@@ -201,8 +201,7 @@
                     <span class="small fw-semibold" style="color:#0047AB;">Dernières ventes</span>
                     <small id="cs-db-ventes-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                     <a href="{{ path('console.vente.index') }}" class="db-task-new-btn ms-auto"
-                       onclick="event.stopPropagation();"
-                       data-action="click->top-progress#show"
+                       data-action="click->geste#arreter click->top-progress#show"
                        data-meta-tip="Voir toutes les ventes"
                        aria-label="Voir toutes les ventes">
                         {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
@@ -230,8 +229,7 @@
                     <span class="small fw-semibold" style="color:#0047AB;">Dernières dépenses</span>
                     <small id="cs-db-depenses-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                     <a href="{{ path('console.depense.index') }}" class="db-task-new-btn ms-auto"
-                       onclick="event.stopPropagation();"
-                       data-action="click->top-progress#show"
+                       data-action="click->geste#arreter click->top-progress#show"
                        data-meta-tip="Voir toutes les dépenses"
                        aria-label="Voir toutes les dépenses">
                         {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
@@ -257,8 +255,7 @@
                     <span class="small fw-semibold" style="color:#0047AB;">Dernières entreprises créées</span>
                     <small id="cs-db-entreprises-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                     <a href="{{ path('console.entreprise.index') }}" class="db-task-new-btn ms-auto"
-                       onclick="event.stopPropagation();"
-                       data-action="click->top-progress#show"
+                       data-action="click->geste#arreter click->top-progress#show"
                        data-meta-tip="Voir toutes les entreprises"
                        aria-label="Voir toutes les entreprises">
                         {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
@@ -284,8 +281,7 @@
                     <span class="small fw-semibold" style="color:#0047AB;">Derniers clients</span>
                     <small id="cs-db-clients-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                     <a href="{{ path('console.client.index') }}" class="db-task-new-btn ms-auto"
-                       onclick="event.stopPropagation();"
-                       data-action="click->top-progress#show"
+                       data-action="click->geste#arreter click->top-progress#show"
                        data-meta-tip="Voir tous les clients"
                        aria-label="Voir tous les clients">
                         {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
@@ -311,8 +307,7 @@
                     <span class="small fw-semibold" style="color:#0047AB;">Derniers utilisateurs créés</span>
                     <small id="cs-db-utilisateurs-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                     <a href="{{ path('console.utilisateur.index') }}" class="db-task-new-btn ms-auto"
-                       onclick="event.stopPropagation();"
-                       data-action="click->top-progress#show"
+                       data-action="click->geste#arreter click->top-progress#show"
                        data-meta-tip="Voir tous les utilisateurs"
                        aria-label="Voir tous les utilisateurs">
                         {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
@@ -338,8 +333,7 @@
                     <span class="small fw-semibold" style="color:#0047AB;">Derniers coupons</span>
                     <small id="cs-db-coupons-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                     <a href="{{ path('console.coupon.index') }}" class="db-task-new-btn ms-auto"
-                       onclick="event.stopPropagation();"
-                       data-action="click->top-progress#show"
+                       data-action="click->geste#arreter click->top-progress#show"
                        data-meta-tip="Voir tous les coupons"
                        aria-label="Voir tous les coupons">
                         {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
@@ -366,8 +360,7 @@
                     <small id="cs-db-plans-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                     {% if is_granted('ROLE_SUPER_ADMIN') %}
                         <a href="{{ path('console.plan.index') }}" class="db-task-new-btn ms-auto"
-                           onclick="event.stopPropagation();"
-                           data-action="click->top-progress#show"
+                           data-action="click->geste#arreter click->top-progress#show"
                            data-meta-tip="Éditer le plan tarifaire"
                            aria-label="Éditer le plan tarifaire">
                             {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
@@ -394,8 +387,7 @@
                     <span class="small fw-semibold" style="color:#0047AB;">Fiscalité</span>
                     <small id="cs-db-taxes-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                     <a href="{{ path('console.taxe.index') }}" class="db-task-new-btn ms-auto"
-                       onclick="event.stopPropagation();"
-                       data-action="click->top-progress#show"
+                       data-action="click->geste#arreter click->top-progress#show"
                        data-meta-tip="Gérer les taxes sur les ventes"
                        aria-label="Gérer les taxes sur les ventes">
                         {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
@@ -423,8 +415,7 @@
                     <span class="small fw-semibold" style="color:#0047AB;">Supervision des erreurs</span>
                     <small id="cs-db-supervision-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                     <a href="{{ path('console.supervision.index') }}" class="db-task-new-btn ms-auto"
-                       onclick="event.stopPropagation();"
-                       data-action="click->top-progress#show"
+                       data-action="click->geste#arreter click->top-progress#show"
                        data-meta-tip="Voir tous les défauts"
                        aria-label="Voir tous les défauts">
                         {{ ux_icon(resolve_icon_name('action:view'), {style: 'width:15px;height:15px;color:#0047AB;'}) }}

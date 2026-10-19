@@ -115,7 +115,7 @@
                                 {% endif %}
                                 {% if v.isPaid %}
                                     <form method="post" action="{{ path('console.vente.refund', {id: v.id}) }}"
-                                          onsubmit="return confirm('{{ 'vente.refund.confirm'|trans|e('js') }}');" style="display:inline;">
+                                          data-action="submit->geste#confirmer" data-geste-message-param="{{ 'vente.refund.confirm'|trans }}" style="display:inline;">
                                         <input type="hidden" name="_token" value="{{ csrf_token('refund-vente-' ~ v.id) }}">
                                         <button type="submit" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center">
                                             {{ ux_icon(resolve_icon_name('action:reset'), {height:'16px', width:'16px'}) }}

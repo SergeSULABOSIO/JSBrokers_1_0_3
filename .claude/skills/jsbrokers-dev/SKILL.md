@@ -246,10 +246,11 @@ Inscrits le 2026-10-17, à la clôture du chantier 1 (constats faits en route, p
    - **Commit 2 FAIT** : plus aucun site extérieur. Quill, Bootstrap 5.3.6 et es-module-shims
      sont vendorisés. Garde-fous : liste blanche exacte de la politique, aucune adresse
      absolue dans `templates/` et `assets/`.
+   - **Commit 3 FAIT** : 47 gestes génériques → contrôleur `geste` (sur `<body>`) et
+     `assets/gestes-autonomes.js` (3 pages sans Stimulus). Garde-fou `GestesSansCodeTest`.
    - **Restent** :
-     - commits 3 et 4 : convertir les 110 gestionnaires `on…=` (47 gestes génériques →
-       contrôleur `geste` ; 63 appels `window.db*` et 3 `onclick` fabriqués dans `app.js` →
-       contrôleur `tableau-de-bord` par délégation) ;
+     - commit 4 : 63 appels `window.db*` et 3 `onclick` fabriqués dans `app.js` → contrôleur
+       `tableau-de-bord` (liste fermée des fonctions appelables) ;
      - commit 5 : garde-fous ;
      - commit 6 : liste de contrôle actionnable parcourue par Serge, puis bascule
        (`PolitiqueCsp::APPLIQUEE`).

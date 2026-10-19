@@ -87,7 +87,7 @@
         <input type="hidden" name="_token" value="{{ csrf_token('crm-ticket-statut-' ~ ticket.id) }}">
         <input type="hidden" name="_retour" value="show">
         <label for="ticket-statut" class="form-label m-0">Statut</label>
-        <select id="ticket-statut" name="statut" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        <select id="ticket-statut" name="statut" class="form-select form-select-sm" style="width:auto;" data-action="change->geste#soumettre">
             {% for key, label in {ouvert:'Ouvert', en_cours:'En cours', resolu:'Résolu', clos:'Clos'} %}
                 <option value="{{ key }}" {{ ticket.statut == key ? 'selected' }}>{{ label }}</option>
             {% endfor %}

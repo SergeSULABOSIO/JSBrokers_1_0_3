@@ -132,7 +132,7 @@
             {# Bascule de langue unifiée : auto-suffisante via ?lang= (fonctionne hors session). #}
             {{ include('components/_lang_switch.html.twig', {current: (isEn ? 'en' : 'fr'), route: 'app_terms', uid: 'lang-cgu'}) }}
             <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center"
-                    onclick="window.print()">
+                    data-action="click->geste#imprimer">
                 {{ ux_icon(resolve_icon_name('mdi:printer-outline'), {height: '18px', width: '18px'}) }}
                 <span class="ms-1">{{ isEn ? 'Print' : 'Imprimer' }}</span>
             </button>

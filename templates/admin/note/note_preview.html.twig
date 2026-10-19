@@ -122,16 +122,18 @@
             /* Un brouillon n'est pas une pièce comptable : il le dit (règle OHADA). */
         .note-brouillon { display: inline-block; padding: .15rem .5rem; background: #fff3cd; color: #664d03; border: 1px solid #664d03; font-weight: 700; letter-spacing: .05em; }
 </style>
+    {# Imprimer / fermer sans code dans le HTML (pas de Stimulus sur cette page autonome) : assets/gestes-autonomes.js. #}
+    <script type="module" src="{{ asset('gestes-autonomes.js') }}"></script>
 </head>
 <body>
 
     <nav class="actions-bar sticky-top" aria-label="Actions du document">
-        <button type="button" class="btn btn-light d-inline-flex align-items-center gap-2" data-controller="ripple" onclick="window.close()">
+        <button type="button" class="btn btn-light d-inline-flex align-items-center gap-2" data-controller="ripple" data-action="click->geste#fermer">
             <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" width="18px" height="18px" aria-hidden="true" />
             <span>Retourner à l'édition</span>
         </button>
 
-        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-controller="ripple" onclick="window.print()">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-controller="ripple" data-action="click->geste#imprimer">
             <twig:UX:Icon name="{{ resolve_icon_name('action:print') }}" width="18px" height="18px" aria-hidden="true" />
             <span>Imprimer</span>
         </button>

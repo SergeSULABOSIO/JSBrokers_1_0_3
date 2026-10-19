@@ -11,15 +11,17 @@
     <link rel="icon" href="{{ asset('images/entreprises/logofav.png') }}" type="image/png">
     <link rel="stylesheet" href="{{ asset('vendor/bootstrap/dist/css/bootstrap.min.css') }}">
     {% include 'admin/soa/_soa_styles.html.twig' %}
+    {# Imprimer / fermer sans code dans le HTML (pas de Stimulus sur cette page autonome) : assets/gestes-autonomes.js. #}
+    <script type="module" src="{{ asset('gestes-autonomes.js') }}"></script>
 </head>
 <body>
 
     <nav class="soa-actions-bar" aria-label="Actions du document">
-        <button type="button" class="btn btn-light btn-sm d-inline-flex align-items-center gap-2" onclick="window.close()">
+        <button type="button" class="btn btn-light btn-sm d-inline-flex align-items-center gap-2" data-action="click->geste#fermer">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>
             <span>Fermer</span>
         </button>
-        <button type="button" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2" onclick="window.print()">
+        <button type="button" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2" data-action="click->geste#imprimer">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/></svg>
             <span>Imprimer</span>
         </button>

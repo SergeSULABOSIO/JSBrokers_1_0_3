@@ -184,7 +184,7 @@
                             <twig:UX:Icon name="lucide:more-vertical" width="18px" height="18px" class="text-white" />
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow" data-bordereau-analysis-target="optionsMenu">
-                            <li><button class="dropdown-item d-inline-flex align-items-center gap-2" onclick="window.print()"><twig:UX:Icon name="lucide:printer" width="16px" height="16px" /><span>Imprimer</span></button></li>
+                            <li><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->geste#imprimer"><twig:UX:Icon name="lucide:printer" width="16px" height="16px" /><span>Imprimer</span></button></li>
                             <li data-bordereau-analysis-target="bulkDivider" class="d-none"><hr class="dropdown-divider"></li>
                             <li data-bordereau-analysis-target="bulkCreateItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#bulkCreateAll"><twig:UX:Icon name="{{ resolve_icon_name('action:add') }}" width="16px" height="16px" /><span>Tout créer</span></button></li>
                             <li data-bordereau-analysis-target="bulkUpdateItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#bulkUpdateAll"><twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" width="16px" height="16px" /><span>Tout mettre à jour</span></button></li>

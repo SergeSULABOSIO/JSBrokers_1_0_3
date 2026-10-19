@@ -27,7 +27,7 @@
         </button>
         <button class="db-block-add-btn"
                 data-meta-tip="Voir tous les membres de l'équipe"
-                onclick="event.stopPropagation(); document.dispatchEvent(new CustomEvent('workspace:navigate-to',{bubbles:true,detail:{component:'_view_manager_administration.html.twig',group:'Administration',entity:'Invite'}}));"
+                data-action="click->geste#naviguer:stop" data-geste-component-param="_view_manager_administration.html.twig" data-geste-group-param="Administration" data-geste-entity-param="Invite"
                 aria-label="Voir tous les membres">
             <twig:UX:Icon name="hugeicons:view" aria-hidden="true" style="width:15px;height:15px;color:#0047AB;" />
         </button>
@@ -43,7 +43,7 @@
 {# ── Menu contextuel invités ── #}
 <meta id="db-invite-csrf" content="{{ csrf_token('db-invite-delete') }}">
 <nav id="dbInviteCtxMenu" class="context-menu" aria-label="Menu contextuel invité" style="display:none;"
-     onmousedown="event.stopPropagation()">
+     data-action="mousedown->geste#arreter">
     <ul role="menu" class="list-unstyled mb-0">
         <li role="menuitem" tabindex="-1" id="dbInviteCtxEditItem"
             onclick="dbInviteCtxEdit()"

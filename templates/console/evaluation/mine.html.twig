@@ -22,12 +22,12 @@
 {% block console_actions %}
     {# Sélecteur de période (année + trimestre), soumis en GET sur ma propre fiche. #}
     <form method="get" class="d-flex align-items-center gap-2" data-action="change->top-progress#show">
-        <select name="annee" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="Année">
+        <select name="annee" class="form-select form-select-sm" data-action="change->geste#soumettre" aria-label="Année">
             {% for a in annees %}
                 <option value="{{ a }}" {{ a == annee ? 'selected' }}>{{ a }}</option>
             {% endfor %}
         </select>
-        <select name="trimestre" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="Période">
+        <select name="trimestre" class="form-select form-select-sm" data-action="change->geste#soumettre" aria-label="Période">
             <option value="0" {{ trimestre == 0 ? 'selected' }}>Annuel</option>
             {% for t in 1..4 %}
                 <option value="{{ t }}" {{ trimestre == t ? 'selected' }}>T{{ t }}</option>

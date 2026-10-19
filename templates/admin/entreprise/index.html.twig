@@ -436,7 +436,7 @@
          style="display:none;"
          tabindex="-1"
          aria-label="{{ 'entreprise_menu_aria' | trans }}"
-         onmousedown="event.stopPropagation()">
+         data-action="mousedown->geste#arreter">
         <ul role="menu" class="list-unstyled mb-0">
             <li role="menuitem" tabindex="-1" data-menu-key="workspace"
                 data-action="click->entreprise-context-menu#onItemClick">

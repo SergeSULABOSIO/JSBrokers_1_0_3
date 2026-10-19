@@ -176,7 +176,7 @@
     <nav class="soa-actions-bar" aria-label="Actions du relevé de compte">
         <button type="button"
                 class="btn btn-secondary btn-sm d-inline-flex align-items-center gap-2 me-2"
-                onclick="document.dispatchEvent(new CustomEvent('app:workspace.reload-active-tab'))"
+                data-action="click->geste#rechargerOnglet"
                 aria-label="Actualiser les données du relevé de compte">
             <twig:UX:Icon name="{{ resolve_icon_name('action:refresh') }}" width="16px" height="16px" aria-hidden="true" />
             <span>Actualiser</span>
@@ -957,7 +957,7 @@
          style="display:none;"
          tabindex="-1"
          aria-label="Menu contextuel du relevé de compte"
-         onmousedown="event.stopPropagation()">
+         data-action="mousedown->geste#arreter">
         <ul role="menu" class="list-unstyled mb-0">
             <li role="menuitem" tabindex="-1" data-menu-key="refresh"
                 data-action="click->soa-context-menu#onItemClick">

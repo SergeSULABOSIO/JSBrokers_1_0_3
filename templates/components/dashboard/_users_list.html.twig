@@ -108,7 +108,7 @@
     <a href="#"
        class="d-flex align-items-center justify-content-center gap-1 small text-decoration-none"
        style="color:#0047AB;font-size:.75rem;"
-       onclick="event.preventDefault(); document.dispatchEvent(new CustomEvent('workspace:navigate-to',{bubbles:true,detail:{component:'_view_manager_administration.html.twig',group:'Administration',entity:'Invite'}}));">
+       data-action="click->geste#naviguer:prevent" data-geste-component-param="_view_manager_administration.html.twig" data-geste-group-param="Administration" data-geste-entity-param="Invite">
         Voir tous les membres
         <twig:UX:Icon name="mdi:chevron-right" style="width:14px;height:14px;" aria-hidden="true" />
     </a>

@@ -54,7 +54,7 @@
             </button>
             <button class="db-task-new-btn"
                     data-meta-tip="Voir toutes les tâches"
-                    onclick="event.stopPropagation(); document.dispatchEvent(new CustomEvent('workspace:navigate-to',{bubbles:true,detail:{component:'_view_manager_marketing.html.twig',group:'Marketing',entity:'Tache'}}));"
+                    data-action="click->geste#naviguer:stop" data-geste-component-param="_view_manager_marketing.html.twig" data-geste-group-param="Marketing" data-geste-entity-param="Tache"
                     aria-label="Voir toutes les tâches">
                 <twig:UX:Icon name="hugeicons:view" style="width:15px;height:15px;color:#0047AB;" />
             </button>
@@ -200,7 +200,7 @@
 {# ── Menu contextuel tâches ── #}
 <meta id="db-task-csrf" content="{{ csrf_token('db-task-close') }}">
 <nav id="dbTaskCtxMenu" class="context-menu" style="display:none;"
-     onmousedown="event.stopPropagation()">
+     data-action="mousedown->geste#arreter">
     <ul role="menu" class="list-unstyled mb-0">
         <li role="menuitem" tabindex="-1" id="dbTaskCtxEditItem"
             class="d-flex align-items-center gap-2 px-3 py-2"
