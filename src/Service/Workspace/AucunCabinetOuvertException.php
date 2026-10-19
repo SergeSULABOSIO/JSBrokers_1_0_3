@@ -18,7 +18,7 @@ namespace App\Service\Workspace;
  * message, que {@see CabinetFermeListener} reconnaît. Un `AccessDeniedException` eût
  * été confondu avec les refus de périmètre, qui, eux, doivent rester des 403.
  */
-class AucunCabinetOuvertException extends \RuntimeException
+class AucunCabinetOuvertException extends \RuntimeException implements \App\Exception\MessagePourLUtilisateur
 {
     public function __construct()
     {

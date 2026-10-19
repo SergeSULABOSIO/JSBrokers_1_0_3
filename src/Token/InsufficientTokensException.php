@@ -9,7 +9,7 @@ namespace App\Token;
  * persistance n'a lieu. L'utilisateur doit recharger ou attendre le
  * renouvellement de l'allocation gratuite (porté par $nextRenewalAt).
  */
-class InsufficientTokensException extends \RuntimeException
+class InsufficientTokensException extends \RuntimeException implements \App\Exception\MessagePourLUtilisateur
 {
     public function __construct(
         public readonly int $required,

@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Echange\Service\FluxNdjson;
+use App\Service\Erreur\MessageDErreur;
 use App\Service\Workspace\ArbreDeSuppression;
 use App\Service\Workspace\ExclusionsDeSuppression;
 use App\Service\Workspace\ExecutionDuDossier;
@@ -194,7 +195,7 @@ class SuppressionApercuController extends AbstractController
      * appellent cette route n'ont pas à savoir lire un flux.
      */
     #[Route('/executer/{rubrique}/{id}', name: 'executer', requirements: ['rubrique' => '[A-Za-z_]+', 'id' => Requirement::DIGITS], methods: ['POST'])]
-    public function executer(string $rubrique, int $id, Request $request, ExecutionDuDossier $execution): Response
+    public function executer(string $rubrique, int $id, Request $request, ExecutionDuDossier $execution, MessageDErreur $messageDErreur): Response
     {
         $fqcn = $this->classeDeLaRubrique($rubrique);
         if ($fqcn === null) {
@@ -225,7 +226,7 @@ class SuppressionApercuController extends AbstractController
             return $this->json(['type' => 'resultat'] + $execution->executer($cible, $lots, $exclusions));
         }
 
-        return new StreamedResponse(function () use ($execution, $cible, $lots, $exclusions): void {
+        return new StreamedResponse(function () use ($execution, $cible, $lots, $exclusions, $messageDErreur): void {
             FluxNdjson::demarrer();
             try {
                 $rapport = $execution->executer($cible, $lots, $exclusions, static fn (array $ligne) => FluxNdjson::ligne($ligne));
@@ -235,7 +236,10 @@ class SuppressionApercuController extends AbstractController
                 // code HTTP, il voyage dans la dernière ligne.
                 FluxNdjson::ligne([
                     'type'    => 'erreur',
-                    'message' => 'La suppression s’est interrompue : ' . $erreur->getMessage(),
+                    'message' => 'La suppression s’est interrompue : ' . $messageDErreur->pourLEcran(
+                        $erreur,
+                        'une erreur technique est survenue. L’équipe Joseara est prévenue ; rouvrez l’aperçu pour voir ce qui reste.',
+                    ),
                 ]);
             }
         }, Response::HTTP_OK, FluxNdjson::entetes());

@@ -3,6 +3,7 @@
 namespace App\Service\Workspace;
 
 use App\Echange\Service\Progression;
+use App\Service\Erreur\MessageDErreur;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -40,6 +41,7 @@ final class ExecutionDuDossier
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly SuppressionEnCascade $moteur,
+        private readonly MessageDErreur $messageDErreur,
     ) {
     }
 
@@ -201,17 +203,16 @@ final class ExecutionDuDossier
         }
     }
 
-    /** Le motif d'un échec, dans les mots du métier quand on les a. */
+    /**
+     * Le motif d'un échec, dans les mots du métier quand on les a. Le tri ne se fait plus
+     * sur la présence de « SQLSTATE » : un chemin ou un nom de classe passaient.
+     */
     private function motifLisible(\Throwable $erreur): string
     {
-        if ($erreur instanceof MutationException) {
-            return $erreur->getMessage();
-        }
-        $message = trim($erreur->getMessage());
-
-        return $message !== '' && !str_contains($message, 'SQLSTATE')
-            ? $message
-            : "Cette partie du dossier n'a pas pu être supprimée. Elle est restée intacte.";
+        return $this->messageDErreur->pourLEcran(
+            $erreur,
+            "Cette partie du dossier n'a pas pu être supprimée. Elle est restée intacte.",
+        );
     }
 
     private function nomDe(object $cible, string $repli): string

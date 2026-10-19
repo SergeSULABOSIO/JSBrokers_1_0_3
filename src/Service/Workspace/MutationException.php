@@ -9,7 +9,7 @@ namespace App\Service\Workspace;
  * → rollback global + journal marquant l'étape fautive. Porte un message
  * lisible et, le cas échéant, le détail des erreurs de champ.
  */
-final class MutationException extends \RuntimeException
+final class MutationException extends \RuntimeException implements \App\Exception\MessagePourLUtilisateur
 {
     public const HORS_PERIMETRE = 'hors_perimetre';
     public const INTROUVABLE    = 'introuvable';

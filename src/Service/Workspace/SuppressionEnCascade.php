@@ -194,7 +194,8 @@ class SuppressionEnCascade
     public function executer(PlanDeSuppression $plan, ?Progression $progression = null): array
     {
         if ($plan->estBloque()) {
-            throw new \RuntimeException(implode(' ', $plan->refus));
+            // Les refus du plan sont des phrases du métier : typés, ils restent lisibles.
+            throw new \App\Exception\RefusMetierException(implode(' ', $plan->refus));
         }
 
         $connexion = $this->em->getConnection();

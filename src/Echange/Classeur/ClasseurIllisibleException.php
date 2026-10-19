@@ -9,6 +9,6 @@ namespace App\Echange\Classeur;
  * s'arrête là, avec un message unique et clair, et AUCUNE occurrence n'est décomptée.
  * Un fichier qu'on ne sait pas ouvrir n'a rien coûté à personne.
  */
-final class ClasseurIllisibleException extends \RuntimeException
+final class ClasseurIllisibleException extends \RuntimeException implements \App\Exception\MessagePourLUtilisateur
 {
 }

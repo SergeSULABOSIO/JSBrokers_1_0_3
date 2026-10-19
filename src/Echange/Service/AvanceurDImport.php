@@ -3,6 +3,7 @@
 namespace App\Echange\Service;
 
 use App\Ai\Mutation\MutationOperation;
+use App\Service\Erreur\MessageDErreur;
 use App\Ai\Mutation\MutationReferences;
 use App\Ai\Scope\AiScope;
 use App\Echange\Classeur\LecteurJsbx;
@@ -112,6 +113,9 @@ final class AvanceurDImport
         // à son tour, et l'utilisateur recevait une erreur fatale à la place du rapport
         // qui lui aurait dit quoi corriger.
         private readonly ManagerRegistry $registre,
+        // Le motif d'un palier annulé va au rapport ET au classeur annoté : celui du
+        // métier y figure, le texte d'une panne (SQL, chemin) part au journal.
+        private readonly MessageDErreur $messageDErreur,
         /**
          * LA TAILLE DU PALIER, IMPOSÉE — zéro laisse le calcul décider.
          *
@@ -567,7 +571,7 @@ final class AvanceurDImport
                     . 'Les lignes déjà écrites le restent : redéposez le même fichier pour reprendre '
                     . 'là où il s\'est arrêté, sans rien créer en double. Motif : %s',
                     $fenetre[0]->numero,
-                    $e->getMessage(),
+                    $this->messageDErreur->pourLEcran($e, 'une erreur technique, que l’équipe Joseara a reçue.'),
                 ),
                 $fenetre[0]->feuille,
                 $fenetre[0]->numero,

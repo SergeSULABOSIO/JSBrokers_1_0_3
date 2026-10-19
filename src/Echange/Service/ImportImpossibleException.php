@@ -10,6 +10,6 @@ namespace App\Echange\Service;
  * intacte, aucune occurrence n'est décomptée, et la réponse à donner à l'utilisateur
  * est « redéposez le fichier », pas « corrigez ces lignes ».
  */
-final class ImportImpossibleException extends \RuntimeException
+final class ImportImpossibleException extends \RuntimeException implements \App\Exception\MessagePourLUtilisateur
 {
 }

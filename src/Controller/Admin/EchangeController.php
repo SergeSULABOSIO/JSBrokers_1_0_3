@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Service\Erreur\MessageDErreur;
 use App\Service\Workspace\AppartenanceAuCabinet;
 use App\Echange\Canevas\CanevasDEchange;
 use App\Echange\Classeur\AnnotateurJsbx;
@@ -67,6 +68,18 @@ class EchangeController extends AbstractController
 
     private const LIBELLE = 'Importation / Exportation';
 
+    // CE QUE L'ÉCRAN REÇOIT À LA PLACE DU TEXTE D'UNE PANNE (MessageDErreur) : le détail
+    // technique part au journal, la supervision prévient l'équipe.
+    private const EXPORT_INTERROMPU = 'L’exportation s’est interrompue à cause d’une erreur technique. '
+        . 'L’équipe Joseara est prévenue ; réessayez dans quelques instants.';
+    private const DEPOT_INTERROMPU = 'Le fichier n’a pas pu être déposé à cause d’une erreur technique. '
+        . 'Rien n’a été importé. L’équipe Joseara est prévenue ; réessayez dans quelques instants.';
+    private const IMPORT_INTERROMPU = 'L’importation s’est interrompue à cause d’une erreur technique. '
+        . 'Les lignes déjà écrites le restent : redéposez le même fichier pour reprendre sans rien '
+        . 'créer en double. L’équipe Joseara est prévenue.';
+    private const IMPORT_NON_DEMARRE = 'L’importation n’a pas pu démarrer à cause d’une erreur technique. '
+        . 'Rien n’a été écrit. L’équipe Joseara est prévenue ; réessayez dans quelques instants.';
+
     public function __construct(
         private readonly CanevasDEchange $canevas,
         private readonly CompteurDOccurrences $compteur,
@@ -93,6 +106,8 @@ class EchangeController extends AbstractController
         private readonly AppartenanceAuCabinet $appartenance,
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly TokenAccountService $tokenAccountService,
+        // Le texte d'une panne (SQL, chemin, classe) ne sort pas : il part au journal.
+        private readonly MessageDErreur $messageDErreur,
         #[Autowire('%kernel.project_dir%')]
         private readonly string $projectDir,
     ) {
@@ -234,7 +249,7 @@ class EchangeController extends AbstractController
                 Response::HTTP_PAYMENT_REQUIRED,
             );
         } catch (\RuntimeException $e) {
-            return new Response($e->getMessage(), Response::HTTP_UNPROCESSABLE_ENTITY);
+            return new Response($this->messageDErreur->pourLEcran($e, self::EXPORT_INTERROMPU), Response::HTTP_UNPROCESSABLE_ENTITY);
         }
     }
 
@@ -319,7 +334,7 @@ class EchangeController extends AbstractController
                     ),
                 ]);
             } catch (\Throwable $e) {
-                FluxNdjson::ligne(['type' => 'erreur', 'message' => $e->getMessage()]);
+                FluxNdjson::ligne(['type' => 'erreur', 'message' => $this->messageDErreur->pourLEcran($e, self::EXPORT_INTERROMPU)]);
             }
         });
 
@@ -464,7 +479,7 @@ class EchangeController extends AbstractController
                 $autreCabinet,
             );
         } catch (\Throwable $e) {
-            return $this->json(['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->json(['message' => $this->messageDErreur->pourLEcran($e, self::DEPOT_INTERROMPU)], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $this->file->pousser($run);
@@ -513,7 +528,7 @@ class EchangeController extends AbstractController
             try {
                 $run = $this->avanceur->avancerUnPalier($run);
             } catch (\Throwable $e) {
-                return $this->json(['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+                return $this->json(['message' => $this->messageDErreur->pourLEcran($e, self::IMPORT_INTERROMPU)], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
 
             return $this->json($this->etatDuRun($run));
@@ -536,7 +551,7 @@ class EchangeController extends AbstractController
             try {
                 $run = $this->avanceur->avancerUnPalier($run, $progression);
             } catch (\Throwable $e) {
-                FluxNdjson::ligne(['type' => 'erreur', 'message' => $e->getMessage()]);
+                FluxNdjson::ligne(['type' => 'erreur', 'message' => $this->messageDErreur->pourLEcran($e, self::IMPORT_INTERROMPU)]);
 
                 return;
             }
@@ -651,7 +666,7 @@ class EchangeController extends AbstractController
                 'buyUrl'          => $this->generateUrl('admin.token.buy'),
             ], Response::HTTP_PAYMENT_REQUIRED);
         } catch (\Throwable $e) {
-            return $this->json(['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->json(['message' => $this->messageDErreur->pourLEcran($e, self::IMPORT_NON_DEMARRE)], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $this->file->pousser($run);

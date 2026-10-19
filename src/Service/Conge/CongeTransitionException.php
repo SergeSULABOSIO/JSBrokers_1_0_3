@@ -9,7 +9,7 @@ namespace App\Service\Conge;
  * contrôleur (422) comme par l'assistant, pour que le même geste refusé donne le même
  * mot d'un canal à l'autre.
  */
-class CongeTransitionException extends \RuntimeException
+class CongeTransitionException extends \RuntimeException implements \App\Exception\MessagePourLUtilisateur
 {
     /**
      * @param string[] $violations

@@ -357,7 +357,7 @@ class JSBDynamicSearchService
                 } catch (\Exception $e) {
                     return [
                         'status' => [
-                            'error' => 'Une erreur inattendue est survenue: ' . $e->getMessage(),
+                            'error' => $this->erreurInattendue($e),
                             'code' => 500,
                             'message' => 'Erreur interne du serveur.',
                         ],
@@ -394,7 +394,7 @@ class JSBDynamicSearchService
                 } catch (\Exception $e) {
                     return [
                         'status' => [
-                            'error' => 'Une erreur inattendue est survenue: ' . $e->getMessage(),
+                            'error' => $this->erreurInattendue($e),
                             'code' => 500,
                             'message' => 'Erreur interne du serveur.',
                         ],
@@ -491,7 +491,7 @@ class JSBDynamicSearchService
                 } catch (\Exception $e) {
                     return [
                         'status' => [
-                            'error' => 'Une erreur inattendue est survenue: ' . $e->getMessage(),
+                            'error' => $this->erreurInattendue($e),
                             'code' => 500,
                             'message' => 'Erreur interne du serveur.',
                         ],
@@ -540,7 +540,7 @@ class JSBDynamicSearchService
             $status['message'] = "Requête de filtre exécutée avec succès.";
         } catch (\Exception $e) {
             $status = [
-                "error" => "Une erreur inattendue est survenue: " . $e->getMessage(),
+                "error" => $this->erreurInattendue($e),
                 "code" => 500,
                 "message" => "Erreur interne du serveur."
             ];
@@ -1154,5 +1154,18 @@ class JSBDynamicSearchService
         }
 
         return $joinAlias;
+    }
+
+    /**
+     * LE TEXTE D'UNE PANNE NE VOYAGE PAS DANS `status.error`. Il y était concaténé
+     * (« Une erreur inattendue est survenue: SQLSTATE… ») ; aucun appelant ne l'affiche
+     * aujourd'hui, mais le premier qui le ferait montrerait la requête. Il part au
+     * journal (supervision) ; le statut garde une phrase neutre.
+     */
+    private function erreurInattendue(\Throwable $e): string
+    {
+        $this->logger->error('Recherche : erreur technique', ['exception' => $e]);
+
+        return 'Une erreur inattendue est survenue.';
     }
 }

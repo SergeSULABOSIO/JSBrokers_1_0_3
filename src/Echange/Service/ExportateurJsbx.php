@@ -95,7 +95,7 @@ final class ExportateurJsbx
     ): Response {
         $ressources = $this->perimetre($invite, $codesDemandes);
         if ($ressources === []) {
-            throw new \RuntimeException(
+            throw new \App\Exception\RefusMetierException(
                 'Aucune donnée à exporter : votre périmètre d\'accès ne couvre aucune des données demandées.',
             );
         }

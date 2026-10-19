@@ -41,6 +41,8 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use App\Exception\RefusMetierException;
+use App\Service\Erreur\MessageDErreur;
 
 #[Route("/admin/bordereau", name: 'admin.bordereau.')]
 #[IsGranted('ROLE_USER')]
@@ -48,6 +50,12 @@ class BordereauController extends AbstractController
 {
     use HandleChildAssociationTrait;
     use ControllerUtilsTrait;
+
+    // Ce que l'écran reçoit à la place du texte d'une panne (MessageDErreur).
+    private const CLASSEUR_ILLISIBLE = "Le classeur de ce bordereau n’a pas pu être lu. Vérifiez qu’il s’agit "
+        . "d’un fichier Excel (.xlsx, .xls, .ods) intact, rattachez-le de nouveau, puis réessayez.";
+    private const LIGNE_NON_TRAITEE = "Cette ligne n’a pas pu être traitée à cause d’une erreur technique. "
+        . "L’équipe Joseara est prévenue ; réessayez dans quelques instants.";
 
     public function __construct(
         private MailerInterface $mailer,
@@ -66,6 +74,7 @@ class BordereauController extends AbstractController
         private ServiceMonnaies $serviceMonnaies, // NOUVEAU : Pour la monnaie d'affichage
         private AvenantActionService $avenantActionService, // NOUVEAU : Service pour traiter les actions
         private BordereauAnalysisPdfService $bordereauPdfService,
+        private MessageDErreur $messageDErreur,
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait
         $this->canvasBuilder = $canvasBuilder;
@@ -316,7 +325,8 @@ class BordereauController extends AbstractController
                     $error = "Aucune feuille de calcul avec des données n'a été trouvée dans le fichier.";
                 }
             } catch (ReaderException $e) {
-                $error = "Une erreur est survenue lors de la lecture du fichier Excel : " . $e->getMessage();
+                // Le texte du lecteur porte le CHEMIN du fichier sur le serveur : au journal.
+                $error = $this->messageDErreur->pourLEcran($e, self::CLASSEUR_ILLISIBLE);
             }
         }
 
@@ -990,7 +1000,7 @@ class BordereauController extends AbstractController
 
             return array_values($dataRows); // Re-index and return
         } catch (ReaderException $e) {
-            return $this->json(['error' => "Erreur lecture Excel : " . $e->getMessage()], 500);
+            return $this->json(['error' => $this->messageDErreur->pourLEcran($e, self::CLASSEUR_ILLISIBLE)], 500);
         }
     }
 
@@ -1072,7 +1082,7 @@ class BordereauController extends AbstractController
             // Un refus (404 d'une police d'un autre cabinet) n'est pas une panne.
             throw $e;
         } catch (\Exception $e) {
-            return $this->json(['success' => false, 'message' => $e->getMessage()], 500);
+            return $this->json(['success' => false, 'message' => $this->messageDErreur->pourLEcran($e, self::LIGNE_NON_TRAITEE)], 500);
         }
     }
 
@@ -1116,11 +1126,19 @@ class BordereauController extends AbstractController
                     'row_index'        => $res['resolved_row_index'] ?? null,
                     'message'          => $res['message']
                 ];
+            } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                // Un avenant d'un autre cabinet (404 d'AppartenanceAuCabinet) n'est pas une
+                // panne : ni alerte de supervision, ni « erreur technique » à l'écran.
+                $results[] = [
+                    'success'   => false,
+                    'row_index' => $item['row_index'] ?? null,
+                    'message'   => 'Cet avenant est introuvable dans votre cabinet.',
+                ];
             } catch (\Exception $e) {
                 $results[] = [
                     'success'   => false,
                     'row_index' => $item['row_index'] ?? null,
-                    'message'   => $e->getMessage(),
+                    'message'   => $this->messageDErreur->pourLEcran($e, self::LIGNE_NON_TRAITEE),
                 ];
             }
         }
@@ -1145,7 +1163,7 @@ class BordereauController extends AbstractController
         $excelData  = $data['excel_data'] ?? [];
         $rowIndex   = isset($data['row_index']) ? (int)$data['row_index'] : null;
         
-        if ($rowIndex === null) throw new \Exception("Index de ligne manquant.");
+        if ($rowIndex === null) throw new RefusMetierException("Index de ligne manquant.");
         
         // On sécurise la récupération de l'entreprise et de l'invité en utilisant le bordereau comme source de vérité.
         $entreprise = $this->getEntreprise() ?? $bordereau->getEntreprise();
@@ -1169,7 +1187,7 @@ class BordereauController extends AbstractController
         
         if ($actionType === 'discrepancy') {
             $avenant = $this->avenantRepository->find($data['avenant_id'] ?? null);
-            if (!$avenant) throw new \Exception("Avenant introuvable.");
+            if (!$avenant) throw new RefusMetierException("Avenant introuvable.");
             // L'identifiant vient du corps de la requête, et la police est MODIFIÉE ensuite :
             // celle d'un autre cabinet ne se met pas à jour depuis ce bordereau.
             $this->appartenance()->exigerLeCabinetOuvert($avenant, 'Cet avenant');
@@ -1188,7 +1206,7 @@ class BordereauController extends AbstractController
             ];
         }
 
-        throw new \Exception("Action d'analyse inconnue.");
+        throw new RefusMetierException("Action d'analyse inconnue.");
     }
 
     /**

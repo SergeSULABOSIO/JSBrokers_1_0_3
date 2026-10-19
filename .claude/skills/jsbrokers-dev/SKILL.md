@@ -107,6 +107,14 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
 - **Ce qu'on relit du `localStorage` n'est pas sûr** : une icône passe par
   `icone-memorisee.js` (SVG inerte, sinon effacée), une URL d'onglet par `url-de-confiance.js`
   (même origine) avant tout `fetch` suivi d'un `innerHTML`.
+- **Le texte d'une erreur technique ne sort pas** (chantier 10, 2026-10-19). Un message
+  d'exception va à l'écran (JSON, flash, Twig, NDJSON, rapport d'import) par
+  `App\Service\Erreur\MessageDErreur::pourLEcran($e, $repli)` : relayé si l'exception porte
+  le marqueur `App\Exception\MessagePourLUtilisateur` (ou est une `\DomainException`), sinon
+  journalisé en ERROR (supervision) et remplacé par le repli métier du site. Un refus métier
+  sans exception dédiée se lève en `App\Exception\RefusMetierException` — jamais en
+  `\RuntimeException`/`\Exception` nue, que le tri masquerait. Garde-fou :
+  `tests/Security/MessagesDErreurTest.php` (inventaire motivé des `getMessage()` de `src/`).
 - Les cookies s'écrivent et se lisent par `assets/controllers/cookies.js`, et nulle part ailleurs.
 - Asset Mapper : aucune compilation. En dev, rien à builder ; en E2E, ne pas laisser `public/assets`.
 
@@ -203,10 +211,10 @@ Inscrits le 2026-10-17, à la clôture du chantier 1 (constats faits en route, p
    `style-src 'unsafe-inline'` au début). Quill est chargé depuis jsDelivr
    (`rich-text_controller.js:2`, CSS :84) : le vendoriser par `importmap:require`, ou l'autoriser
    explicitement.
-10. **Relais de `$e->getMessage()` vers l'écran** (fuite d'information : chemin, SQL, classe) :
-    environ 15 sites, par ex. `ControllerUtilsTrait.php:1952`, `EchangeController.php:322`,
-    `BordereauController.php:1075`, `AvenantController.php:344`. Message métier à l'écran,
-    détail au journal (supervision).
+10. ✅ **FAIT (2026-10-19) — `$e->getMessage()` à l'écran.** 13 sites routés par
+    `MessageDErreur::pourLEcran` (règle au §4) ; fuite prouvée et corrigée (aperçu de bordereau :
+    chemin du serveur à l'écran). Reste hors chantier : `ControllerUtilsTrait::executerLaSuppression`
+    rend un texte générique sans journaliser la panne (le trait n'a pas de logger).
 11. **La recherche fait un `LIKE` sur le HTML brut des champs riches**
     (`JSBDynamicSearchService:1095-1102`) : « strong » trouve tout texte en gras, et un mot
     coupé par une balise n'est pas trouvé.
