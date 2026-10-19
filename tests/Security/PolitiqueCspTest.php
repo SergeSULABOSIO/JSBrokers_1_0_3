@@ -105,6 +105,72 @@ class PolitiqueCspTest extends WebTestCase
         self::assertFalse($this->client->getResponse()->headers->has('Reporting-Endpoints'));
     }
 
+    /**
+     * LA POLITIQUE EXACTE, directive par directive — une liste blanche, pas une liste noire.
+     * Un `https:`, un hôte nu, `blob:`, `data:` ou `'unsafe-eval'` dans script-src rouvriraient
+     * la porte : toute source ajoutée doit passer par ce test, donc par une décision.
+     */
+    public function testLaPolitiqueEstExactementCelleDecidee(): void
+    {
+        $this->client->request('GET', 'https://localhost/login');
+        $directives = $this->politique();
+        $directives['script-src'] = (string) preg_replace("/'nonce-[A-Za-z0-9+\\/=]+'/", "'nonce-…'", $directives['script-src'] ?? '');
+
+        self::assertSame([
+            'default-src' => "'self'",
+            'script-src' => "'self' 'nonce-…' 'report-sample'",
+            'style-src' => "'self' 'unsafe-inline'",
+            'img-src' => "'self' data:",
+            'font-src' => "'self' data:",
+            'connect-src' => "'self'",
+            'media-src' => "'self'",
+            'worker-src' => "'self'",
+            'frame-src' => "'self'",
+            'object-src' => "'none'",
+            'base-uri' => "'self'",
+            'form-action' => "'self'",
+            'frame-ancestors' => "'self'",
+            'report-uri' => '/api/journal/csp',
+            'report-to' => 'csp',
+        ], $directives);
+    }
+
+    /**
+     * Ni gabarit, ni JavaScript, ni CSS de l'application ne référence un autre site : la
+     * politique refuserait ce qu'il sert (feuille, script, module, police, image, fetch,
+     * worker…). Toute adresse absolue est suspecte — guillemets simples ou doubles, import
+     * sur plusieurs lignes, `fetch()`, `setAttribute()`, `url()` d'un style — hors deux
+     * exceptions : les espaces de noms SVG/XML (w3.org, jamais chargés) et notre domaine.
+     * Une bibliothèque se vendorise (`importmap:require`) et se sert par asset().
+     */
+    public function testAucuneRessourceExterneDansLesGabaritsNiLeJavaScript(): void
+    {
+        $racine = \dirname(__DIR__, 2);
+        $externes = [];
+        // Une adresse absolue : schéma explicite, ou « // » ouvert juste après un guillemet ou url(.
+        $adresse = '#(?:(?:https?|wss?):|[\'"`(]\s*)//([a-z0-9-]+(?:\.[a-z0-9-]+)+)#i';
+        // + les noms réservés aux exemples (RFC 2606) : ils ne désignent jamais un vrai serveur.
+        $admis = '#^(www\.w3\.org|(www\.)?joseara\.com|.+\.(example|invalid|test))$#i';
+        foreach (['templates', 'assets'] as $dossier) {
+            $fichiers = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($racine . '/' . $dossier, \FilesystemIterator::SKIP_DOTS));
+            foreach ($fichiers as $fichier) {
+                $chemin = str_replace('\\', '/', $fichier->getPathname());
+                // Les e-mails et les PDF ne passent pas par un navigateur ; assets/vendor est du code tiers.
+                if (!preg_match('#\.(twig|js|css)$#', $chemin) || str_contains($chemin, '/assets/vendor/') || preg_match('#/templates/emails/|/pdf/#', $chemin)) {
+                    continue;
+                }
+                preg_match_all($adresse, (string) file_get_contents($chemin), $m);
+                foreach (array_unique($m[1]) as $hote) {
+                    if (!preg_match($admis, $hote)) {
+                        $externes[] = substr($chemin, \strlen($racine) + 1) . ' : ' . $hote;
+                    }
+                }
+            }
+        }
+
+        self::assertSame([], $externes, 'Ressource externe : la vendoriser (importmap:require) et la servir par asset().');
+    }
+
     /** Un nonce dans style-src y annulerait 'unsafe-inline' : les 1 594 attributs style= casseraient. */
     public function testLeNonceNEstJamaisDansStyleSrc(): void
     {

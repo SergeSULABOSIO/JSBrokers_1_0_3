@@ -65,4 +65,35 @@ return [
     'html2canvas' => [
         'version' => '1.4.1',
     ],
+    'quill' => [
+        'version' => '2.0.2',
+    ],
+    'quill/dist/quill.snow.css' => [
+        'version' => '2.0.2',
+        'type' => 'css',
+    ],
+    'es-module-shims' => [
+        'version' => '1.10.0',
+    ],
+    'lodash-es' => [
+        'version' => '4.18.1',
+    ],
+    'parchment' => [
+        'version' => '3.0.0',
+    ],
+    'quill-delta' => [
+        'version' => '5.1.0',
+    ],
+    'eventemitter3' => [
+        'version' => '5.0.1',
+    ],
+    'fast-diff' => [
+        'version' => '1.3.0',
+    ],
+    'lodash.clonedeep' => [
+        'version' => '4.5.0',
+    ],
+    'lodash.isequal' => [
+        'version' => '4.5.0',
+    ],
 ];

@@ -50,7 +50,7 @@ function destinationInterne(adresse) {
     if (typeof adresse !== 'string' || adresse === '') {
         return false;
     }
-    // `//evil.tld` est un chemin « relatif au protocole » : il part ailleurs.
+    // `//evil.example` est un chemin « relatif au protocole » : il part ailleurs.
     if (adresse.startsWith('//')) {
         return false;
     }

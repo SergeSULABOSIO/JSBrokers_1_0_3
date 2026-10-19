@@ -1,5 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
-import Quill from 'https://cdn.jsdelivr.net/npm/quill@2.0.2/+esm';
+// Quill et ses dépendances sont vendorisés (importmap.php, assets/vendor/) : aucun CDN.
+import Quill from 'quill';
 import { texteRicheSur } from './texte-riche.js';
 import { estTexteRiche, FORMATS_DE_LA_BARRE } from './texte-riche-regles.js';
 
@@ -9,8 +10,8 @@ import { estTexteRiche, FORMATS_DE_LA_BARRE } from './texte-riche-regles.js';
  */
 export default class extends Controller {
     connect() {
-        // Chargement dynamique du CSS de Quill depuis le CDN
-        this._loadCss();
+        // La CSS de Quill est posée en <link> par templates/segments/_feuilles_de_l_application.html.twig
+        // (servie par nous : la CSP n'admet aucun hôte externe).
 
         // Configuration de la barre d'outils avec les options demandées (mise en forme, couleur, etc.)
         const toolbarOptions = [
@@ -72,17 +73,4 @@ export default class extends Controller {
         // La méthode de nettoyage est volontairement laissée vide pour garantir que l'éditeur s'affiche.
         // Nous reviendrons sur le nettoyage dans un second temps, une fois la fonctionnalité restaurée.
     }
-
-    /**
-     * Charge le fichier CSS de Quill si ce n'est pas déjà fait.
-     */
-    _loadCss() {
-        if (document.getElementById('quill-css')) return;
-        const link = document.createElement('link');
-        link.id = 'quill-css';
-        link.rel = 'stylesheet';
-        link.href = 'https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css';
-        document.head.appendChild(link);
-    }
-
 }

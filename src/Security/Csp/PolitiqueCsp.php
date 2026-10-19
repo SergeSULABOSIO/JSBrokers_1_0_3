@@ -25,14 +25,6 @@ final class PolitiqueCsp
     public const ROUTE_DES_RAPPORTS = '/api/journal/csp';
     public const GROUPE_DES_RAPPORTS = 'csp';
 
-    /**
-     * PROVISOIRE (chantier 9, commit 2) : Quill et la CSS Bootstrap viennent encore de
-     * jsDelivr, et le polyfill es-module-shims de ga.jspm.io. Ils seront servis par nous ;
-     * ces hôtes disparaîtront alors de la politique.
-     */
-    private const HOTES_PROVISOIRES_SCRIPTS = ['https://cdn.jsdelivr.net', 'https://ga.jspm.io'];
-    private const HOTES_PROVISOIRES_STYLES = ['https://cdn.jsdelivr.net'];
-
     /** Report-Only tant que Serge n'a pas parcouru la liste de contrôle (commit 6). */
     public const APPLIQUEE = false;
 
@@ -51,8 +43,10 @@ final class PolitiqueCsp
     {
         $directives = [
             'default-src' => ["'self'"],
-            'script-src' => ["'self'", "'nonce-" . $nonce . "'", "'report-sample'", ...self::HOTES_PROVISOIRES_SCRIPTS],
-            'style-src' => ["'self'", "'unsafe-inline'", ...self::HOTES_PROVISOIRES_STYLES],
+            // Aucun hôte externe : Bootstrap, Quill et le polyfill es-module-shims sont servis
+            // par nous (assets/vendor/). Un hôte ajouté ici rouvre la porte à tout ce qu'il sert.
+            'script-src' => ["'self'", "'nonce-" . $nonce . "'", "'report-sample'"],
+            'style-src' => ["'self'", "'unsafe-inline'"],
             'img-src' => ["'self'", 'data:'],
             'font-src' => ["'self'", 'data:'],
             'connect-src' => ["'self'"],

@@ -243,8 +243,10 @@ Inscrits le 2026-10-17, à la clôture du chantier 1 (constats faits en route, p
 9. 🔄 **EN COURS (plan v2 approuvé le 2026-10-19) — CSP, APPLIQUÉE avant l'ouverture aux
    clients.**
    - **Commit 1 FAIT** : Report-Only, nonce, collecte `/api/journal/csp` (règles au §4).
+   - **Commit 2 FAIT** : plus aucun site extérieur. Quill, Bootstrap 5.3.6 et es-module-shims
+     sont vendorisés. Garde-fous : liste blanche exacte de la politique, aucune adresse
+     absolue dans `templates/` et `assets/`.
    - **Restent** :
-     - commit 2 : plus aucun hôte externe (Quill, Bootstrap 5.3.6 local, es-module-shims) ;
      - commits 3 et 4 : convertir les 110 gestionnaires `on…=` (47 gestes génériques →
        contrôleur `geste` ; 63 appels `window.db*` et 3 `onclick` fabriqués dans `app.js` →
        contrôleur `tableau-de-bord` par délégation) ;
@@ -255,7 +257,10 @@ Inscrits le 2026-10-17, à la clôture du chantier 1 (constats faits en route, p
    - **À la bascule** :
      - `form-action 'self'` bloquera la redirection vers un prestataire de paiement réel
        (`TokenController.php:169`) : déclarer son hôte ;
-     - un `on…=` n'est signalé qu'au clic, il faut donc le cliquer pour le voir.
+     - un `on…=` n'est signalé qu'au clic, il faut donc le cliquer pour le voir ;
+     - sur un navigateur sans importmap (Safari < 16.4), le polyfill es-module-shims fabrique
+       des modules `blob:`, que `script-src` refuse. Ces navigateurs ne chargeront plus
+       l'application : à accepter ou à traiter avant la bascule.
 10. ✅ **FAIT (2026-10-19) — `$e->getMessage()` à l'écran.** 13 sites routés par
     `MessageDErreur::pourLEcran` (règle au §4) ; fuite prouvée et corrigée (aperçu de bordereau :
     chemin du serveur à l'écran). Reste hors chantier : `ControllerUtilsTrait::executerLaSuppression`
@@ -283,3 +288,19 @@ Inscrits le 2026-10-17, à la clôture du chantier 1 (constats faits en route, p
     de routes XML (`config/routes/framework.yaml`, `web_profiler.yaml`), `UrlType` sans
     `default_protocol` (`AssureurType`, `EntrepriseType`), `#[TaggedIterator]` (5 fichiers de
     `src/Services/Canvas`), `ux-toggle-password` déprécié.
+
+Inscrit le 2026-10-19 (revue du chantier 9, décision de Serge) :
+
+13. **Fichiers téléversés servis sans CSP.**
+    - **Constat** : `public/uploads/documents` est servi directement par Apache, donc hors PHP
+      et hors `PolitiqueCsp`.
+      - le namer Vich (`SmartUniqueNamer`) garde l'extension d'origine ;
+      - aucune contrainte de type MIME n'est posée dans `DocumentType` ;
+      - un `.html` ou un `.svg` téléversé s'exécuterait donc depuis NOTRE origine.
+    - **Exploitabilité** : limitée, car le nom du fichier est difficile à deviner.
+    - **Ce qui protège déjà** : `public/uploads/.htaccess` interdit l'EXÉCUTION de PHP, mais
+      pas le rendu d'un HTML.
+    - **Piste** : `Header set Content-Security-Policy "default-src 'none'; sandbox"` dans ce
+      `.htaccess`, et/ou `Content-Disposition: attachment` pour les types actifs.
+    - **⚠ À tester d'abord** : une CSP `sandbox` peut empêcher Chrome d'AFFICHER un PDF en ligne.
+      Vérifier l'aperçu des documents avant de livrer.

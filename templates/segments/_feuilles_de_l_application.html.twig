@@ -10,3 +10,6 @@
 <link rel="stylesheet" href="{{ asset('styles/interactive-menu.css') }}">
 <link rel="stylesheet" href="{{ asset('vendor/tom-select/dist/css/tom-select.bootstrap5.css') }}">
 <link rel="stylesheet" href="{{ asset('@symfony/ux-toggle-password/style.min.css') }}">
+{# Quill (éditeur de texte riche) : en dernier, comme quand rich-text_controller l'ajoutait à
+   la fin du <head> — ses règles gardent la même priorité. Vendorisé, plus de CDN. #}
+<link rel="stylesheet" href="{{ asset('vendor/quill/dist/quill.snow.css') }}">
