@@ -196,8 +196,9 @@ final class VeilleErreursNavigateurTest extends TestCase
 
         // Le socle commun charge le point d'entrée unique.
         $socle = (string) file_get_contents($racine . '/base.html.twig');
+        // `importmap('app'` sans la parenthèse fermante : l'appel porte le nonce de la CSP.
         self::assertStringContainsString(
-            "importmap('app')",
+            "importmap('app'",
             $socle,
             'templates/base.html.twig doit rester le seul point de chargement de app.js.'
         );

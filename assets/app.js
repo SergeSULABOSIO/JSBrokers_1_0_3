@@ -14,8 +14,8 @@ import './bootstrap.js';
  * This file will be included onto the page via the importmap() Twig function,
  * which should already be in your base.html.twig.
  */
-import './styles/app.css';
-import './styles/interactive-menu.css';
+// Les feuilles de style ne s'importent PAS ici : templates/segments/_feuilles_de_l_application.html.twig
+// (une CSS importée devient un script `data:` que la CSP bloque).
 // Correctif global des menus d'autocomplétion (champs relation) dans les dialogues.
 import './autocomplete-dropdown-global.js';
 import { Chart } from 'chart.js';

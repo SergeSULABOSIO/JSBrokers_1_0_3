@@ -24,3 +24,13 @@ framework:
             limit: 3
             interval: '1 day'
             lock_factory: null
+
+        # LES RAPPORTS DE VIOLATION DE LA CSP (`POST /api/journal/csp`, route publique).
+        # Une page qui viole la politique en envoie un par violation, et une page chargée
+        # en rafale peut en envoyer des dizaines : 300 par heure et par adresse laissent
+        # passer un vrai défaut, pas un déluge. Au-delà, rien n'est enregistré (204 quand même).
+        csp_par_ip:
+            policy: sliding_window
+            limit: 300
+            interval: '1 hour'
+            lock_factory: null

@@ -2,7 +2,7 @@
    JS inline des rendus autonomes du SOA (accordéon des sections, infobulles,
    auto-impression via ?print). Partagé entre l'aperçu courtier et la page publique.
 #}
-<script>
+<script nonce="{{ csp_nonce() }}">
     document.addEventListener('DOMContentLoaded', function () {
         /* ── Toggle accordéon des sections ── */
         var sections = document.querySelectorAll('.soa-container > section');

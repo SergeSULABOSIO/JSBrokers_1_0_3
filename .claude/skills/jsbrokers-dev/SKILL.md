@@ -127,6 +127,17 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   `tests/Security/MessagesDErreurTest.php` (inventaire motivé des `getMessage()` de `src/`).
 - Les cookies s'écrivent et se lisent par `assets/controllers/cookies.js`, et nulle part ailleurs.
 - Asset Mapper : aucune compilation. En dev, rien à builder ; en E2E, ne pas laisser `public/assets`.
+- **CSP** (chantier 9, politique dans `App\Security\Csp\PolitiqueCsp`, nulle part ailleurs) :
+  - tout `<script>` inline porte `nonce="{{ csp_nonce() }}"`, et `importmap()` reçoit
+    `{nonce: csp_nonce()}` (test statique `PolitiqueCspTest`) ;
+  - **une CSS ne s'importe jamais depuis le JS** : AssetMapper en ferait un module
+    `data:application/javascript,` que `script-src` refuse. Les feuilles vont dans
+    `templates/segments/_feuilles_de_l_application.html.twig` ; un `autoimport` CSS de
+    `controllers.json` reste à `false`. N'ajoutez JAMAIS `data:` à `script-src` ;
+  - le nonce n'entre jamais dans `style-src` (il y annulerait `'unsafe-inline'`) ;
+  - les rapports (`/api/journal/csp`) passent par `App\Supervision\AdresseDuNavigateur` :
+    adresses sans requête, fragment, jeton ni identifiant. Ils n'envoient jamais d'e-mail
+    (`alerter: false`), car n'importe qui peut en fabriquer.
 
 ## 5. Procédure de test
 
@@ -229,14 +240,22 @@ Inscrits le 2026-10-16 (décisions de Serge), après l'inventaire fait pour la s
 
 Inscrits le 2026-10-17, à la clôture du chantier 1 (constats faits en route, prouvés) :
 
-9. **CSP, d'abord en `Content-Security-Policy-Report-Only`**, avec un point de collecte des
-   violations. Aucun en-tête CSP aujourd'hui (`public/.htaccess` ne pose que
-   `Permissions-Policy`). Recensement à résorber avant d'appliquer : 91 gestionnaires `on…=`
-   dans les gabarits et 4 dans des chaînes JS (dont les `onclick` des tableaux de production
-   d'`assets/app.js`), 12 `<script>` inline, 1 610 attributs `style=` (qui imposeront
-   `style-src 'unsafe-inline'` au début). Quill est chargé depuis jsDelivr
-   (`rich-text_controller.js:2`, CSS :84) : le vendoriser par `importmap:require`, ou l'autoriser
-   explicitement.
+9. 🔄 **EN COURS (plan v2 approuvé le 2026-10-19) — CSP, APPLIQUÉE avant l'ouverture aux
+   clients.**
+   - **Commit 1 FAIT** : Report-Only, nonce, collecte `/api/journal/csp` (règles au §4).
+   - **Restent** :
+     - commit 2 : plus aucun hôte externe (Quill, Bootstrap 5.3.6 local, es-module-shims) ;
+     - commits 3 et 4 : convertir les 110 gestionnaires `on…=` (47 gestes génériques →
+       contrôleur `geste` ; 63 appels `window.db*` et 3 `onclick` fabriqués dans `app.js` →
+       contrôleur `tableau-de-bord` par délégation) ;
+     - commit 5 : garde-fous ;
+     - commit 6 : liste de contrôle actionnable parcourue par Serge, puis bascule
+       (`PolitiqueCsp::APPLIQUEE`).
+   - **CIBLE** : retirer `style-src 'unsafe-inline'` quand les ~1 600 `style=` auront migré.
+   - **À la bascule** :
+     - `form-action 'self'` bloquera la redirection vers un prestataire de paiement réel
+       (`TokenController.php:169`) : déclarer son hôte ;
+     - un `on…=` n'est signalé qu'au clic, il faut donc le cliquer pour le voir.
 10. ✅ **FAIT (2026-10-19) — `$e->getMessage()` à l'écran.** 13 sites routés par
     `MessageDErreur::pourLEcran` (règle au §4) ; fuite prouvée et corrigée (aperçu de bordereau :
     chemin du serveur à l'écran). Reste hors chantier : `ControllerUtilsTrait::executerLaSuppression`

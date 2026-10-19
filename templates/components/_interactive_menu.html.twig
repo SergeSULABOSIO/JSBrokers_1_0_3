@@ -72,7 +72,7 @@
        lui aussi être servi. Une seule condition ici : replier ne peut pas
        rendre l'espace de travail inutilisable, la navigation reste entière
        dans le panneau flottant. #}
-    <script>
+    <script nonce="{{ csp_nonce() }}">
         (function (racine) {
             try {
                 var id = racine.dataset.workspaceManagerIdEntrepriseValue;

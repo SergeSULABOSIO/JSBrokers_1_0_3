@@ -1,0 +1,12 @@
+{# LES FEUILLES DE STYLE DE L'APPLICATION — posées en <link>, jamais importées par le JS.
+
+   Une CSS importée par un module (`import './styles/app.css'`, ou l'`autoimport` de
+   controllers.json) devient dans l'importmap un pseudo-script `data:application/javascript,`
+   (ImportMapRenderer:89 et :178) : la CSP le bloque, puisque `script-src` n'admet pas
+   `data:` — et ne doit pas l'admettre, un <script src="data:…"> injecté s'exécuterait.
+   Même ordre qu'avant (celui que rendait importmap()), juste avant l'importmap.
+   Garde-fou : PolitiqueCspTest (aucun `data:` dans l'importmap). #}
+<link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+<link rel="stylesheet" href="{{ asset('styles/interactive-menu.css') }}">
+<link rel="stylesheet" href="{{ asset('vendor/tom-select/dist/css/tom-select.bootstrap5.css') }}">
+<link rel="stylesheet" href="{{ asset('@symfony/ux-toggle-password/style.min.css') }}">

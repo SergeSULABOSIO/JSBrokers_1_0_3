@@ -59,6 +59,11 @@ final class EnregistreurDErreurs
      * chaîne Monolog, elle, aura quand même prévenu.
      *
      * @param array<string, mixed> $contexte
+     * @param bool                 $alerter false : compté et visible dans la console, jamais
+     *                                      d'e-mail. Pour ce qu'un tiers peut fabriquer à volonté
+     *                                      depuis une route publique (violations de la CSP) : sans
+     *                                      quoi un rapport forgé deviendrait un e-mail d'alerte,
+     *                                      et une rafale, un déluge sur le quota d'envoi du domaine.
      */
     public function enregistrer(
         string $cote,
@@ -69,6 +74,7 @@ final class EnregistreurDErreurs
         ?int $ligne = null,
         ?string $trace = null,
         array $contexte = [],
+        bool $alerter = true,
     ): ?ErreurApplicative {
         // GARDE 1 : une base fermée ou absente rend toute écriture impossible.
         // On sort en silence plutôt que de lever une exception par-dessus celle
@@ -113,7 +119,9 @@ final class EnregistreurDErreurs
             // L'envoi a lieu APRÈS l'écriture : si le courrier échoue, le
             // comptage est déjà acquis. L'inverse perdrait la donnée pour
             // sauver un message.
-            if ($regression) {
+            if (!$alerter) {
+                // Rien : la console de supervision le montre, avec son compteur.
+            } elseif ($regression) {
                 $this->prevenir('RÉGRESSION', $erreur, "Ce défaut avait été marqué résolu. Il vient de reparaître : le correctif n'a pas tenu.");
             } elseif (null !== $palier && !$premiere) {
                 $this->prevenir('AGGRAVATION', $erreur, sprintf('Ce défaut vient de franchir %d occurrences.', $palier));

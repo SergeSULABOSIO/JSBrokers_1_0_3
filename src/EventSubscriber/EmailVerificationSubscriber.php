@@ -51,6 +51,10 @@ class EmailVerificationSubscriber implements EventSubscriberInterface
         // connecté mais non vérifié (sinon il serait renvoyé en boucle vers la re-vérif).
         'app_forgot_password',
         'app_reset_password',
+        // Collectes du navigateur (erreurs JS, violations de la CSP) : un rapport part avec
+        // les cookies ; redirigé, il serait perdu et empilerait un flash en session.
+        'api.journal.navigateur',
+        'api.journal.csp',
     ];
 
     public function __construct(

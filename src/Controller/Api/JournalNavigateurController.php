@@ -4,6 +4,7 @@ namespace App\Controller\Api;
 
 use App\Entity\ErreurApplicative;
 use App\Entity\Utilisateur;
+use App\Supervision\AdresseDuNavigateur;
 use App\Supervision\EnregistreurDErreurs;
 use App\Supervision\OrigineErreur;
 use Psr\Cache\CacheItemPoolInterface;
@@ -78,14 +79,15 @@ class JournalNavigateurController extends AbstractController
             }
 
             $utilisateur = $this->getUser();
-            $page = self::texte($charge['page'] ?? null, 500);
+            // Sans requête, fragment ni jeton (`/soa/{jeton}`) : cf. AdresseDuNavigateur.
+            $page = AdresseDuNavigateur::anonymisee(self::texte($charge['page'] ?? null, 500));
 
             $this->enregistreur->enregistrer(
                 cote: ErreurApplicative::COTE_NAVIGATEUR,
                 branche: $this->origine->depuisUrl($page),
                 type: self::texte($charge['type'] ?? null, 180) ?? 'Erreur',
                 message: $message,
-                fichier: $fichier,
+                fichier: AdresseDuNavigateur::anonymisee($fichier),
                 ligne: self::entier($charge['ligne'] ?? null),
                 trace: self::texte($charge['trace'] ?? null, 20000),
                 contexte: [
@@ -122,10 +124,8 @@ class JournalNavigateurController extends AbstractController
             return true;
         }
 
-        foreach (['chrome-extension://', 'moz-extension://', 'safari-web-extension://', 'safari-extension://', 'webkit-masked-url:', 'about:blank'] as $etranger) {
-            if (str_starts_with($fichier, $etranger)) {
-                return false;
-            }
+        if (AdresseDuNavigateur::estEtrangere($fichier)) {
+            return false;
         }
 
         // Un script servi par un autre domaine n'est pas notre code.
@@ -139,10 +139,9 @@ class JournalNavigateurController extends AbstractController
     /**
      * Limitation de débit, par adresse et par heure.
      *
-     * Le cache de l'application plutôt que symfony/rate-limiter : le composant
-     * n'est pas installé, et ajouter une dépendance à une branche de Symfony en
-     * fin de vie pour un compteur de trente coûterait plus cher que ce qu'il
-     * rapporte. Le projet a déjà ce motif dans src/Ai/Debit/BudgetDebit.php.
+     * Le cache de l'application, écrit avant que symfony/rate-limiter n'entre au
+     * projet (il sert désormais le formulaire de contact et la collecte CSP,
+     * `config/packages/rate_limiter.yaml`). Même motif que src/Ai/Debit/BudgetDebit.php.
      *
      * Un cache indisponible ne bloque RIEN : on préfère un rapport de trop à un
      * rapport perdu.
