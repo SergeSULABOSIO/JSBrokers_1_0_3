@@ -22,9 +22,6 @@ return [
     '@symfony/stimulus-bundle' => [
         'path' => './vendor/symfony/stimulus-bundle/assets/dist/loader.js',
     ],
-    '@hotwired/turbo' => [
-        'version' => '7.3.0',
-    ],
     'tom-select' => [
         'version' => '2.3.1',
     ],
@@ -34,9 +31,6 @@ return [
     ],
     'chart.js' => [
         'version' => '3.9.1',
-    ],
-    'tinymce' => [
-        'version' => '7.9.1',
     ],
     'bootstrap' => [
         'version' => '5.3.6',
@@ -60,7 +54,7 @@ return [
         'version' => '18.0.6',
     ],
     'dompurify' => [
-        'version' => '3.4.12',
+        'version' => '3.4.16',
     ],
     'html2canvas' => [
         'version' => '1.4.1',

@@ -9,16 +9,6 @@
     array (
     ),
   ),
-  '@hotwired/turbo' => 
-  array (
-    'version' => '7.3.0',
-    'dependencies' => 
-    array (
-    ),
-    'extraFiles' => 
-    array (
-    ),
-  ),
   'tom-select' => 
   array (
     'version' => '2.3.1',
@@ -42,16 +32,6 @@
   'chart.js' => 
   array (
     'version' => '3.9.1',
-    'dependencies' => 
-    array (
-    ),
-    'extraFiles' => 
-    array (
-    ),
-  ),
-  'tinymce' => 
-  array (
-    'version' => '7.9.1',
     'dependencies' => 
     array (
     ),
@@ -120,16 +100,6 @@
     array (
     ),
   ),
-  'dompurify' => 
-  array (
-    'version' => '3.4.12',
-    'dependencies' => 
-    array (
-    ),
-    'extraFiles' => 
-    array (
-    ),
-  ),
   'html2canvas' => 
   array (
     'version' => '1.4.1',
@@ -168,6 +138,16 @@
   'es-module-shims' => 
   array (
     'version' => '1.10.0',
+    'dependencies' => 
+    array (
+    ),
+    'extraFiles' => 
+    array (
+    ),
+  ),
+  'lodash-es' => 
+  array (
+    'version' => '4.18.1',
     'dependencies' => 
     array (
     ),
@@ -238,9 +218,9 @@
     array (
     ),
   ),
-  'lodash-es' => 
+  'dompurify' => 
   array (
-    'version' => '4.18.1',
+    'version' => '3.4.16',
     'dependencies' => 
     array (
     ),
