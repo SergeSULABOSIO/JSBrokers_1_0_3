@@ -40,6 +40,7 @@ class MessagesDErreurTest extends TestCase
         'src/Controller/Console/EvaluationController.php' => [1, self::JOURNAL],
         'src/Controller/Api/PaymentWebhookController.php' => [1, self::JOURNAL],
         'src/EventListener/CabinetFermeListener.php' => [1, 'AucunCabinetOuvertException (métier)'],
+        'src/EventListener/HoteInconnuListener.php' => [2, 'reconnaît le refus « Untrusted Host » et le trace en INFO ; l\'écran reçoit un texte fixe'],
         'src/Service/Workspace/WorkspaceMutationService.php' => [2, 'NoteNonValidable et erreurs de formulaire (métier)'],
         'src/Echange/Service/ImportateurJsbx.php' => [1, 'ClasseurIllisibleException (métier) au rapport'],
         'src/Echange/Etat/ProducteurDeLEtat.php' => [1, self::JOURNAL],

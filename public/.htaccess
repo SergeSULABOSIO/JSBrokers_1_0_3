@@ -39,6 +39,18 @@ Options -Indexes -MultiViews
     RewriteRule ^ /maintenance.html [R=503,L]
     ErrorDocument 503 /maintenance.html
 
+    # ---- 0 bis. SOUS-DOMAINES → LE SITE ----------------------------------------
+    # cPanel sert « mail.joseara.com » (et d'autres alias) depuis CE dossier. Symfony
+    # n'accepte que joseara.com et www.joseara.com (trusted_hosts) : chaque visite de
+    # mail.joseara.com finissait en « Untrusted Host » — un ERROR, donc un e-mail d'alerte
+    # toutes les cinq minutes (2026-10-19). On renvoie ces sous-domaines vers le site AVANT
+    # PHP. /.well-known/ reste servi : c'est là que la validation des certificats (AutoSSL)
+    # dépose et lit ses fichiers. Ne touche ni localhost ni le serveur d'essai.
+    RewriteCond %{HTTP_HOST} \.joseara\.com$ [NC]
+    RewriteCond %{HTTP_HOST} !^(www\.)?joseara\.com$ [NC]
+    RewriteCond %{REQUEST_URI} !^/\.well-known/
+    RewriteRule ^ https://www.joseara.com%{REQUEST_URI} [L,R=301]
+
     # ---- 1. NOM CANONIQUE ET HTTPS -----------------------------------------
     # ⚠ NE DÉCOMMENTER QUE SI l'option « Force HTTPS Redirect » de cPanel
     #   (Domaines → joseara.com) est LAISSÉE ÉTEINTE. Les deux ensemble
