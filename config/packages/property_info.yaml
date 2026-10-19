@@ -1,0 +1,6 @@
+# Symfony 7.3+ demande de choisir explicitement. `false` = le comportement d'avant la montée
+# en 7.4 (lot 12-B) : l'extraction de types par le constructeur changerait ce que le
+# sérialiseur produit (fiches de Ket, groupes list:read). À réévaluer avant Symfony 8.
+framework:
+    property_info:
+        with_constructor_extractor: false

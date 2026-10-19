@@ -144,6 +144,15 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   `publier` fait le `git pull` AVANT `deploy.sh` : les dépendances se réinstallent sur
   l'empreinte de `composer.lock` (`vendor/.composer-lock.sha1`). **Prévenir Serge de tout commit
   qui modifie `composer.lock`.**
+- **Montée de version de Symfony** : `cache:clear` ne suffit pas toujours — des fichiers du pool
+  `cache.system` à l'ancien format ont survécu en local (500 sur toute icône en 7.4). `deploy.sh`
+  vide ce pool entre `cache:clear` et `cache:warmup` (`CachesInternesAuDeploiementTest`). Avant
+  de livrer une montée, rejouer la séquence de `deploy.sh` en `APP_ENV=prod APP_DEBUG=0` sur le
+  conteneur prod compilé par l'ancienne version (les commandes d'avant l'étape 7 tournent dessus).
+- **Tests et Symfony 7.4** : la page d'erreur de débogage lit les journaux de tout le processus ;
+  `tests/Support/JournauxDeDebogageParRequete` (env test) les remet à zéro à chaque requête.
+  `HttpKernelBrowser` capture une réponse dans son propre tampon : `FluxNdjson` ne ferme que les
+  tampons de PHP.
 - Vérifications faites en production (chantier 1) : requêtes REGEXP de détection des charges
   dans les champs texte (lecture seule, phpMyAdmin) — aucune trace, contre-épreuve valide ;
   journal du limiteur du formulaire de contact `var/log/contact-AAAA-MM-JJ.log` (IP retenue =
@@ -218,5 +227,14 @@ Inscrits le 2026-10-17, à la clôture du chantier 1 (constats faits en route, p
 11. **La recherche fait un `LIKE` sur le HTML brut des champs riches**
     (`JSBDynamicSearchService:1095-1102`) : « strong » trouve tout texte en gras, et un mot
     coupé par une balise n'est pas trouvé.
-12. **`composer audit` : 55 avis de sécurité** sur les dépendances (2026-10-16) — à trier, mettre
-    à jour par lots testés.
+12. ✅ **FAIT (2026-10-18/19) — dépendances : 60 avis → 0.** 12-A : correctifs sans changer de
+    Symfony (dont le cookie « se souvenir de moi » et l'XSS d'ux-autocomplete ; options riches
+    gardées par `AutocompleteLibelleHtmlExtension`). 12-B : Symfony 7.1 → **7.4 LTS** (maintenu
+    jusqu'en 2029). Recettes Flex relues : `csrf.yaml` (CSRF sans état) NON retenu — un
+    `recipes:update` le recréerait, à refuser ; `property_info.with_constructor_extractor: false`.
+    Reste pour Symfony 8 (dépréciations du projet) : options de contraintes en tableau
+    (`RegistrationFormType`, `ChangePasswordFormType`), `Utilisateur::eraseCredentials()`,
+    `RateLimiterFactory` → `RateLimiterFactoryInterface` (`GardeDuFormulaireDeContact`), imports
+    de routes XML (`config/routes/framework.yaml`, `web_profiler.yaml`), `UrlType` sans
+    `default_protocol` (`AssureurType`, `EntrepriseType`), `#[TaggedIterator]` (5 fichiers de
+    `src/Services/Canvas`), `ux-toggle-password` déprécié.

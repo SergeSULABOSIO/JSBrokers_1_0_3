@@ -47,9 +47,7 @@ final class FluxNdjson
     {
         @ini_set('zlib.output_compression', '0');
         @ini_set('implicit_flush', '1');
-        while (ob_get_level() > 0) {
-            @ob_end_flush();
-        }
+        self::fermerLesTamponsDePhp();
         ob_implicit_flush(true);
 
         echo str_repeat("\n", 2048);
@@ -61,13 +59,31 @@ final class FluxNdjson
     {
         echo json_encode($donnees, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE), "\n";
 
-        // On vide TOUS les niveaux de tampon, pas seulement le dernier : le serveur de
-        // développement en empile parfois plusieurs, et un seul niveau oublié suffit à
+        // On vide TOUS les niveaux de tampon de PHP, pas seulement le dernier : le serveur
+        // de développement en empile parfois plusieurs, et un seul niveau oublié suffit à
         // retenir la ligne.
+        self::fermerLesTamponsDePhp();
+        @flush();
+    }
+
+    /**
+     * Ferme les tampons de PHP lui-même (output_buffering, zlib, ob_gzhandler), qui
+     * retiendraient le flux jusqu'à la fin.
+     *
+     * ⚠ ON S'ARRÊTE AU PREMIER TAMPON POSÉ PAR DU CODE (une fermeture, une méthode) : c'est
+     * quelqu'un qui LIT le flux — le navigateur de test de Symfony 7.4 (HttpKernelBrowser
+     * capture la réponse dans le sien, et plantait en le refermant après qu'on le lui eut
+     * volé). En production, seuls les tampons de PHP entourent la réponse : rien ne change.
+     */
+    private static function fermerLesTamponsDePhp(): void
+    {
         while (ob_get_level() > 0) {
+            $gestionnaire = (string) (ob_get_status()['name'] ?? '');
+            if (str_contains($gestionnaire, '::') || stripos($gestionnaire, 'closure') !== false) {
+                return;
+            }
             @ob_end_flush();
         }
-        @flush();
     }
 
     /**

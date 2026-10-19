@@ -687,6 +687,12 @@ titre "7/11  Reconstruction du cache"
 # Les sessions vivent dans var/sessions (framework.yaml) : personne n'est
 # déconnecté par cette étape.
 executer "APP_ENV=prod APP_DEBUG=0 $PHP -d memory_limit=512M bin/console cache:clear --no-warmup"
+# LE POOL SYSTÈME, VIDÉ EXPLICITEMENT (incident de la montée Symfony 7.4, 2026-10-19) : des
+# fichiers écrits par l'ancienne version avaient survécu à cache:clear, et la nouvelle les
+# relisait de travers (500 sur toute page portant une icône). Ce pool (métadonnées, icônes,
+# sérialiseur) se reconstruit seul au préchauffage ; les données (sessions, limiteurs,
+# supervision) n'y vivent pas.
+executer "APP_ENV=prod APP_DEBUG=0 $PHP -d memory_limit=512M bin/console cache:pool:clear cache.system_clearer"
 executer "APP_ENV=prod APP_DEBUG=0 $PHP -d memory_limit=512M bin/console cache:warmup"
 ok "Cache de production reconstruit et prechauffe"
 

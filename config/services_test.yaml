@@ -26,6 +26,10 @@ services:
         autoconfigure: true
         public: true
 
+    # Symfony 7.4 : la page d'erreur de débogage montrait les journaux de tout le processus,
+    # semis du test compris. Chaque requête repart de journaux vides (voir la classe).
+    App\Tests\Support\JournauxDeDebogageParRequete: ~
+
     App\Echange\Canevas\CanevasDEchange: ~
     App\Echange\Canevas\OrdreTopologique: ~
     App\Echange\Classeur\EcrivainJsbx: ~
