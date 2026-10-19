@@ -42,13 +42,23 @@ diffusée** : voir « Avant d'ouvrir au public » plus bas.
 Dans **cPanel → Terminal** :
 
 ```bash
-cd ~/joseara && git pull origin master && bash bin/deploy.sh
+cd ~/joseara && bash bin/deploy.sh
 ```
+
+PAS de `git pull` avant : `deploy.sh` récupère lui-même la version visée, et se relance
+dans sa nouvelle version s'il a changé. Un `git pull` échoue dès qu'un commit touche
+`public/.htaccess`, que le serveur porte toujours modifié (blocs de l'hébergeur).
 
 Un raccourci évite de s'en souvenir — à créer une seule fois :
 
 ```bash
-echo "alias publier='cd ~/joseara && git pull origin master && bash bin/deploy.sh'" >> ~/.bashrc && source ~/.bashrc
+echo "alias publier='cd ~/joseara && bash bin/deploy.sh'" >> ~/.bashrc && source ~/.bashrc
+```
+
+Pour remplacer l'ancien raccourci (celui qui faisait `git pull`) :
+
+```bash
+sed -i '/^alias publier=/d' ~/.bashrc && echo "alias publier='cd ~/joseara && bash bin/deploy.sh'" >> ~/.bashrc && source ~/.bashrc && type publier
 ```
 
 Ensuite, il suffit de taper `publier`.

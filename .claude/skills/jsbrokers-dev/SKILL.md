@@ -141,9 +141,16 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   `git push JSBrokers_1_0_3 master` (pas d'`origin`).
 - L'utilisateur commite aussi depuis son poste : toujours `fetch` avant de commiter.
 - Mise en production : `bin/deploy.sh` + `bin/publier.ps1` ; jamais `git clean` ni `rm -rf var/`.
-  `publier` fait le `git pull` AVANT `deploy.sh` : les dépendances se réinstallent sur
-  l'empreinte de `composer.lock` (`vendor/.composer-lock.sha1`). **Prévenir Serge de tout commit
-  qui modifie `composer.lock`.**
+  Les dépendances se réinstallent sur l'empreinte de `composer.lock`
+  (`vendor/.composer-lock.sha1`). **Prévenir Serge de tout commit qui modifie `composer.lock`.**
+- **`publier` = `cd ~/joseara && bash bin/deploy.sh`, SANS `git pull`** (2026-10-19) : le
+  `.htaccess` du serveur porte toujours les blocs de l'hébergeur, et un `git pull` échoue dès
+  qu'un commit touche ce fichier. `deploy.sh` récupère la version visée et se relance dans sa
+  propre nouvelle version. Sur le serveur, ne JAMAIS `git checkout`/`git stash` le `.htaccess`
+  (le bloc `alt-php82` partirait → 500). Tout commit qui touche `public/.htaccess` : le dire.
+- **Hôtes** : `trusted_hosts` (prod) n'admet que joseara.com et www ; les sous-domaines que
+  cPanel sert depuis le dossier du site (`mail.`…) sont renvoyés par `.htaccess`, les autres
+  hôtes reçoivent un 400 journalisé en INFO (`HoteInconnuListener`) — pas d'alerte.
 - **Montée de version de Symfony** : `cache:clear` ne suffit pas toujours — des fichiers du pool
   `cache.system` à l'ancien format ont survécu en local (500 sur toute icône en 7.4). `deploy.sh`
   vide ce pool entre `cache:clear` et `cache:warmup` (`CachesInternesAuDeploiementTest`). Avant

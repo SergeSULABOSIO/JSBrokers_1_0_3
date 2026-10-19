@@ -241,6 +241,32 @@ trap sortie_propre EXIT
 
 cd "$APP_DIR"
 
+# ---------------------------------------------------------------------------
+# CE SCRIPT SE MET À JOUR LUI-MÊME, AVANT TOUT GESTE.
+#
+# L'alias `publier` faisait `git pull` avant d'appeler ce script, pour que la version
+# PUBLIÉE de deploy.sh soit celle qui tourne. Mais le .htaccess du serveur porte les blocs
+# de l'hébergeur (remis à l'étape 4) : dès qu'un commit touche public/.htaccess, `git pull`
+# refuse d'écraser la copie locale et la publication s'arrête (2026-10-19). Le `git pull`
+# n'est plus nécessaire : on lit ici la version visée de ce script et, si elle diffère de
+# celle qui tourne, on la relance — rien n'a encore été touché (ni maintenance, ni
+# sauvegarde). Une seule relance (JOSEARA_DEPLOY_RELANCE). Pas pour un retour arrière :
+# l'ancienne version d'un script n'a pas à remplacer la courante.
+# ---------------------------------------------------------------------------
+if [ "$SKIP_GIT" -eq 0 ] && [ -z "$ROLLBACK" ] && [ -z "${JOSEARA_DEPLOY_RELANCE:-}" ]; then
+  git fetch --prune --tags "$DEPOT" >>"$JOURNAL" 2>&1 || true
+  SCRIPT_VISE="$(mktemp)"
+  if git show "${REF:-$DEPOT/$BRANCHE}:bin/deploy.sh" > "$SCRIPT_VISE" 2>/dev/null \
+     && [ -s "$SCRIPT_VISE" ] && ! cmp -s "$SCRIPT_VISE" "$APP_DIR/bin/deploy.sh"; then
+    info "deploy.sh a change dans la version visee : la nouvelle version prend le relais."
+    trap - EXIT
+    JOSEARA_DEPLOY_RELANCE=1 exec bash "$SCRIPT_VISE" "$@"
+  fi
+  rm -f "$SCRIPT_VISE"
+fi
+# La copie relancée s'efface d'elle-même (bash garde le fichier ouvert : sans effet sur la suite).
+[ -n "${JOSEARA_DEPLOY_RELANCE:-}" ] && [ "$0" != "$APP_DIR/bin/deploy.sh" ] && rm -f "$0"
+
 # ===========================================================================
 titre "1/11  Verifications prealables"
 # ===========================================================================
