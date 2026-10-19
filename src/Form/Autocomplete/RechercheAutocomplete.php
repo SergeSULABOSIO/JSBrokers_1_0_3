@@ -31,22 +31,27 @@ final class RechercheAutocomplete
     {
         return static function (QueryBuilder $qb, string $saisie) use ($champs): void {
             $qb->setMaxResults(self::PROPOSITIONS);
-            $motif = JSBDynamicSearchService::motifLike($saisie);
-            if ($motif === null) {
+            if (JSBDynamicSearchService::motifLike($saisie) === null) {
                 return; // rien de tapé : les premières propositions, comme le bundle
             }
             $alias = $qb->getRootAliases()[0];
-            $conditions = array_map(
-                static fn (string $champ): string => sprintf(
-                    "%s.%s LIKE :saisieAutocomplete ESCAPE '%s'",
-                    $alias,
-                    $champ,
+            $meta = $qb->getEntityManager()->getClassMetadata($qb->getRootEntities()[0]);
+
+            // Même lecture que les listes : le TEXTE d'un champ riche (TEXTE_DU_HTML), blancs
+            // réduits ; un champ simple tel quel. Un paramètre par sorte de champ.
+            $conditions = [];
+            foreach ($champs as $champ) {
+                $riche = JSBDynamicSearchService::estRiche($meta, $champ);
+                $parametre = $riche ? 'saisieAutocompleteRiche' : 'saisieAutocomplete';
+                $conditions[] = sprintf(
+                    "%s LIKE :%s ESCAPE '%s'",
+                    JSBDynamicSearchService::colonneCherchable($meta, $alias, $champ),
+                    $parametre,
                     JSBDynamicSearchService::ECHAPPEMENT_LIKE,
-                ),
-                $champs,
-            );
-            $qb->andWhere($qb->expr()->orX(...$conditions))
-                ->setParameter('saisieAutocomplete', $motif);
+                );
+                $qb->setParameter($parametre, JSBDynamicSearchService::motifLike($saisie, 'contains', $riche));
+            }
+            $qb->andWhere($qb->expr()->orX(...$conditions));
         };
     }
 }

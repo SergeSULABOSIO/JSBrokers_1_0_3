@@ -104,6 +104,16 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
     un texte simple reste intact (`striptags` coupait « A<B »). Rendu en HTML : `texteRicheSur`
     (DOMPurify, même liste blanche) ; Quill reçoit `formats: FORMATS_DE_LA_BARRE`.
   - L'export `.jsbx` garde le HTML : format d'échange ré-importable, réassaini au flush.
+  - **La recherche lit le TEXTE d'un champ riche** : fonction DQL `TEXTE_DU_HTML`
+    (`App\Doctrine\Fonction\TexteDuHtml`), choisie par `JSBDynamicSearchService::colonneCherchable()`
+    — seul point de décision, aussi pour les autocomplétions (`RechercheAutocomplete`).
+    **`TEXTE_DU_HTML` et `TexteRiche::lisible()`/`enTexte()` sont liés par un test de parité
+    (`TexteDuHtmlTest`) : modifier l'un impose de modifier l'autre.** Le même test vérifie que
+    toute entité que le sanitizer écrit est décodée par la base. L'argument est converti en
+    utf8mb4 d'abord (sinon « Illegal mix of collations » sous une connexion unicode_ci,
+    incident du 2026-10-19).
+- **LIKE** : un seul motif (`motifLike`, `ESCAPE '!'`) — `%`, `_`, `!` tapés sont du texte ; un
+  terme réduit à rien ne trouve rien.
 - **Ce qu'on relit du `localStorage` n'est pas sûr** : une icône passe par
   `icone-memorisee.js` (SVG inerte, sinon effacée), une URL d'onglet par `url-de-confiance.js`
   (même origine) avant tout `fetch` suivi d'un `innerHTML`.
@@ -231,9 +241,18 @@ Inscrits le 2026-10-17, à la clôture du chantier 1 (constats faits en route, p
     `MessageDErreur::pourLEcran` (règle au §4) ; fuite prouvée et corrigée (aperçu de bordereau :
     chemin du serveur à l'écran). Reste hors chantier : `ControllerUtilsTrait::executerLaSuppression`
     rend un texte générique sans journaliser la panne (le trait n'a pas de logger).
-11. **La recherche fait un `LIKE` sur le HTML brut des champs riches**
-    (`JSBDynamicSearchService:1095-1102`) : « strong » trouve tout texte en gras, et un mot
-    coupé par une balise n'est pas trouvé.
+11. ✅ **FAIT (2026-10-19) — la recherche lit le texte, pas le HTML** (règles au §4). Option A
+    retenue (conversion à la lecture, pas de migration) sur mesures : prod ≤ 43 fiches par
+    rubrique riche et par cabinet, coût ≈ 0,16 ms par fiche convertie, filtre cabinet par
+    index (le coût suit le cabinet, pas la table). **CIBLE** : au-delà de ~2 000 fiches par
+    rubrique riche et par cabinet, passer à l'option **B** (texte précalculé à l'écriture dans
+    une table `texte_recherche`, écrit par l'écouteur d'assainissement ; une migration, une
+    commande de remplissage) — seul `colonneCherchable()` change. Piste écartée : le
+    **pré-filtre par mot** sur la colonne brute, qui n'est pas une condition nécessaire (un mot
+    contenant & < > ou un pleine-chasse est stocké encodé ; une balise au milieu d'un mot —
+    gras partiel — casse le mot). Écart connu, antérieur : la porte « champ simple » du service
+    ne vérifie pas que le champ existe dans les métadonnées (`$actualField`) — à traiter à part
+    (l'ignorer élargirait les résultats en silence).
 12. ✅ **FAIT (2026-10-18/19) — dépendances : 60 avis → 0.** 12-A : correctifs sans changer de
     Symfony (dont le cookie « se souvenir de moi » et l'XSS d'ux-autocomplete ; options riches
     gardées par `AutocompleteLibelleHtmlExtension`). 12-B : Symfony 7.1 → **7.4 LTS** (maintenu

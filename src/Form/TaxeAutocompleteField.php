@@ -4,6 +4,7 @@ namespace App\Form;
 
 use App\Entity\Taxe;
 use App\Form\Autocomplete\RechercheAutocomplete;
+use App\Service\TexteRiche\TexteRiche;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -30,7 +31,7 @@ class TaxeAutocompleteField extends AbstractType
             'choice_label' => fn (Taxe $taxe) => $this->rendu->libelle(
                 titre: $taxe->getCode() ?: 'Taxe',
                 contact: [
-                    $taxe->getDescription(),
+                    TexteRiche::lisible($taxe->getDescription()), // le TEXTE du HTML de l'éditeur
                     'IARD ' . ($taxe->getTauxIARD() !== null ? $taxe->tauxPourcentage(true)->format(2) . ' %' : '—'),
                     'VIE ' . ($taxe->getTauxVIE() !== null ? $taxe->tauxPourcentage(false)->format(2) . ' %' : '—'),
                 ],

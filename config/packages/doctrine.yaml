@@ -54,6 +54,11 @@ doctrine:
                 alias: App
         controller_resolver:
             auto_mapping: false
+        dql:
+            string_functions:
+                # Le texte d'un champ riche, lu par la base (recherche, chantier 11).
+                # Lié à TexteRiche::lisible() par TexteDuHtmlTest.
+                TEXTE_DU_HTML: App\Doctrine\Fonction\TexteDuHtml
 
 when@dev:
     doctrine:

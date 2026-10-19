@@ -4,6 +4,7 @@ namespace App\Services;
 
 
 use App\Entity\Entreprise;
+use App\Service\TexteRiche\ChampsEnTexteRiche;
 use App\Entity\ReversementRetroAgent;
 use App\Services\Search\AvenantEcheanceScope;
 use App\Services\Search\AvenantSuccessionScope;
@@ -139,15 +140,55 @@ class JSBDynamicSearchService
      * tout pris (un outil de Ket résolvant une référence « vide » serait tombé sur la seule
      * fiche du cabinet).
      */
-    public static function motifLike(mixed $terme, string $mode = 'contains'): ?string
+    public static function motifLike(mixed $terme, string $mode = 'contains', bool $texteRiche = false): ?string
     {
-        $texte = trim(str_replace("\u{00A0}", ' ', (string) $terme));
+        $texte = self::termeNormalise($terme, $texteRiche);
         if ($texte === '') {
             return null;
         }
         $echappe = strtr($texte, [self::ECHAPPEMENT_LIKE => '!!', '%' => '!%', '_' => '!_']);
 
         return $mode === 'starts' ? $echappe . '%' : '%' . $echappe . '%';
+    }
+
+    /**
+     * LA COLONNE TELLE QUE LA RECHERCHE LA LIT — seul point de décision (chantier 11).
+     *
+     * Un champ riche (registre ChampsEnTexteRiche) est stocké en HTML : on cherche son TEXTE
+     * (fonction DQL TEXTE_DU_HTML, liée à TexteRiche::lisible par TexteDuHtmlTest), sinon
+     * « strong » trouvait la fiche et « Relancer le client » ne la trouvait pas. Toute autre
+     * colonne est lue telle quelle. La classe vient TOUJOURS des métadonnées Doctrine, jamais
+     * d'une chaîne reçue du navigateur.
+     *
+     * Passer un jour à un texte précalculé (option B, au-delà de ~2 000 fiches par rubrique
+     * riche et par cabinet) ne toucherait qu'ici.
+     */
+    public static function colonneCherchable(ClassMetadata $meta, string $alias, string $champ): string
+    {
+        return self::estRiche($meta, $champ)
+            ? sprintf('TEXTE_DU_HTML(%s.%s)', $alias, $champ)
+            : $alias . '.' . $champ;
+    }
+
+    public static function estRiche(ClassMetadata $meta, string $champ): bool
+    {
+        return \in_array($champ, ChampsEnTexteRiche::de($meta->getName()), true);
+    }
+
+    /**
+     * Le terme tel qu'on le compare : bords retirés (espace insécable comprise) ; pour un
+     * champ RICHE, blancs réduits aussi — TEXTE_DU_HTML les réduit, sinon « Relancer  le
+     * client » ne trouverait pas « Relancer le client ». Un texte invalide en UTF-8
+     * (preg_replace rend null) garde sa forme : il ne trouvera simplement rien.
+     */
+    private static function termeNormalise(mixed $terme, bool $texteRiche): string
+    {
+        $texte = trim(str_replace("\u{00A0}", ' ', (string) $terme));
+        if ($texteRiche) {
+            $texte = trim((string) (preg_replace('/\s+/u', ' ', $texte) ?? $texte));
+        }
+
+        return $texte;
     }
 
     /** `colonne LIKE :parametre ESCAPE '!'` — la seule forme de LIKE du service. */
@@ -835,20 +876,29 @@ class JSBDynamicSearchService
                     continue;
                 }
 
+                // Deux motifs : un champ riche est lu blancs réduits, un champ simple tel quel.
+                $motifs = ['ouTexte' . $suffix => self::motifLike($texte), 'ouTexteRiche' . $suffix => self::motifLike($texte, 'contains', true)];
+                if ($motifs['ouTexte' . $suffix] === null) {
+                    $qb->andWhere('1 = 0'); // un terme réduit à rien ne trouve rien
+                    continue;
+                }
+
                 $orParts = [];
+                $parametres = [];
                 foreach ($champs as $champ) {
                     if (!$metadata->hasField((string) $champ)) {
                         continue;
                     }
-                    $orParts[] = self::conditionLike("{$rootAlias}." . $champ, 'ouTexte' . $suffix);
+                    $parametre = self::estRiche($metadata, (string) $champ) ? 'ouTexteRiche' . $suffix : 'ouTexte' . $suffix;
+                    $orParts[] = self::conditionLike(self::colonneCherchable($metadata, $rootAlias, (string) $champ), $parametre);
+                    $parametres[$parametre] = $motifs[$parametre];
                 }
 
-                $motif = self::motifLike($texte);
-                if ($motif === null) {
-                    $qb->andWhere('1 = 0'); // un terme réduit à rien ne trouve rien
-                } elseif (!empty($orParts)) {
-                    $qb->andWhere($qb->expr()->orX(...$orParts))
-                       ->setParameter('ouTexte' . $suffix, $motif);
+                if (!empty($orParts)) {
+                    $qb->andWhere($qb->expr()->orX(...$orParts));
+                    foreach ($parametres as $nom => $motif) {
+                        $qb->setParameter($nom, $motif);
+                    }
                 }
                 continue;
             }
@@ -1121,12 +1171,22 @@ class JSBDynamicSearchService
                     } else {
                         // Recherche texte de repli (recherche simple) : LIKE sur le champ
                         // d'affichage de la relation (ex: 'nom'), fourni dans le critère.
-                        $targetField = $value['targetField'] ?? 'nom';
-                        $motif = self::motifLike($filterValue);
+                        $targetField = (string) ($value['targetField'] ?? 'nom');
+                        // Le champ visé doit exister sur l'entité ATTEINTE : la classe vient des
+                        // métadonnées du chemin, jamais du navigateur.
+                        if (!$currentMeta->hasField($targetField)) {
+                            $this->logger->warning('[JSBDynamicSearch] Champ de relation inconnu ignoré.', [
+                                'entity' => $currentMeta->getName(),
+                                'field'  => $targetField,
+                            ]);
+                            continue;
+                        }
+                        $riche = self::estRiche($currentMeta, $targetField);
+                        $motif = self::motifLike($filterValue, 'contains', $riche);
                         if ($motif === null) {
                             $qb->andWhere('1 = 0'); // un terme réduit à rien ne trouve rien
                         } else {
-                            $qb->andWhere(self::conditionLike("{$joinAlias}.{$targetField}", $parameterName))
+                            $qb->andWhere(self::conditionLike(self::colonneCherchable($currentMeta, $joinAlias, $targetField), $parameterName))
                                 ->setParameter($parameterName, $motif);
                         }
                     }
@@ -1142,16 +1202,20 @@ class JSBDynamicSearchService
 
                     // Mode de correspondance texte : 'starts' => "valeur%", sinon "%valeur%".
                     // (le mode 'exact' est envoyé par le frontend avec l'opérateur '=').
+                    // Un champ riche se compare par son TEXTE, quel que soit l'opérateur.
+                    $colonne = self::colonneCherchable($metadata, $currentAlias, $actualField);
+                    $riche = self::estRiche($metadata, $actualField);
                     if ($operator === 'LIKE') {
-                        $paramValue = self::motifLike($filterValue, (string) ($value['mode'] ?? 'contains'));
+                        $paramValue = self::motifLike($filterValue, (string) ($value['mode'] ?? 'contains'), $riche);
                         if ($paramValue === null) {
                             $qb->andWhere('1 = 0'); // un terme réduit à rien ne trouve rien
                             continue;
                         }
-                        $qb->andWhere(self::conditionLike($currentAlias . '.' . $actualField, $parameterName));
+                        $qb->andWhere(self::conditionLike($colonne, $parameterName));
                     } else {
-                        $qb->andWhere($qb->expr()->{$doctrineOperator}($currentAlias . '.' . $actualField, ':' . $parameterName));
-                        $paramValue = $filterValue;
+                        $qb->andWhere($qb->expr()->{$doctrineOperator}($colonne, ':' . $parameterName));
+                        // « Exact » sur un champ riche : le terme normalisé comme le texte lu.
+                        $paramValue = $riche && \is_string($filterValue) ? self::termeNormalise($filterValue, true) : $filterValue;
                     }
                     $qb->setParameter($parameterName, $paramValue);
                 }

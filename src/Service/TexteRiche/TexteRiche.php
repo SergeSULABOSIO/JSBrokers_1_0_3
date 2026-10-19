@@ -27,8 +27,12 @@ use Symfony\Component\HtmlSanitizer\HtmlSanitizerInterface;
  */
 final class TexteRiche
 {
-    /** Balises de bloc remplacées par une espace : « <p>Un</p><p>deux</p> » ≠ « Undeux ». */
-    private const FINS_DE_BLOC = ['<br>', '<br/>', '<br />', '</p>', '</div>', '</li>', '</h1>', '</h2>', '</h3>'];
+    /**
+     * Saut de ligne et fins de bloc remplacés par une espace : « <p>Un</p><p>deux</p> » ≠
+     * « Undeux ». MÊME LISTE que TexteDuHtml::FINS_DE_BLOC (la recherche, côté base) — liées
+     * par TexteDuHtmlTest : modifier l'une impose de modifier l'autre.
+     */
+    private const FINS_DE_BLOC = '~<(br[^>]*|/(p|li|div|h[1-6]|blockquote|pre|tr|td|ol|ul))>~i';
 
     /**
      * Entités que l'assainisseur pose sur des caractères INOFFENSIFS d'un texte : les
@@ -68,7 +72,7 @@ final class TexteRiche
             return '';
         }
 
-        $texte = strip_tags(str_ireplace(self::FINS_DE_BLOC, ' ', $brut));
+        $texte = strip_tags((string) preg_replace(self::FINS_DE_BLOC, ' ', $brut));
         $texte = html_entity_decode($texte, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         // L'espace insécable que Quill écrit pour les blancs successifs est une espace.
         $texte = str_replace("\u{00A0}", ' ', $texte);

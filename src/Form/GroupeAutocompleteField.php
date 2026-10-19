@@ -4,6 +4,7 @@ namespace App\Form;
 
 use App\Entity\Groupe;
 use App\Form\Autocomplete\RechercheAutocomplete;
+use App\Service\TexteRiche\TexteRiche;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -29,7 +30,8 @@ class GroupeAutocompleteField extends AbstractType
             'filter_query' => RechercheAutocomplete::surLesChamps(['nom', 'description']),
             'choice_label' => fn (Groupe $groupe) => $this->rendu->libelle(
                 titre: $groupe->getNom(),
-                contact: [$groupe->getDescription()],
+                // La description est du HTML de l'éditeur : on en montre le TEXTE.
+                contact: [TexteRiche::lisible($groupe->getDescription())],
             ),
         ]);
     }
