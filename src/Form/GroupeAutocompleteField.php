@@ -3,6 +3,7 @@
 namespace App\Form;
 
 use App\Entity\Groupe;
+use App\Form\Autocomplete\RechercheAutocomplete;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -24,7 +25,8 @@ class GroupeAutocompleteField extends AbstractType
             'class' => Groupe::class,
             'placeholder' => 'Sélectionner un groupe',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
-            'searchable_fields' => ['nom', 'description'],
+            // Notre LIKE, pas celui du bundle : jokers tapés échappés (RechercheAutocomplete).
+            'filter_query' => RechercheAutocomplete::surLesChamps(['nom', 'description']),
             'choice_label' => fn (Groupe $groupe) => $this->rendu->libelle(
                 titre: $groupe->getNom(),
                 contact: [$groupe->getDescription()],

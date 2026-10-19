@@ -3,6 +3,7 @@
 namespace App\Form;
 
 use App\Entity\Taxe;
+use App\Form\Autocomplete\RechercheAutocomplete;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -24,7 +25,8 @@ class TaxeAutocompleteField extends AbstractType
             'class' => Taxe::class,
             'placeholder' => 'Rechercher une taxe',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
-            'searchable_fields' => ['code', 'description'],
+            // Notre LIKE, pas celui du bundle : jokers tapés échappés (RechercheAutocomplete).
+            'filter_query' => RechercheAutocomplete::surLesChamps(['code', 'description']),
             'choice_label' => fn (Taxe $taxe) => $this->rendu->libelle(
                 titre: $taxe->getCode() ?: 'Taxe',
                 contact: [

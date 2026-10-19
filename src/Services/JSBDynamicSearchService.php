@@ -118,6 +118,45 @@ class JSBDynamicSearchService
     private array $allowedOperators = ['=', '!=', '<', '<=', '>', '>=', 'LIKE'];
 
     /**
+     * LE CARACTÈRE D'ÉCHAPPEMENT DES LIKE — `!`, jamais l'antislash (pas d'antislash dans le
+     * SQL du projet). Chaque LIKE porte `ESCAPE '!'` (conditionLike).
+     */
+    public const ECHAPPEMENT_LIKE = '!';
+
+    /**
+     * LE MOTIF D'UN LIKE, CONSTRUIT À PARTIR DU TERME SAISI — et de lui seul.
+     *
+     * Un `%` ou un `_` tapé par l'utilisateur (« remise 100% », « A_B ») était un joker :
+     * « 100% » trouvait « 1000 », « A_B » trouvait « AxB ». Les jokers sont désormais ceux du
+     * service, posés ICI autour du terme échappé ; aucun appelant (outils de Ket, barres de
+     * recherche, contrôleurs) n'en passe dans la valeur (vérifié le 2026-10-19).
+     *
+     * Bords retirés (espace insécable comprise) ; les blancs INTÉRIEURS ne sont pas réduits :
+     * une valeur stockée « a  b » doit rester trouvable par son texte exact (la collation
+     * unicode_ci tient déjà l'espace insécable pour une espace).
+     *
+     * NULL quand il ne reste rien : le critère ne trouve alors RIEN — un motif « %% » aurait
+     * tout pris (un outil de Ket résolvant une référence « vide » serait tombé sur la seule
+     * fiche du cabinet).
+     */
+    public static function motifLike(mixed $terme, string $mode = 'contains'): ?string
+    {
+        $texte = trim(str_replace("\u{00A0}", ' ', (string) $terme));
+        if ($texte === '') {
+            return null;
+        }
+        $echappe = strtr($texte, [self::ECHAPPEMENT_LIKE => '!!', '%' => '!%', '_' => '!_']);
+
+        return $mode === 'starts' ? $echappe . '%' : '%' . $echappe . '%';
+    }
+
+    /** `colonne LIKE :parametre ESCAPE '!'` — la seule forme de LIKE du service. */
+    private static function conditionLike(string $colonne, string $parametre): string
+    {
+        return sprintf("%s LIKE :%s ESCAPE '%s'", $colonne, $parametre, self::ECHAPPEMENT_LIKE);
+    }
+
+    /**
      * Le service a besoin de l'EntityManager de Doctrine pour fonctionner.
      * Symfony l'injectera automatiquement ici.
      */
@@ -801,12 +840,15 @@ class JSBDynamicSearchService
                     if (!$metadata->hasField((string) $champ)) {
                         continue;
                     }
-                    $orParts[] = $qb->expr()->like("{$rootAlias}." . $champ, ':ouTexte' . $suffix);
+                    $orParts[] = self::conditionLike("{$rootAlias}." . $champ, 'ouTexte' . $suffix);
                 }
 
-                if (!empty($orParts)) {
+                $motif = self::motifLike($texte);
+                if ($motif === null) {
+                    $qb->andWhere('1 = 0'); // un terme réduit à rien ne trouve rien
+                } elseif (!empty($orParts)) {
                     $qb->andWhere($qb->expr()->orX(...$orParts))
-                       ->setParameter('ouTexte' . $suffix, '%' . $texte . '%');
+                       ->setParameter('ouTexte' . $suffix, $motif);
                 }
                 continue;
             }
@@ -1080,8 +1122,13 @@ class JSBDynamicSearchService
                         // Recherche texte de repli (recherche simple) : LIKE sur le champ
                         // d'affichage de la relation (ex: 'nom'), fourni dans le critère.
                         $targetField = $value['targetField'] ?? 'nom';
-                        $qb->andWhere($qb->expr()->like("{$joinAlias}.{$targetField}", ':' . $parameterName))
-                            ->setParameter($parameterName, '%' . $filterValue . '%');
+                        $motif = self::motifLike($filterValue);
+                        if ($motif === null) {
+                            $qb->andWhere('1 = 0'); // un terme réduit à rien ne trouve rien
+                        } else {
+                            $qb->andWhere(self::conditionLike("{$joinAlias}.{$targetField}", $parameterName))
+                                ->setParameter($parameterName, $motif);
+                        }
                     }
                 }
                 // SOUS-CAS 2.2 : Le champ est un attribut simple (texte, nombre, etc.).
@@ -1093,13 +1140,17 @@ class JSBDynamicSearchService
                     $doctrineOperator = $operatorMap[$operator] ?? null;
                     if (!$doctrineOperator) continue;
 
-                    $qb->andWhere($qb->expr()->{$doctrineOperator}($currentAlias . '.' . $actualField, ':' . $parameterName));
                     // Mode de correspondance texte : 'starts' => "valeur%", sinon "%valeur%".
                     // (le mode 'exact' est envoyé par le frontend avec l'opérateur '=').
                     if ($operator === 'LIKE') {
-                        $mode = $value['mode'] ?? 'contains';
-                        $paramValue = $mode === 'starts' ? $filterValue . '%' : '%' . $filterValue . '%';
+                        $paramValue = self::motifLike($filterValue, (string) ($value['mode'] ?? 'contains'));
+                        if ($paramValue === null) {
+                            $qb->andWhere('1 = 0'); // un terme réduit à rien ne trouve rien
+                            continue;
+                        }
+                        $qb->andWhere(self::conditionLike($currentAlias . '.' . $actualField, $parameterName));
                     } else {
+                        $qb->andWhere($qb->expr()->{$doctrineOperator}($currentAlias . '.' . $actualField, ':' . $parameterName));
                         $paramValue = $filterValue;
                     }
                     $qb->setParameter($parameterName, $paramValue);
