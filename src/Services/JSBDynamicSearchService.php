@@ -1096,6 +1096,27 @@ class JSBDynamicSearchService
                     ->setParameter('beneficiaire' . $suffix, $id);
                 continue;
             }
+            // UN CRITÈRE QUE L'ENTITÉ NE CONNAÎT PAS EST ÉCARTÉ, comme un filtre « Tous ».
+            //
+            // Tous les critères synthétiques reconnus ont été traités ci-dessus. Ce qui reste
+            // désigne un champ ou une relation de l'entité — sinon Doctrine lève une erreur de
+            // sémantique et la liste entière tombe en 500. Vu en production (2026-10-20) : le
+            // chip d'échéance des Avenants (`__echeance_avenant__`) parti dans une requête sur
+            // les Tranches. Le serveur garantit ; le cabinet, lui, est filtré plus haut quoi
+            // qu'il arrive. Seul le PREMIER segment se vérifie ici : la porte « relation »
+            // (SOUS-CAS 2.1) contrôle déjà chacun des suivants.
+            // Ignorer élargit la liste : l'écart est donc JOURNALISÉ (avertissement), pour
+            // qu'une faute de nom dans un canevas ne passe pas inaperçue.
+            $metadataRacine ??= $this->em->getClassMetadata($qb->getRootEntities()[0]);
+            $premierSegment = explode('.', (string) $actualField)[0];
+            if (!$metadataRacine->hasField($premierSegment) && !$metadataRacine->hasAssociation($premierSegment)) {
+                $this->logger->warning('Recherche : critère « {critere} » inconnu de {entite}, ignoré.', [
+                    'critere' => $actualField,
+                    'entite' => $metadataRacine->getName(),
+                ]);
+                continue;
+            }
+
             // CAS 1 : C'est une plage de dates (recherche avancée pour les champs de type DateTimeRange).
             // La valeur est un tableau comme { from: 'YYYY-MM-DD', to: 'YYYY-MM-DD' }.
             if (is_array($value) && (isset($value['from']) || isset($value['to'])) && !isset($value['operator'])) {

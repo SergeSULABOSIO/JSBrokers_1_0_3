@@ -149,6 +149,24 @@ class RechercheTexteRicheTest extends WebTestCase
         return $this->trouve(['description' => ['operator' => 'LIKE', 'value' => $terme, 'mode' => $mode]]);
     }
 
+    /**
+     * UN CRITÈRE QUE LA RUBRIQUE NE CONNAÎT PAS EST IGNORÉ, IL NE FAIT PAS PLANTER LA LISTE.
+     *
+     * Production, 2026-10-20 (supervision, 7 occurrences) : « Class App\Entity\Tranche has no
+     * field or association named __echeance_avenant__ ». Le chip d'échéance des Avenants était
+     * parti dans une requête sur les Tranches, et la porte « champ simple » le passait tel quel
+     * à Doctrine — 500, liste vide. Le serveur garantit : un nom absent des métadonnées de
+     * l'entité est écarté, comme un filtre « Tous ». Le cabinet, lui, reste filtré quoi qu'il arrive.
+     */
+    public function testUnCritereInconnuDeLaRubriqueEstIgnore(): void
+    {
+        $tache = ['description' => ['operator' => 'LIKE', 'value' => 'Tâche urgente', 'mode' => 'contains']];
+
+        self::assertSame(['tache'], $this->trouve(['__echeance_avenant__' => ['operator' => '=', 'value' => 'echus', 'label' => 'Échus']] + $tache), 'Critère synthétique d\'une autre rubrique (le chip).');
+        self::assertSame(['tache'], $this->trouve(['champInexistant' => ['operator' => 'LIKE', 'value' => 'x']] + $tache), 'Champ inconnu, opérateur LIKE.');
+        self::assertSame(['tache'], $this->trouve(['champInexistant' => 'x'] + $tache), 'Champ inconnu, valeur simple.');
+    }
+
     public function testUnePhraseCoupeeParUneBaliseSeRetrouve(): void
     {
         self::assertSame(['relance'], $this->contient('Relancer le client'));

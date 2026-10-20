@@ -284,9 +284,12 @@ Inscrits le 2026-10-17, à la clôture du chantier 1 (constats faits en route, p
     commande de remplissage) — seul `colonneCherchable()` change. Piste écartée : le
     **pré-filtre par mot** sur la colonne brute, qui n'est pas une condition nécessaire (un mot
     contenant & < > ou un pleine-chasse est stocké encodé ; une balise au milieu d'un mot —
-    gras partiel — casse le mot). Écart connu, antérieur : la porte « champ simple » du service
-    ne vérifie pas que le champ existe dans les métadonnées (`$actualField`) — à traiter à part
-    (l'ignorer élargirait les résultats en silence).
+    gras partiel — casse le mot). **Écart traité le 2026-10-20** : un critère inconnu de
+    l'entité (premier segment ni champ ni relation) est écarté, comme un « Tous », et
+    JOURNALISÉ en avertissement. Vu en production : le chip d'échéance des Avenants
+    (`__echeance_avenant__`) dans une requête Tranche → 500. Test
+    `RechercheTexteRicheTest::testUnCritereInconnuDeLaRubriqueEstIgnore`. La fuite du chip
+    d'un onglet à l'autre côté navigateur n'est pas encore reproduite.
 12. ✅ **FAIT (2026-10-18/19) — dépendances : 60 avis → 0.** 12-A : correctifs sans changer de
     Symfony (dont le cookie « se souvenir de moi » et l'XSS d'ux-autocomplete ; options riches
     gardées par `AutocompleteLibelleHtmlExtension`). 12-B : Symfony 7.1 → **7.4 LTS** (maintenu
