@@ -91,6 +91,22 @@ ici ou dans une skill sœur, la skill est corrigée **dans le même chantier**.
 | Source unique du métier | Étapes du pipe | `PisteTransformationScope.php` : seuil :55, `ETAPES` :85, `etapeDe` :122 | `JSBDynamicSearchServicePisteEtapesTest`, `AgregatPistesParEtapeTest` |
 | Outils Ket | Même règle, autre surface | `SaisirPropositionTool`, `SouscrireCotationTool`, `PreparerOperationsTool` ; manifeste `CouvertureDesEcrans.php:111-117` | `PariteEcranKetTest`, `KetPeripherePariteTest` |
 | Cloisonnement | Tout id venu de la requête | `AppartenanceAuCabinet.php:64`, :88, :132 | `CloisonnementDesIdentifiantsTest` + `SemisDeDeuxCabinetsTrait` |
+| Gestes sans code dans le HTML | Politique de sécurité du navigateur : aucun `on…=`, aucun `<script>` sans nonce | `geste_controller.js` (imprimer, fermer, arreter, soumettre, confirmer, naviguer, rechargerOnglet) ; `tableau-de-bord_controller.js` (liste fermée) ; `assets/gestes-autonomes.js` (pages sans Stimulus) | `GestesSansCodeTest`, `PolitiqueCspTest` |
+
+**Gestes et scripts d'un écran neuf** (chantier 9, politique dans `App\Security\Csp\PolitiqueCsp`) :
+
+- **Jamais** de `onclick=`, `onchange=`, `oninput=`… : le navigateur les refusera. Un geste générique
+  s'écrit `data-action="click->geste#imprimer"` (le contrôleur `geste` est sur `<body>`) ; un
+  comportement propre à l'écran va dans **son** contrôleur Stimulus (`data-action="click->ma-rubrique#faire"`).
+  Retenir un clic : option `:stop` ; empêcher le comportement natif : `:prevent`.
+- **Jamais** de `<script>` inline dans un fragment (onglet, panneau, dialogue) : il ne s'exécuterait
+  pas, et la politique le refuserait. Dans une page complète, `<script nonce="{{ csp_nonce() }}">`.
+- **Jamais** de ressource d'un autre site (CDN, police distante) : `importmap:require`, puis `asset()`.
+  Une feuille de style se pose en `<link>`, **jamais** par un `import '….css'` dans le JS.
+- Une page autonome sans `importmap()` (aperçu imprimable) : ses boutons « Imprimer » et « Fermer »
+  gardent le même balisage et chargent `assets/gestes-autonomes.js`.
+- Les tests de rendu qui lisent une balise par expression régulière sautent les valeurs entre
+  guillemets (`(?:[^>"]|"[^"]*")*`) : `click->x#y` contient un « > ».
 
 **L'ordre réel de `handleFormSubmission`** (`ControllerUtilsTrait.php:1712-2002`) — un
 contrôleur ne le contourne pas, il passe ses ajouts par `beforePersist` :

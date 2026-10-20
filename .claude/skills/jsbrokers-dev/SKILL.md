@@ -137,7 +137,15 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   - le nonce n'entre jamais dans `style-src` (il y annulerait `'unsafe-inline'`) ;
   - les rapports (`/api/journal/csp`) passent par `App\Supervision\AdresseDuNavigateur` :
     adresses sans requête, fragment, jeton ni identifiant. Ils n'envoient jamais d'e-mail
-    (`alerter: false`), car n'importe qui peut en fabriquer.
+    (`alerter: false`), car n'importe qui peut en fabriquer ;
+  - **aucun site extérieur** : la politique est une liste blanche exacte, et aucune adresse
+    absolue n'apparaît dans `templates/` ni dans `assets/` (hors `vendor`). Une bibliothèque se
+    vendorise (`importmap:require`) ;
+  - **aucun `on…=`**, ni dans un gabarit, ni dans le HTML que fabrique le JavaScript
+    (`GestesSansCodeTest`). Gestes génériques : contrôleur `geste` ; fonctions `window.db…` du
+    tableau de bord : contrôleur `tableau-de-bord` (liste fermée `FONCTIONS_AUTORISEES` ; une
+    fonction nouvelle s'y ajoute, sinon le test échoue) ; pages sans Stimulus :
+    `assets/gestes-autonomes.js`. Règles d'écran : skill `jsb-construire-rubrique` §3.
 
 ## 5. Procédure de test
 
@@ -251,10 +259,10 @@ Inscrits le 2026-10-17, à la clôture du chantier 1 (constats faits en route, p
    - **Commit 4 FAIT** : 63 appels `window.db*` et 3 lignes fabriquées dans `app.js` → contrôleur
      `tableau-de-bord` (liste fermée ; un refus lève, donc vu par la supervision). Plus aucun
      `on…=` nulle part (`GestesSansCodeTest`).
-   - **Restent** :
-     - commit 5 : garde-fous ;
-     - commit 6 : liste de contrôle actionnable parcourue par Serge, puis bascule
-       (`PolitiqueCsp::APPLIQUEE`).
+   - **Commit 5 FAIT** : garde-fous déjà posés aux commits 1 à 4 ; règles inscrites ici (§4) et dans
+     `jsb-construire-rubrique` §3.
+   - **Reste** : commit 6, liste de contrôle actionnable parcourue par Serge, puis bascule
+     (`PolitiqueCsp::APPLIQUEE`), avec l'E2E rejoué sous la politique appliquée.
    - **CIBLE** : retirer `style-src 'unsafe-inline'` quand les ~1 600 `style=` auront migré.
    - **À la bascule** :
      - `form-action 'self'` bloquera la redirection vers un prestataire de paiement réel
