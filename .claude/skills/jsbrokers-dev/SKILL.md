@@ -318,3 +318,18 @@ Inscrit le 2026-10-19 (revue du chantier 9, décision de Serge) :
       `.htaccess`, et/ou `Content-Disposition: attachment` pour les types actifs.
     - **⚠ À tester d'abord** : une CSP `sandbox` peut empêcher Chrome d'AFFICHER un PDF en ligne.
       Vérifier l'aperçu des documents avant de livrer.
+
+Inscrits le 2026-10-20 (décisions de Serge) :
+
+14. ✅ **FAIT (2026-10-20) — icônes figées dans le dépôt.** 31 icônes nommées dans le CODE (canevas,
+    `IconExtension`, `IconController`) manquaient sur le disque : téléchargées d'Iconify au rendu,
+    elles faisaient tomber la page en 500 dès qu'Iconify ne répondait pas. Importées
+    (`ux:icons:import`), garde-fou `IconesEcritesDansLeCodeVendoriseesTest` (src/ + assets/ ;
+    `IconInvocationsVendoriseesTest` couvre les gabarits). **Règle** : une icône nouvelle s'importe
+    et se versionne dans `assets/icons/` ; le test donne la commande exacte.
+15. **Restauration des onglets à l'identique** (règle de Serge : « après plantage, au moment de
+    la restauration, tout doit être restauré à l'identique »). Chaque onglet restauré retrouve SES
+    critères, chips, page et tri. Constat : `ui:search.submitted` ne porte que `{criteria}`, et le
+    cerveau l'applique à l'onglet ACTIF (`_handleSearchRequest` → `_getActiveTabState()`) ; le chip
+    d'échéance des Avenants a été vu dans une requête Tranche (500 en production, corrigé côté
+    serveur, fuite non encore reproduite au navigateur).
