@@ -55,8 +55,11 @@ class PolitiqueCspTest extends WebTestCase
     /** @return array<string, string> directive => valeur */
     private function politique(): array
     {
-        $entete = (string) $this->client->getResponse()->headers->get('Content-Security-Policy-Report-Only');
-        self::assertNotSame('', $entete, 'Aucune politique sur une page HTML.');
+        // APPLIQUÉE depuis le 2026-10-20 (décision de Serge) : l'en-tête qui bloque, plus celui
+        // qui observe. Les deux ensemble feraient appliquer la plus stricte et doubler les rapports.
+        $entete = (string) $this->client->getResponse()->headers->get('Content-Security-Policy');
+        self::assertNotSame('', $entete, 'Aucune politique APPLIQUÉE sur une page HTML.');
+        self::assertFalse($this->client->getResponse()->headers->has('Content-Security-Policy-Report-Only'), 'La politique ne doit plus être seulement observée.');
         $directives = [];
         foreach (array_filter(array_map('trim', explode(';', $entete))) as $directive) {
             [$nom, $valeur] = array_pad(explode(' ', $directive, 2), 2, '');

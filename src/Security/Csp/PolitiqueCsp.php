@@ -25,8 +25,14 @@ final class PolitiqueCsp
     public const ROUTE_DES_RAPPORTS = '/api/journal/csp';
     public const GROUPE_DES_RAPPORTS = 'csp';
 
-    /** Report-Only tant que Serge n'a pas parcouru la liste de contrôle (commit 6). */
-    public const APPLIQUEE = false;
+    /**
+     * APPLIQUÉE depuis le 2026-10-20, sur décision de Serge : la politique a d'abord tourné en
+     * Report-Only (commits 1 à 5), sa liste de contrôle a été parcourue en production, et la
+     * supervision n'a plus rapporté aucune violation. Repasser à `false` (observation) est le
+     * levier de secours si une page cassait — la collecte des rapports continue dans les deux
+     * modes.
+     */
+    public const APPLIQUEE = true;
 
     public static function nomDeLEntete(): string
     {

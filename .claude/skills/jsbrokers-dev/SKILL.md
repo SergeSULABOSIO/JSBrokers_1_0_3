@@ -248,7 +248,7 @@ Inscrits le 2026-10-16 (décisions de Serge), après l'inventaire fait pour la s
 
 Inscrits le 2026-10-17, à la clôture du chantier 1 (constats faits en route, prouvés) :
 
-9. 🔄 **EN COURS (plan v2 approuvé le 2026-10-19) — CSP, APPLIQUÉE avant l'ouverture aux
+9. ✅ **FAIT (2026-10-19/20) — CSP APPLIQUÉE avant l'ouverture aux
    clients.**
    - **Commit 1 FAIT** : Report-Only, nonce, collecte `/api/journal/csp` (règles au §4).
    - **Commit 2 FAIT** : plus aucun site extérieur. Quill, Bootstrap 5.3.6 et es-module-shims
@@ -261,10 +261,11 @@ Inscrits le 2026-10-17, à la clôture du chantier 1 (constats faits en route, p
      `on…=` nulle part (`GestesSansCodeTest`).
    - **Commit 5 FAIT** : garde-fous déjà posés aux commits 1 à 4 ; règles inscrites ici (§4) et dans
      `jsb-construire-rubrique` §3.
-   - **Reste** : commit 6, liste de contrôle actionnable parcourue par Serge, puis bascule
-     (`PolitiqueCsp::APPLIQUEE`), avec l'E2E rejoué sous la politique appliquée.
+   - **Commit 6 FAIT (2026-10-20)** : liste de contrôle parcourue par Serge en production (supervision
+     propre), puis bascule `PolitiqueCsp::APPLIQUEE = true` ; cinq E2E rejoués SOUS la politique
+     appliquée (blocage réel prouvé). Secours : repasser `APPLIQUEE` à false, la collecte continue.
    - **CIBLE** : retirer `style-src 'unsafe-inline'` quand les ~1 600 `style=` auront migré.
-   - **À la bascule** :
+   - **Points d'attention depuis la bascule** :
      - `form-action 'self'` bloquera la redirection vers un prestataire de paiement réel
        (`TokenController.php:169`) : déclarer son hôte ;
      - un `on…=` n'est signalé qu'au clic, il faut donc le cliquer pour le voir ;
