@@ -84,7 +84,14 @@ class Entreprise
 
     // #[Vich\Uploadable(mapping:"profiles", fileNameProperty: "thumbnail")]
     #[Vich\UploadableField(mapping: 'entreprises', fileNameProperty: 'thumbnail')]
-    #[Assert\Image()]
+    // Images MATRICIELLES seulement. Par défaut, Assert\Image admet tout `image/*`, dont le SVG,
+    // qui peut porter du script : déposé ici, il serait servi depuis joseara.com (chantier 13).
+    // Le type est lu dans le CONTENU du fichier, pas dans son extension.
+    #[Assert\Image(
+        maxSize: '2M',
+        mimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
+        mimeTypesMessage: 'entreprise.logo.type', // translations/validators.*.yaml
+    )]
     private ?File $thumbnailFile = null;
 
     /**

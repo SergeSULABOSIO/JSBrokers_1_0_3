@@ -1,0 +1,16 @@
+# =============================================================================
+#  DOCUMENTS DÉPOSÉS — JAMAIS SERVIS DIRECTEMENT (chantier 9 / 13)
+# -----------------------------------------------------------------------------
+#  Les pièces déposées (sinistres, bordereaux, documents des clients…) sont
+#  TOUTES servies par l'application : DocumentController::downloadApi et
+#  ::telechargerApi, le relevé public (PublicSoaController) — droit de lecture,
+#  cabinet du fichier vérifié, envoi en pièce jointe. Aucun écran ne pointe vers
+#  cette URL.
+#
+#  Servi directement par le serveur web, un .html ou un .svg déposé s'ouvrirait
+#  DEPUIS joseara.com, hors de la politique de sécurité de l'application, et
+#  ses scripts liraient la session du cabinet. D'où : aucun accès par URL.
+#  Le parent (public/uploads/.htaccess) interdit en plus toute exécution.
+# =============================================================================
+
+Require all denied

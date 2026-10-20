@@ -117,6 +117,8 @@ class EntrepriseType extends AbstractType
             ->add('thumbnailFile', FileType::class, [
                 'label' => "entreprise_form_label_profile",
                 'required' => false,
+                // Le sélecteur ne propose que ce que la contrainte accepte (Entreprise::$thumbnailFile).
+                'attr' => ['accept' => 'image/png,image/jpeg,image/gif,image/webp'],
             ])
             ->add('enregistrer', SubmitType::class, [
                 'label' => "commom_save",

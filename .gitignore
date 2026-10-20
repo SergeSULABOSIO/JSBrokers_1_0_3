@@ -46,6 +46,8 @@
 # pas du code — jamais versionnés. Le .gitkeep préserve le dossier au clone.
 /public/uploads/documents/*
 !/public/uploads/documents/.gitkeep
+# Le verrou du dossier (aucun accès direct par URL) DOIT partir en production.
+!/public/uploads/documents/.htaccess
 ###< vich/uploader-bundle ###
 
 ###> déploiement ###

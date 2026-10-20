@@ -305,19 +305,20 @@ Inscrits le 2026-10-17, à la clôture du chantier 1 (constats faits en route, p
 
 Inscrit le 2026-10-19 (revue du chantier 9, décision de Serge) :
 
-13. **Fichiers téléversés servis sans CSP.**
-    - **Constat** : `public/uploads/documents` est servi directement par Apache, donc hors PHP
-      et hors `PolitiqueCsp`.
-      - le namer Vich (`SmartUniqueNamer`) garde l'extension d'origine ;
-      - aucune contrainte de type MIME n'est posée dans `DocumentType` ;
-      - un `.html` ou un `.svg` téléversé s'exécuterait donc depuis NOTRE origine.
-    - **Exploitabilité** : limitée, car le nom du fichier est difficile à deviner.
-    - **Ce qui protège déjà** : `public/uploads/.htaccess` interdit l'EXÉCUTION de PHP, mais
-      pas le rendu d'un HTML.
-    - **Piste** : `Header set Content-Security-Policy "default-src 'none'; sandbox"` dans ce
-      `.htaccess`, et/ou `Content-Disposition: attachment` pour les types actifs.
-    - **⚠ À tester d'abord** : une CSP `sandbox` peut empêcher Chrome d'AFFICHER un PDF en ligne.
-      Vérifier l'aperçu des documents avant de livrer.
+13. ✅ **FAIT (2026-10-20) — un fichier déposé ne s'exécute jamais sur joseara.com.**
+    - `public/uploads/documents/.htaccess` : `Require all denied` — aucun accès par URL ; toutes les
+      pièces passent par les contrôleurs (droits, cabinet, pièce jointe). Versionné malgré
+      l'ignore du dossier (exception `.gitignore`). L'aperçu des PDF n'était pas concerné.
+    - `public/images/entreprises/.htaccess` (logos) : types ACTIFS refusés (svg, html, xml, js…)
+      et `Header always set Content-Security-Policy "default-src 'none'; … sandbox"` + nosniff.
+      **Pas** « tout refuser puis accorder les images » : la levée d'un refus par `<FilesMatch>`
+      n'est pas éprouvée sous LiteSpeed, et un échec couperait tous les logos et le favicon.
+    - `Entreprise::$thumbnailFile` : `Assert\Image` limité à PNG, JPEG, GIF, WebP (le défaut
+      acceptait le SVG, qui porte du script) ; message traduit `entreprise.logo.type`.
+    - Test `TeleversementsInertesTest` ; effet réel vérifié sous Apache. **Reste** : vérifier sous
+      LiteSpeed après déploiement (`curl -I` du favicon : 200 + sandbox ; d'un document : 403).
+    - ⚠ La voie cPanel « Deploy HEAD Commit » (`.cpanel.yml`) exclut ces dossiers et ne livre pas
+      ces `.htaccess` : publier par `publier` (SSH, `deploy.sh`).
 
 Inscrits le 2026-10-20 (décisions de Serge) :
 

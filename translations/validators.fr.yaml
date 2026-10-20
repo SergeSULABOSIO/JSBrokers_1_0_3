@@ -154,3 +154,6 @@ Error: Erreur
 'Prière de fournir le mot de passe.': '__Prière de fournir le mot de passe.'
 'Votre mot de passe devrait avoit au moins {{ limit }} charactère(s)': '__Votre mot de passe devrait avoit au moins {{ limit }} charactère(s)'
 "Vous devez accepter les termes et conditions d'utilisation.": "__Vous devez accepter les termes et conditions d'utilisation."
+
+# Logo du cabinet (Entreprise::$thumbnailFile) : images matricielles seulement (chantier 13).
+entreprise.logo.type: "Le logo doit être une image PNG, JPEG, GIF ou WebP."

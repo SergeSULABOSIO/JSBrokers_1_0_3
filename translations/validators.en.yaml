@@ -154,3 +154,6 @@ Error: Error
 'Prière de fournir le mot de passe.': '__Prière de fournir le mot de passe.'
 'Votre mot de passe devrait avoit au moins {{ limit }} charactère(s)': '__Votre mot de passe devrait avoit au moins {{ limit }} charactère(s)'
 "Vous devez accepter les termes et conditions d'utilisation.": "__Vous devez accepter les termes et conditions d'utilisation."
+
+# Firm logo (Entreprise::$thumbnailFile): raster images only.
+entreprise.logo.type: "The logo must be a PNG, JPEG, GIF or WebP image."

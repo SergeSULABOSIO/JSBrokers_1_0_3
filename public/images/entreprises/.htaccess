@@ -20,3 +20,31 @@ RemoveType .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
 AddType text/plain .php .phtml .phar
 
 Options -Indexes -ExecCGI
+
+# =============================================================================
+#  LOGOS : DES IMAGES, ET RIEN QUI S'EXÉCUTE (chantier 13)
+# -----------------------------------------------------------------------------
+#  Ce dossier mêle les fichiers de marque (logofav.png…) et les logos déposés
+#  par les cabinets, montrés par <img>. Un .html ou un .svg (qui peut porter du
+#  script) ouvert ici le serait DEPUIS joseara.com, hors de la politique de
+#  sécurité de l'application. Le formulaire n'accepte plus que PNG, JPEG, GIF,
+#  WebP (Entreprise::$thumbnailFile) ; ce fichier tient la même règle côté
+#  serveur web, pour ce qui serait déjà là ou passerait autrement :
+#   1. seules les images matricielles sont servies ;
+#   2. chaque réponse porte une politique « sandbox » sans aucune source : même
+#      ouvert seul dans un onglet, un fichier ne peut rien exécuter ;
+#   3. le navigateur ne devine pas le type (nosniff).
+# =============================================================================
+
+# Les types ACTIFS sont refusés (ils portent ou déclenchent du script). Pas de
+# « tout refuser puis accorder les images » : la levée d'un refus par <FilesMatch> n'est
+# pas éprouvée sous LiteSpeed, et un échec y couperait tous les logos et le favicon. Le
+# verrou de fond reste l'en-tête ci-dessous, qui rend inerte même un type oublié ici.
+<FilesMatch "\.(svgz?|x?html?|shtml|xml|xsl|xslt|js|mjs|json|swf|pdf|txt|htm)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    Header always set Content-Security-Policy "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox"
+    Header always set X-Content-Type-Options "nosniff"
+</IfModule>
