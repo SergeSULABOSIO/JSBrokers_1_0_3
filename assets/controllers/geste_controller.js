@@ -4,7 +4,7 @@ import { Controller } from '@hotwired/stimulus';
  * LES GESTES SIMPLES — sans une ligne de code dans le HTML.
  *
  * La politique de sécurité (chantier 9, `PolitiqueCsp`) refuse tout code écrit dans un
- * attribut (`onclick="…"`) : c'est précisément ce qu'une donnée piégée y glisserait. Les
+ * attribut onclick : c'est précisément ce qu'une donnée piégée y glisserait. Les
  * gestes génériques qu'on y écrivait passent donc par ce contrôleur, posé UNE fois sur
  * <body> (base.html.twig, analyse de bordereau) : il couvre tout ce qui est dans la page,
  * y compris les fragments chargés plus tard (onglets, panneaux) et les dialogues ajoutés

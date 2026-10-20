@@ -248,9 +248,10 @@ Inscrits le 2026-10-17, à la clôture du chantier 1 (constats faits en route, p
      absolue dans `templates/` et `assets/`.
    - **Commit 3 FAIT** : 47 gestes génériques → contrôleur `geste` (sur `<body>`) et
      `assets/gestes-autonomes.js` (3 pages sans Stimulus). Garde-fou `GestesSansCodeTest`.
+   - **Commit 4 FAIT** : 63 appels `window.db*` et 3 lignes fabriquées dans `app.js` → contrôleur
+     `tableau-de-bord` (liste fermée ; un refus lève, donc vu par la supervision). Plus aucun
+     `on…=` nulle part (`GestesSansCodeTest`).
    - **Restent** :
-     - commit 4 : 63 appels `window.db*` et 3 `onclick` fabriqués dans `app.js` → contrôleur
-       `tableau-de-bord` (liste fermée des fonctions appelables) ;
      - commit 5 : garde-fous ;
      - commit 6 : liste de contrôle actionnable parcourue par Serge, puis bascule
        (`PolitiqueCsp::APPLIQUEE`).

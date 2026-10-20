@@ -95,7 +95,7 @@
                  data-piste-invite="{{ inviteNom|e }}"
                  data-piste-prime="{{ piste.primePotentielle ? piste.primePotentielle|number_format(0, ',', ' ') : '—' }}"
                  data-piste-commission="{{ piste.commissionPotentielle ? piste.commissionPotentielle|number_format(0, ',', ' ') : '—' }}"
-                 oncontextmenu="dbPisteCtxOpen(event,this)"
+                 data-action="contextmenu->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbPisteCtxOpen"
                  {% if group != 'j30' %}style="display:none;"{% endif %}>
 
             <summary class="d-flex align-items-center gap-2 py-2 px-1">

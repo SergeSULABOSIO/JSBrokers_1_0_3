@@ -168,7 +168,7 @@
                                 data-meta-tip="Créer une nouvelle piste"
                                 data-entreprise-id="{{ entreprise.id }}"
                                 data-invite-id="{{ currentInviteId }}"
-                                onclick="event.stopPropagation(); dbPisteNew(this)"
+                                data-action="click->tableau-de-bord#appeler:stop" data-tableau-de-bord-fonction-param="dbPisteNew"
                                 aria-label="Nouvelle piste">
                             <twig:UX:Icon name="gridicons:add" style="width:15px;height:15px;color:#0047AB;" />
                         </button>
@@ -245,7 +245,7 @@
                                 data-meta-tip="Créer un nouveau bordereau de production"
                                 data-entreprise-id="{{ entreprise.id }}"
                                 data-invite-id="{{ currentInviteId }}"
-                                onclick="event.stopPropagation(); dbBordNew(this)"
+                                data-action="click->tableau-de-bord#appeler:stop" data-tableau-de-bord-fonction-param="dbBordNew"
                                 aria-label="Nouveau bordereau">
                             <twig:UX:Icon name="gridicons:add" style="width:15px;height:15px;color:#0047AB;" />
                         </button>
@@ -276,7 +276,7 @@
                                 data-meta-tip="Créer une nouvelle note de débit"
                                 data-entreprise-id="{{ entreprise.id }}"
                                 data-invite-id="{{ currentInviteId }}"
-                                onclick="event.stopPropagation(); dbNoteNew(this)"
+                                data-action="click->tableau-de-bord#appeler:stop" data-tableau-de-bord-fonction-param="dbNoteNew"
                                 aria-label="Nouvelle note">
                             <twig:UX:Icon name="gridicons:add" style="width:15px;height:15px;color:#0047AB;" />
                         </button>
@@ -307,7 +307,7 @@
                                 data-meta-tip="Déclarer un nouveau sinistre"
                                 data-entreprise-id="{{ entreprise.id }}"
                                 data-invite-id="{{ currentInviteId }}"
-                                onclick="event.stopPropagation(); dbSinistreNew(this)"
+                                data-action="click->tableau-de-bord#appeler:stop" data-tableau-de-bord-fonction-param="dbSinistreNew"
                                 aria-label="Nouveau sinistre">
                             <twig:UX:Icon name="gridicons:add" style="width:15px;height:15px;color:#0047AB;" />
                         </button>
@@ -339,15 +339,15 @@
                 </summary>
                 <div class="px-3 pt-2 pb-2 bg-white border-bottom d-flex align-items-center gap-2">
                     <div class="db-prod-tabs">
-                        <button class="db-task-toggle active" data-mode="bar"   onclick="dbProdToggleMode(this)" aria-pressed="true"  title="Histogramme">
+                        <button class="db-task-toggle active" data-mode="bar"   data-action="click->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbProdToggleMode" aria-pressed="true"  title="Histogramme">
                             <twig:UX:Icon name="mdi:chart-bar"  style="width:12px;height:12px;" />
                             Histogramme
                         </button>
-                        <button class="db-task-toggle"        data-mode="line"  onclick="dbProdToggleMode(this)" aria-pressed="false" title="Courbe">
+                        <button class="db-task-toggle"        data-mode="line"  data-action="click->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbProdToggleMode" aria-pressed="false" title="Courbe">
                             <twig:UX:Icon name="mdi:chart-line" style="width:12px;height:12px;" />
                             Courbe
                         </button>
-                        <button class="db-task-toggle"        data-mode="table" onclick="dbProdToggleMode(this)" aria-pressed="false" title="Tableau">
+                        <button class="db-task-toggle"        data-mode="table" data-action="click->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbProdToggleMode" aria-pressed="false" title="Tableau">
                             <twig:UX:Icon name="mdi:table"      style="width:12px;height:12px;" />
                             Tableau
                         </button>

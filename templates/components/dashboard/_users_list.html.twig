@@ -39,7 +39,7 @@
      data-invite-id="{{ currentInviteId }}"
      data-entreprise-id="{{ entreprise.id }}"
      data-current-invite-id="{{ currentInviteId }}"
-     oncontextmenu="dbInviteCtxOpen(event,this)">
+     data-action="contextmenu->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbInviteCtxOpen">
 
     {# Avatar avec anneau gris #}
     <div class="position-relative mb-2" style="
@@ -83,7 +83,7 @@
                  data-invite-id="{{ inv.id }}"
                  data-entreprise-id="{{ entreprise.id }}"
                  data-current-invite-id="{{ currentInviteId }}"
-                 oncontextmenu="dbInviteCtxOpen(event,this)">
+                 data-action="contextmenu->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbInviteCtxOpen">
                 <div class="db-users-avatar-sm d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
                      style="width:28px;height:28px;background:#e9ecef;border:1px solid #dee2e6;transition:background .15s ease;">
                     <twig:UX:Icon name="hugeicons:mail-send-01"

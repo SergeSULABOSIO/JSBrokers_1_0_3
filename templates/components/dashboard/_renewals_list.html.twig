@@ -104,7 +104,7 @@
                  {# Lu par dbRenewCtxOpen : le menu contextuel propose « Signaler » ou
                     « Rétablir » selon l'état réel, jamais l'action impossible. #}
                  data-non-renouvelable="{{ avenant.nonRenouvelable ? '1' : '0' }}"
-                 oncontextmenu="dbRenewCtxOpen(event,this)"
+                 data-action="contextmenu->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbRenewCtxOpen"
                  {% if group != groupeDefaut %}style="display:none;"{% endif %}>
             <summary class="d-flex align-items-center gap-2 py-2 px-1">
                 <div class="db-ass-avatar rounded-circle d-flex align-items-center justify-content-center text-white"

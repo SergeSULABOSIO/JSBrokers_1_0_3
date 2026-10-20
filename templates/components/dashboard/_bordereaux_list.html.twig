@@ -122,7 +122,7 @@
                  data-bord-periode="{{ periodeStr|e }}"
                  data-bord-recu="{{ b.receivedAt|date('d/m/Y') }}"
                  data-bord-days="{{ _days|round(0, 'ceil') }}"
-                 oncontextmenu="dbBordCtxOpen(event,this)"
+                 data-action="contextmenu->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbBordCtxOpen"
                  {% if group != 'j30' %}style="display:none;"{% endif %}>
 
             <summary class="d-flex align-items-center gap-2 py-2 px-1">

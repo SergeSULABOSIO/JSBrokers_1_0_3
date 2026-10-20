@@ -71,7 +71,7 @@
                  data-entreprise-id="{{ entreprise.id }}"
                  data-invite-id="{{ currentInviteId }}"
                  data-dep-nom="{{ (chargeLib ~ (tiers ? ' — ' ~ tiers : ''))|e }}"
-                 oncontextmenu="dbDepCtxOpen(event,this)"
+                 data-action="contextmenu->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbDepCtxOpen"
                  {% if group != 'j30' %}style="display:none;"{% endif %}>
             <summary class="d-flex align-items-center gap-2 py-2 px-1">
                 <div class="db-ass-avatar rounded-circle d-flex align-items-center justify-content-center text-white"

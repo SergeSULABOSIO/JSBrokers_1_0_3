@@ -925,7 +925,8 @@ class PortefeuilleFilterTest extends WebTestCase
         );
         $this->assertStringNotContainsString('-30j', $html, 'Aucun badge négatif ne doit subsister.');
         $this->assertMatchesRegularExpression(
-            '/data-mode="echus"[^>]*aria-pressed="true"/',
+            // Valeurs entre guillemets sautées : `click->tableau-de-bord#appeler` contient un « > ».
+            '/data-mode="echus"(?:[^>"]|"[^"]*")*aria-pressed="true"/',
             $html,
             'Le seau « Échues » est ouvert par défaut dès qu\'une police est échue.'
         );

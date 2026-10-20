@@ -3353,7 +3353,10 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
             var tot    = monthTotals[m] || {};
             var assureurs = rows[m] || {};
 
-            html += '<tr class="db-prod-tr-month" data-month="' + m + '" onclick="dbProdToggleMonth(this,' + m + ')">'
+            // Pas de onclick (politique de sécurité) : le contrôleur tableau-de-bord appelle la fonction.
+            html += '<tr class="db-prod-tr-month" data-month="' + m + '"'
+                  + ' data-action="click->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbProdToggleMonth"'
+                  + ' data-tableau-de-bord-arguments-param="' + echapper(JSON.stringify([m])) + '">'
                   + '<td><span class="db-prod-chevron">▼</span>' + mLabel + '</td>'
                   + fmtCells(tot)
                   + '</tr>';
@@ -3566,7 +3569,8 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
             var assId = Number(item.id) || 0;
             _fields.forEach(function(f) { grand[f] += item[f] || 0; });
             rows += '<tr class="db-prod-tr-month db-prod-tr-ass-head" data-ass-id="' + assId + '"'
-                  + ' onclick="dbProdToggleAssureur(this,' + assId + ')">'
+                  + ' data-action="click->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbProdToggleAssureur"'
+                  + ' data-tableau-de-bord-arguments-param="' + echapper(JSON.stringify([assId])) + '">'
                   + '<td><span class="db-prod-chevron">▼</span>' + echapper(item.nom || '—') + '</td>'
                   + fmtCells(item) + '</tr>';
 
@@ -3632,11 +3636,13 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
         var rows = '';
         items.forEach(function (item) {
-            // Un id de risque, ou « __none__ » : il entre dans un onclick, rien d'autre n'y passe.
+            // Un id de risque, ou « __none__ » : il entre dans un attribut (data-ris-id, argument du
+            // contrôleur tableau-de-bord) et dans un sélecteur — rien d'autre n'y passe.
             var risId = String(item.id).replace(/[^\w-]/g, '');
             _fields.forEach(function(f) { grand[f] += item[f] || 0; });
             rows += '<tr class="db-prod-tr-month db-prod-tr-ass-head" data-ris-id="' + risId + '"'
-                  + ' onclick="dbProdToggleRisque(this,\'' + risId + '\')">'
+                  + ' data-action="click->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbProdToggleRisque"'
+                  + ' data-tableau-de-bord-arguments-param="' + echapper(JSON.stringify([risId])) + '">'
                   + '<td><span class="db-prod-chevron">▼</span>' + echapper(item.nom || '—') + '</td>'
                   + fmtCells(item) + '</tr>';
 

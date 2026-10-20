@@ -13,7 +13,7 @@
         <button class="db-block-add-btn ms-auto me-1"
                 data-entreprise-id="{{ entreprise.id }}"
                 data-invite-id="{{ currentInviteId }}"
-                onclick="event.stopPropagation(); dbBlockAdd(this, 'assureur', 'Nouvel assureur')"
+                data-action="click->tableau-de-bord#appeler:stop" data-tableau-de-bord-fonction-param="dbBlockAdd" data-tableau-de-bord-arguments-param='["assureur","Nouvel assureur"]'
                 title="Nouvel assureur" aria-label="Nouvel assureur">
             <twig:UX:Icon name="gridicons:add" style="width:13px;height:13px;color:#0047AB;" />
         </button>
@@ -141,7 +141,7 @@
         <button class="db-block-add-btn ms-auto me-1"
                 data-entreprise-id="{{ entreprise.id }}"
                 data-invite-id="{{ currentInviteId }}"
-                onclick="event.stopPropagation(); dbBlockAdd(this, 'client', 'Nouveau client')"
+                data-action="click->tableau-de-bord#appeler:stop" data-tableau-de-bord-fonction-param="dbBlockAdd" data-tableau-de-bord-arguments-param='["client","Nouveau client"]'
                 title="Nouveau client" aria-label="Nouveau client">
             <twig:UX:Icon name="gridicons:add" style="width:13px;height:13px;color:#0047AB;" />
         </button>
@@ -270,7 +270,7 @@
         <button class="db-block-add-btn ms-auto me-1"
                 data-entreprise-id="{{ entreprise.id }}"
                 data-invite-id="{{ currentInviteId }}"
-                onclick="event.stopPropagation(); dbBlockAdd(this, 'risque', 'Nouveau risque')"
+                data-action="click->tableau-de-bord#appeler:stop" data-tableau-de-bord-fonction-param="dbBlockAdd" data-tableau-de-bord-arguments-param='["risque","Nouveau risque"]'
                 title="Nouveau risque" aria-label="Nouveau risque">
             <twig:UX:Icon name="gridicons:add" style="width:13px;height:13px;color:#0047AB;" />
         </button>
@@ -399,7 +399,7 @@
         <button class="db-block-add-btn ms-auto me-1"
                 data-entreprise-id="{{ entreprise.id }}"
                 data-invite-id="{{ currentInviteId }}"
-                onclick="event.stopPropagation(); dbBlockAdd(this, 'partenaire', 'Nouvel intermédiaire')"
+                data-action="click->tableau-de-bord#appeler:stop" data-tableau-de-bord-fonction-param="dbBlockAdd" data-tableau-de-bord-arguments-param='["partenaire","Nouvel intermédiaire"]'
                 title="Nouvel intermédiaire" aria-label="Nouvel intermédiaire">
             <twig:UX:Icon name="gridicons:add" style="width:13px;height:13px;color:#0047AB;" />
         </button>

@@ -8,11 +8,10 @@ use PHPUnit\Framework\TestCase;
  * AUCUN CODE DANS UN ATTRIBUT HTML (chantier 9, politique de sécurité).
  *
  * La politique refuse tout `onclick="…"`, `onchange="…"`… : c'est exactement ce qu'une donnée
- * piégée glisserait dans une page. Les gestes s'écrivent en `data-action` (contrôleur Stimulus
- * `geste`, ou `assets/gestes-autonomes.js` sur les pages sans Stimulus).
- *
- * TOLÉRANCE PROVISOIRE (commit 4) : les appels aux fonctions du tableau de bord (`dbXxx(…)`,
- * assets/app.js) restent à convertir ; ce test les laisse passer et ne laisse passer qu'eux.
+ * piégée glisserait dans une page. Les gestes s'écrivent en `data-action` : contrôleur Stimulus
+ * `geste` (gestes génériques), `tableau-de-bord` (fonctions `window.db…` d'assets/app.js, liste
+ * fermée), ou `assets/gestes-autonomes.js` sur les pages sans Stimulus. Ni les gabarits, ni le
+ * HTML que fabrique le JavaScript n'en contiennent plus un seul.
  */
 class GestesSansCodeTest extends TestCase
 {
@@ -34,19 +33,87 @@ class GestesSansCodeTest extends TestCase
         }
     }
 
-    public function testAucunGestionnaireOnDansLesGabaritsHorsTableauDeBord(): void
+    public function testAucunGestionnaireOnDansLesGabarits(): void
     {
         $restants = [];
         foreach (self::gabarits() as $chemin => $contenu) {
-            preg_match_all('/\son[a-z]+\s*=\s*("[^"]*"|\'[^\']*\')/i', $contenu, $m, \PREG_OFFSET_CAPTURE);
+            // Les instructions et expressions Twig ({% set onglets = … %}, {{ ongletActif == cle }}) ne
+            // sont pas du HTML : blanchies, lignes gardées. Un onclick="{{ x }}" reste vu (ses guillemets restent).
+            $contenu = (string) preg_replace_callback('/\{%.*?%\}|\{\{.*?\}\}/s', static fn (array $c): string => str_repeat("\n", substr_count($c[0], "\n")), $contenu);
+            // Avec ou sans guillemets : `onclick="…"`, `onclick='…'`, `onclick=foo()`.
+            preg_match_all('/\son[a-z]+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>"\'{]+)/i', $contenu, $m, \PREG_OFFSET_CAPTURE);
             foreach ($m[1] as [$valeur, $position]) {
-                if (!preg_match('/\bdb[A-Z]\w*\(/', $valeur)) {
-                    $restants[] = $chemin . ':' . (substr_count(substr($contenu, 0, $position), "\n") + 1) . ' ' . substr($valeur, 0, 80);
+                $restants[] = $chemin . ':' . (substr_count(substr($contenu, 0, $position), "\n") + 1) . ' ' . substr($valeur, 0, 80);
+            }
+        }
+
+        self::assertSame([], $restants, 'Code dans un attribut on…= : le remplacer par un data-action (contrôleurs geste ou tableau-de-bord).');
+    }
+
+    /** Le HTML que le JavaScript fabrique (chaînes de assets/, hors vendor) n'en porte pas non plus. */
+    public function testAucunGestionnaireOnDansLeHtmlFabriqueParLeJavaScript(): void
+    {
+        $restants = [];
+        $fichiers = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(self::RACINE . '/assets', \FilesystemIterator::SKIP_DOTS));
+        foreach ($fichiers as $fichier) {
+            $chemin = str_replace('\\', '/', $fichier->getPathname());
+            if (!str_ends_with($chemin, '.js') || str_contains($chemin, '/assets/vendor/')) {
+                continue;
+            }
+            // Un attribut on…= ouvert dans une chaîne : `' onclick="` , `"<tr onclick='`, `` `<a onclick=${ `` …
+            if (preg_match_all('/\son[a-z]+\s*=\s*(?:\\\\?["\']|\$\{)/i', (string) file_get_contents($chemin), $m)) {
+                foreach ($m[0] as $trouve) {
+                    $restants[] = substr($chemin, strpos($chemin, 'assets/')) . ' : ' . trim($trouve);
                 }
             }
         }
 
-        self::assertSame([], $restants, 'Code dans un attribut on…= : le remplacer par un data-action (contrôleur geste).');
+        self::assertSame([], $restants, 'HTML fabriqué avec un on…= : poser un data-action (contrôleur tableau-de-bord ou geste).');
+    }
+
+    /**
+     * Chaque fonction appelée par `tableau-de-bord#appeler` est dans la LISTE FERMÉE du contrôleur
+     * et définie sur `window` par assets/app.js — sinon le geste meurt en silence (le contrôleur
+     * refuse). Et la liste ne garde aucune fonction que plus rien n'appelle.
+     */
+    public function testLesFonctionsDuTableauDeBordSontAutoriseesEtDefinies(): void
+    {
+        $controleur = (string) file_get_contents(self::RACINE . '/assets/controllers/tableau-de-bord_controller.js');
+        self::assertSame(1, preg_match('/FONCTIONS_AUTORISEES = new Set\(\[(.*?)\]\)/s', $controleur, $liste));
+        preg_match_all("/'(db[A-Za-z]+)'/", $liste[1], $m);
+        $autorisees = $m[1];
+
+        $app = (string) file_get_contents(self::RACINE . '/assets/app.js');
+        $sources = [...iterator_to_array(self::gabarits()), 'assets/app.js' => $app];
+
+        $appelees = [];
+        $ecarts = [];
+        foreach ($sources as $chemin => $contenu) {
+            // Toute fonction nommée (guillemets doubles ou simples, préfixe db ou non)…
+            preg_match_all('/data-tableau-de-bord-fonction-param\s*=\s*["\']([^"\']+)["\']/', $contenu, $noms);
+            // … doit l'être JUSTE après son action, dont on lit l'événement.
+            preg_match_all('/data-action="(\w+)->tableau-de-bord#appeler(?::\w+)*"\s+data-tableau-de-bord-fonction-param="([^"]+)"/', $contenu, $paires, \PREG_SET_ORDER);
+            if (\count($noms[1]) !== \count($paires)) {
+                $ecarts[] = "$chemin : fonction-param sans action tableau-de-bord#appeler juste avant";
+            }
+            foreach ($paires as [, $evenement, $nom]) {
+                $appelees[] = $nom;
+                // Signature : (event, élément) pour un menu contextuel, (élément, …) sinon.
+                if (str_ends_with($nom, 'CtxOpen') !== ('contextmenu' === $evenement)) {
+                    $ecarts[] = "$chemin : $nom déclenchée par « $evenement » (…CtxOpen ⇔ contextmenu)";
+                }
+            }
+        }
+        $appelees = array_values(array_unique($appelees));
+        sort($appelees);
+        $triees = $autorisees;
+        sort($triees);
+
+        self::assertSame([], $ecarts);
+        self::assertSame($triees, $appelees, 'La liste fermée du contrôleur doit être exactement celle des fonctions appelées.');
+        foreach ($autorisees as $nom) {
+            self::assertMatchesRegularExpression('/window\.' . $nom . '\s*=/', $app, "$nom n'est pas définie sur window par assets/app.js.");
+        }
     }
 
     public function testChaqueActionGesteDesigneUneMethodeQuiExiste(): void

@@ -28,9 +28,9 @@
 <div class="px-3 pt-2 pb-2 bg-white">
         <div class="d-flex align-items-center gap-2">
             <div class="db-prod-tabs" id="dbNoteToggleBar">
-                <button class="db-task-toggle active" data-mode="j30"     onclick="dbNoteToggle(this)" aria-pressed="true">≤ 30 jrs ({{ countJ30 }})</button>
-                <button class="db-task-toggle"        data-mode="j60"     onclick="dbNoteToggle(this)" aria-pressed="false">31-60 jrs ({{ countJ60 }})</button>
-                <button class="db-task-toggle"        data-mode="j61plus" onclick="dbNoteToggle(this)" aria-pressed="false">61+ jrs ({{ countJ61plus }})</button>
+                <button class="db-task-toggle active" data-mode="j30"     data-action="click->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbNoteToggle" aria-pressed="true">≤ 30 jrs ({{ countJ30 }})</button>
+                <button class="db-task-toggle"        data-mode="j60"     data-action="click->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbNoteToggle" aria-pressed="false">31-60 jrs ({{ countJ60 }})</button>
+                <button class="db-task-toggle"        data-mode="j61plus" data-action="click->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbNoteToggle" aria-pressed="false">61+ jrs ({{ countJ61plus }})</button>
             </div>
             <div class="ms-auto input-group input-group-sm flex-shrink-0" role="search" style="max-width:130px;">
                 <span class="input-group-text border-0 bg-light px-2">
@@ -41,7 +41,7 @@
                        placeholder="Réf., nom, client…"
                        class="form-control form-control-sm border-0 bg-light"
                        style="font-size:.72rem;"
-                       oninput="dbNoteSearch()">
+                       data-action="input->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbNoteSearch">
             </div>
         </div>
     </div>
