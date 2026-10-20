@@ -6,6 +6,9 @@ import './veille-erreurs.js';
 // emettre une requete des son connect(), et l'enveloppe doit deja etre en place. Aucun
 // script du projet ne capture window.fetch dans une variable au chargement -- verifie --
 // mais l'ordre reste le seul garde-fou si l'un venait a le faire.
+// La reprise d'une lecture coupee par le reseau s'installe AVANT cabinet-ferme.js : celui-ci
+// enveloppe donc le fetch qui retente, et voit la reponse finale (reprise-reseau.js).
+import './reprise-reseau.js';
 import './cabinet-ferme.js';
 import './bootstrap.js';
 /*
