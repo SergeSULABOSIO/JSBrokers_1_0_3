@@ -3,6 +3,7 @@ import { Controller } from '@hotwired/stimulus';
 import Quill from 'quill';
 import { texteRicheSur } from './texte-riche.js';
 import { estTexteRiche, FORMATS_DE_LA_BARRE } from './texte-riche-regles.js';
+import { evenementInterne } from './evenement-interne.js';
 
 /**
  * @class RichTextController
@@ -65,7 +66,7 @@ export default class extends Controller {
         this.quill.on('text-change', () => {
             this.element.value = this.quill.root.innerHTML;
             // On déclenche manuellement l'événement 'change' pour que les formulaires Symfony le détectent.
-            this.element.dispatchEvent(new Event('change', { bubbles: true }));
+            this.element.dispatchEvent(evenementInterne('change'));
         });
     }
 

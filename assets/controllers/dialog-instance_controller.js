@@ -4,7 +4,8 @@ import { urlAction } from './actions-groupees.js';
 import { BarreActions } from './barre-actions.js';
 import { nomAffiche } from './selecto.js';
 import { resumeDeFermeture } from './collection-tampon.js';
-import { empreinteDuFormulaire } from './echap-dialogue.js';
+import { empreinteDuFormulaire, evenementDeSaisie, fermetureADemander, fermetureAutomatiqueAutorisee } from './echap-dialogue.js';
+import { evenementInterne, estInterne } from './evenement-interne.js';
 import { champsSources, conteneurVisible, rangeeVisible, trouverChamp, valeurObservee } from './visibilite-conditions.js';
 /**
  * @file Ce fichier contient le contrôleur Stimulus 'dialog-instance'.
@@ -25,7 +26,7 @@ export default class extends Controller {
     static outlets = ['modal'];
     static targets = [
         'content', 'formRow', 'dynamicFieldContainer', 'header', 'title', 'titleIcon', 
-        'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'submitButton', 'closeFooterButton', 'gesteDeSuite', // Removed montantHT, montantTaxe
+        'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'feedbackStatut', 'feedbackAlerte', 'submitButton', 'closeFooterButton', 'gesteDeSuite', // Removed montantHT, montantTaxe
         'operationsContainer', // Kept operationsContainer as it's still relevant for other logic if needed.
         'saveIcon', 'closeIcon',
         'addressedTo',
@@ -102,6 +103,12 @@ export default class extends Controller {
         for (const geste of ['keydown', 'pointerdown', 'dragenter']) {
             document.addEventListener(geste, this.boundPrendreLEmpreinte, true);
         }
+        // UNE SAISIE SANS GESTE dans la page (gestionnaire de mots de passe, dictée, glisser-
+        // déposer depuis une autre application, extension) : aucune empreinte n'est prise, mais
+        // la fermeture doit demander (décision de Serge, 2026-10-21 ; echap-dialogue.js).
+        this.boundSaisieSansGeste = this._surSaisieSansGeste.bind(this);
+        this.element.addEventListener('input', this.boundSaisieSansGeste, true);
+        this.element.addEventListener('change', this.boundSaisieSansGeste, true);
 
         const detail = this.element.dialogDetail;
 
@@ -132,6 +139,8 @@ export default class extends Controller {
         for (const geste of ['keydown', 'pointerdown', 'dragenter']) {
             document.removeEventListener(geste, this.boundPrendreLEmpreinte, true);
         }
+        this.element.removeEventListener('input', this.boundSaisieSansGeste, true);
+        this.element.removeEventListener('change', this.boundSaisieSansGeste, true);
         // Referme un menu de famille resté déplié et retire les écouteurs de la barre.
         this.barreActions.detruire();
     }
@@ -641,6 +650,11 @@ export default class extends Controller {
      * @private
      */
     handleSuccessfulSubmit(result) {
+        // L'ENREGISTREMENT REMET LA GARDE À ZÉRO, sans attendre le rechargement de la fiche : la
+        // fermeture automatique (congé, 2 s) ne doit pas dépendre de la vitesse du serveur. Ce
+        // qui sera saisi désormais l'est APRÈS l'enregistrement.
+        this._empreinteInitiale = null;
+        this._saisieSansGeste = false;
         // On indique qu'un rechargement est en cours.
         // Le `finally` de `submitForm` ne masquera pas les indicateurs de chargement.
         this.isReloading = true;
@@ -707,8 +721,8 @@ export default class extends Controller {
             } else {
                 field.value = String(valeur);
             }
-            field.dispatchEvent(new Event('input', { bubbles: true }));
-            field.dispatchEvent(new Event('change', { bubbles: true }));
+            field.dispatchEvent(evenementInterne('input'));
+            field.dispatchEvent(evenementInterne('change'));
         }
     }
 
@@ -842,6 +856,7 @@ export default class extends Controller {
         const form = this.contentTarget.querySelector('form');
         this.barreActions.desactiver(false);
         this._empreinteInitiale = null;
+        this._saisieSansGeste = false;
         // Suivie pour TOUTE fiche, barre ou non : elle décide aussi si une fiche modifiée
         // ailleurs peut être rechargée sans rien perdre, et si la fermeture doit demander.
         if (!form) return;
@@ -862,8 +877,13 @@ export default class extends Controller {
      */
     _saisieEnCours() {
         const form = this.contentTarget.querySelector('form');
-        return !!form && this._empreinteInitiale !== null
-            && this._empreinteDuFormulaire(form) !== this._empreinteInitiale;
+        if (!form) return false;
+
+        return fermetureADemander({
+            empreinteInitiale: this._empreinteInitiale ?? null,
+            empreinteActuelle: this._empreinteInitiale == null ? undefined : this._empreinteDuFormulaire(form),
+            saisieSansGeste: !!this._saisieSansGeste,
+        });
     }
 
     /**
@@ -1010,7 +1030,7 @@ export default class extends Controller {
             });
             // Si une option a été décochée, on déclenche un événement 'change' pour que les champs dépendants (client, assureur...) se masquent.
             if (wasChanged && addressedToChoices.length > 0) {
-                addressedToChoices[0].dispatchEvent(new Event('change', { bubbles: true }));
+                addressedToChoices[0].dispatchEvent(evenementInterne('change'));
             }
         }
         // On met à jour la dernière valeur connue.
@@ -1139,9 +1159,13 @@ export default class extends Controller {
     showFeedback(type, message) {
         const feedbackContainer = this.feedbackContainerTarget;
         if (!feedbackContainer) return;
-        // Une ERREUR est annoncée tout de suite : c'est ici, au pied du dialogue, qu'elle se lit
-        // — le cerveau ne la double plus d'un toast (chantier 2).
-        feedbackContainer.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+        // DEUX ZONES PRÉSENTES DÈS L'OUVERTURE (coquille du dialogue) : une ERREUR va dans la zone
+        // `alert`, annoncée tout de suite — le cerveau ne la double plus d'un toast —, le reste
+        // dans la zone `status`. Le message précédent, où qu'il soit, s'efface.
+        const zoneAlerte = this.hasFeedbackAlerteTarget ? this.feedbackAlerteTarget : feedbackContainer;
+        const zoneStatut = this.hasFeedbackStatutTarget ? this.feedbackStatutTarget : feedbackContainer;
+        const zone = type === 'error' ? zoneAlerte : zoneStatut;
+        (zone === zoneAlerte ? zoneStatut : zoneAlerte).replaceChildren();
 
         // On formate la date et l'heure actuelles
         const now = new Date();
@@ -1174,7 +1198,7 @@ export default class extends Controller {
         const texte = document.createElement('span');
         texte.textContent = String(message ?? '');
         bloc.append(horodatage, ' ', texte);
-        feedbackContainer.replaceChildren(bloc);
+        zone.replaceChildren(bloc);
     }
 
     /**
@@ -1325,11 +1349,39 @@ export default class extends Controller {
      */
     _prendreLEmpreinte(event) {
         if (!event.isTrusted || this._empreinteInitiale !== null) return;
+        // Une saisie SANS GESTE a déjà eu lieu : une empreinte prise maintenant l'absorberait
+        // (le geste suivant — Échap compris — photographierait le formulaire déjà changé), et
+        // la question ne serait plus posée. On reste donc sans empreinte : la fermeture demande.
+        if (this._saisieSansGeste) return;
         const cible = event.target;
         const ici = cible instanceof Node && (this.element.contains(cible) || !!cible.closest?.('.ts-dropdown'));
         if (!ici) return;
         const form = this.contentTarget.querySelector('form');
         if (form) this._empreinteInitiale = this._empreinteDuFormulaire(form);
+    }
+
+    /**
+     * Un `input`/`change` survenu AVANT tout geste : une saisie venue d'ailleurs (extension,
+     * dictée…), sauf si c'est NOTRE code qui l'émet (evenement-interne.js) ou Tom Select qui
+     * recopie sa valeur dans le champ qu'il gère.
+     * @param {Event} event
+     * @private
+     */
+    _surSaisieSansGeste(event) {
+        if (this._empreinteInitiale !== null || !this.hasContentTarget || !this.contentTarget.contains(event.target)) return;
+        const form = this.contentTarget.querySelector('form');
+        const cible = event.target;
+        const champDuFormulaire = !!cible?.closest?.('.ql-editor')
+            || (!!cible?.name && !!form && (cible.form === form || form.contains(cible)));
+        if (evenementDeSaisie({
+            type: event.type,
+            isTrusted: event.isTrusted,
+            interne: estInterne(event),
+            surSelectTomSelect: !!cible?.tomselect,
+            champDuFormulaire,
+        })) {
+            this._saisieSansGeste = true;
+        }
     }
 
     /** Les widgets de collection de CETTE boîte qui gardent une saisie en mémoire. @private */
@@ -1681,12 +1733,25 @@ export default class extends Controller {
 
     doClose(event) {
         // On s'assure que l'ordre de fermeture nous est bien destiné.
-        if (event.detail.dialogId === this.dialogId) {
-            this.toggleProgressBar(false); // On s'assure que la barre est cachée.
-            if (this.hasModalOutlet) {
-                this.modalOutlet.hide(); // On demande au contrôleur 'modal' de se fermer.
-            }
+        if (event.detail.dialogId !== this.dialogId) return;
+
+        // UNE FERMETURE AUTOMATIQUE (congé : 2 s après l'enregistrement) s'efface devant
+        // l'utilisateur qui a repris la main — un geste, une saisie sans geste, un formulaire
+        // changé : il travaille, on ne lui retire pas le dialogue.
+        if (event.detail.siInactif && !fermetureAutomatiqueAutorisee({
+            gesteDepuisEnregistrement: this._empreinteInitiale != null,
+            saisieSansGeste: !!this._saisieSansGeste,
+            modifie: this._saisieEnCours(),
+        })) {
+            return;
         }
+
+        this.toggleProgressBar(false); // On s'assure que la barre est cachée.
+        if (this.hasModalOutlet) {
+            this.modalOutlet.hide(); // On demande au contrôleur 'modal' de se fermer.
+        }
+        // La suite prévue par l'émetteur (rouvrir la décision du congé…) : seulement si l'on ferme.
+        event.detail.siFerme?.();
     }
     
     /**

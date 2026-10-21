@@ -1,5 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import { nomAffiche } from './selecto.js';
+import { evenementInterne } from './evenement-interne.js';
 
 /**
  * @class ListRowController
@@ -185,7 +186,7 @@ export default class extends Controller {
         }
         // CORRECTION : Inverse l'état de la checkbox pour un feedback visuel immédiat.
         this.checkboxTarget.checked = !this.checkboxTarget.checked;
-        this.checkboxTarget.dispatchEvent(new Event('change', { bubbles: true }));
+        this.checkboxTarget.dispatchEvent(evenementInterne('change'));
     }
 
     /**

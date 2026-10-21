@@ -147,6 +147,17 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   (prise au premier geste, création comprise, Quill et fichiers compris) a changé ; la question
   se ferme par `ui:confirmation.close`. Le focus revient à l'ouvreur (`__ouvreur` posé à
   l'ouverture). Un nouveau dialogue garde `data-bs-keyboard="false"`.
+  - **Saisie sans geste** (gestionnaire de mots de passe, dictée, extension) : sans empreinte,
+    un `input`/`change` dans le dialogue suffit à poser la question. Donc **tout `input`/`change`
+    émis par notre code passe par `evenementInterne()`** (`assets/controllers/evenement-interne.js`)
+    — garde-fou `tests/js/dialogue-suivi.test.mjs`. Tom Select (recopie vers le champ qu'il gère,
+    `champ.tomselect`) est exclu ; Quill n'émet `change` que sur un geste (menu de sa barre).
+  - **Un seul gestionnaire de dialogues actif** (`gestionnaire-dialogues.js`) : un second
+    `dialog-manager` (analyse du bordereau injectée) reste inerte. Unification : chantier 3.
+  - Une fermeture AUTOMATIQUE se demande « si inactif » (`siInactif: true`, suite par `siFerme`) :
+    refusée si l'utilisateur a repris la saisie.
+  - Le pied d'un dialogue a deux zones dès l'ouverture : `feedbackAlerte` (`role="alert"`),
+    `feedbackStatut` (`role="status"`). Jamais d'`aria-live` changé à la volée.
 - **Messages** (chantier 2 ; `notification-regles.js`) : deux régions permanentes dans
   `base.html.twig` — `role="status"` pour l'information, `role="alert"` réservée aux ERREURS ;
   le toast n'a pas de rôle. Une erreur reste jusqu'à ce qu'on la ferme (au plus 3, pas de

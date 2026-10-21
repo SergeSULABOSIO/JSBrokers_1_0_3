@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { evenementInterne } from './evenement-interne.js';
 
 /**
  * LA DATE DE FIN SUIT LA DATE DE DÉBUT.
@@ -79,7 +80,7 @@ export default class extends Controller {
             this.fin.value = data.fin;
             // On prévient les autres : la visibilité conditionnelle et les indicateurs du
             // dialogue écoutent `change`, et une valeur posée par script n'en émet aucun.
-            this.fin.dispatchEvent(new Event('change', { bubbles: true }));
+            this.fin.dispatchEvent(evenementInterne('change'));
 
             this.ancienDebut = nouveauDebut;
             this.ancienneFin = data.fin;

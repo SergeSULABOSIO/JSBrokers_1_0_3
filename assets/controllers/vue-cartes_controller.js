@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { evenementInterne } from './evenement-interne.js';
 import {
     clicDeSelection, cleDeLaVue, cookieDeVue, doitDistribuer, messageDEtape, partsDuPipe, vueARestaurer,
 } from './vue-cartes-regles.js';
@@ -285,7 +286,7 @@ export default class extends Controller {
             return;
         }
         caseLigne.checked = coche;
-        caseLigne.dispatchEvent(new Event('change', { bubbles: true }));
+        caseLigne.dispatchEvent(evenementInterne('change'));
     }
 
     _refleterLaSelection(event) {

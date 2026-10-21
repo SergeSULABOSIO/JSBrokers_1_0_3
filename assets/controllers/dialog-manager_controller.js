@@ -1,6 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 import { Modal } from 'bootstrap';
 import { decisionEchap, OUVERTS_DANS_LE_DIALOGUE } from './echap-dialogue.js';
+import { reserverLInstallation, libererLInstallation } from './gestionnaire-dialogues.js';
 
 /**
  * @file Ce fichier contient le contrôleur Stimulus 'dialog-manager'.
@@ -62,8 +63,12 @@ export default class extends Controller {
                         </div>
                     </div>
                     <div class="modal-footer" data-dialog-instance-target="footer"> 
-                        <div class="feedback-container me-auto" role="status" aria-live="polite" aria-atomic="true" data-dialog-instance-target="feedbackContainer">
-                            <!-- Feedback message will be injected here -->
+                        <!-- DEUX ZONES D'ANNONCE, présentes dès l'ouverture : le message y est INSÉRÉ.
+                             « alert » pour une erreur, « status » sinon — jamais un aria-live
+                             changé à la volée, peu fiable selon les lecteurs d'écran. -->
+                        <div class="feedback-container me-auto" data-dialog-instance-target="feedbackContainer">
+                            <div role="alert" aria-atomic="false" data-dialog-instance-target="feedbackAlerte"></div>
+                            <div role="status" aria-atomic="false" data-dialog-instance-target="feedbackStatut"></div>
                         </div>
                         <button type="button" class="btn btn-secondary d-inline-flex align-items-center gap-2" data-controller="ripple" data-action="click->dialog-instance#close" data-dialog-instance-target="closeFooterButton">
                             <span class="button-icon d-inline-flex" data-dialog-instance-target="closeIcon"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
@@ -86,6 +91,14 @@ export default class extends Controller {
      */
     connect() {
         this.nomControleur = "Dialogue-Manager";
+        // UN SEUL GESTIONNAIRE ACTIF (gestionnaire-dialogues.js) : l'analyse du bordereau, injectée
+        // dans l'espace de travail, en apportait un second — chaque ouverture créait alors DEUX
+        // dialogues identiques, donc deux enregistrements possibles. Celui-ci reste inerte.
+        this.inerte = false;
+        if (!reserverLInstallation(this.element)) {
+            this.inerte = true;
+            return;
+        }
         this.boundOpen = this.open.bind(this);
         document.addEventListener('app:boite-dialogue:init-request', this.boundOpen);
 
@@ -118,6 +131,8 @@ export default class extends Controller {
      * Nettoie l'écouteur d'événement pour éviter les fuites de mémoire.
      */
     disconnect() {
+        if (this.inerte) return;
+        libererLInstallation(this.element);
         document.removeEventListener('app:boite-dialogue:init-request', this.boundOpen);
         document.removeEventListener('show.bs.modal', this.boundEmpiler);
         document.removeEventListener('hidden.bs.modal', this.boundDepiler);

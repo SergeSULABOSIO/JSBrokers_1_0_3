@@ -2539,9 +2539,10 @@ export default class extends Controller {
         }
 
         const dialogId = payload.dialogId;
+        // « SI INACTIF » : le dialogue refuse de se fermer si l'utilisateur a repris la saisie
+        // (dialog-instance#doClose) — et la décision ne se rouvre alors pas par-dessus.
         window.setTimeout(() => {
-            this.broadcast('app:dialog.do-close', { dialogId });
-            this._reouvrirLaDecisionSiAttendue();
+            this.broadcast('app:dialog.do-close', { dialogId, siInactif: true, siFerme: () => this._reouvrirLaDecisionSiAttendue() });
         }, 2000);
     }
 

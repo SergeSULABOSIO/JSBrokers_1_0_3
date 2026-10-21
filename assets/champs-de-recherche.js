@@ -17,12 +17,13 @@
  * (connexion) garde son remplissage.
  */
 import { doitEffacer, NOM_ANIMATION } from './champs-de-recherche-regles.js';
+import { evenementInterne } from './controllers/evenement-interne.js';
 
 function effacer(champ) {
     champ.value = '';
     // Les listes écoutent `input` (tableau de bord, filtres) : on rejoue l'événement pour
     // qu'elles reviennent à leur état non filtré.
-    champ.dispatchEvent(new Event('input', { bubbles: true }));
+    champ.dispatchEvent(evenementInterne('input'));
 }
 
 if (!window.__champsDeRechercheInstalles) {

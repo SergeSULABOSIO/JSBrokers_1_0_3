@@ -66,3 +66,47 @@ export function empreinteDuFormulaire(entrees) {
 function estFichier(valeur) {
     return valeur !== null && typeof valeur === 'object' && 'name' in valeur && 'size' in valeur;
 }
+
+// ── Suivi du chantier 2 (décisions de Serge, 2026-10-21) ─────────────────────────
+
+/**
+ * Cet événement est-il une SAISIE à protéger ? Compte : tout `input`/`change` de confiance
+ * (dictée, glisser-déposer, gestionnaire de mots de passe) et tout `input`/`change` étranger
+ * (extension qui remplit un champ). Ne compte pas : ce que NOTRE code émet
+ * (evenement-interne.js) et la recopie interne de Tom Select vers son <select> caché.
+ * Et seulement sur un champ qui COMPTE dans le formulaire (un `name` dans le <form>, ou
+ * l'éditeur riche) : la dictée dans la recherche interne de Tom Select ou le remplissage d'un
+ * champ anonyme ne changent rien de ce qui serait enregistré.
+ * @param {{type: string, isTrusted?: boolean, interne?: boolean, surSelectTomSelect?: boolean,
+ *          champDuFormulaire?: boolean}} e
+ */
+export function evenementDeSaisie({ type, isTrusted = false, interne = false, surSelectTomSelect = false, champDuFormulaire = true }) {
+    if (type !== 'input' && type !== 'change') return false;
+    if (!champDuFormulaire) return false;
+    if (isTrusted) return true;
+
+    return !interne && !surSelectTomSelect;
+}
+
+/**
+ * La fermeture doit-elle demander « Abandonner ? » ?
+ * Avec une empreinte (prise au premier geste), la COMPARAISON seule décide : traverser les
+ * champs au Tab sans rien changer ne demande rien. Sans empreinte (aucun geste dans la page),
+ * une saisie sans geste — valeur posée par une extension, la dictée… — suffit.
+ * @param {{empreinteInitiale: string|null, empreinteActuelle?: string, saisieSansGeste?: boolean}} p
+ */
+export function fermetureADemander({ empreinteInitiale, empreinteActuelle, saisieSansGeste = false }) {
+    if (empreinteInitiale === null) return saisieSansGeste;
+
+    return empreinteInitiale !== empreinteActuelle;
+}
+
+/**
+ * La fermeture AUTOMATIQUE (congé : 2 s après l'enregistrement) peut-elle avoir lieu ? Non si
+ * l'utilisateur a repris la main depuis — un geste, une saisie sans geste, ou un formulaire
+ * qui a changé : il travaille, on ne lui retire pas le dialogue.
+ * @param {{gesteDepuisEnregistrement: boolean, saisieSansGeste: boolean, modifie: boolean}} p
+ */
+export function fermetureAutomatiqueAutorisee({ gesteDepuisEnregistrement, saisieSansGeste, modifie }) {
+    return !gesteDepuisEnregistrement && !saisieSansGeste && !modifie;
+}

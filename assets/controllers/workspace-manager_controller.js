@@ -17,6 +17,7 @@ import { texteRicheEnTexte, texteRicheSur } from './texte-riche.js';
 import { estTexteRiche } from './texte-riche-regles.js';
 import { urlDeMemeOrigine } from './url-de-confiance.js';
 import { cleOnglets, clePanneauVisualisation, copieLocale, lireCopieLocale, copiePanneau, lirePanneau, peutEcrire } from '../stockage-de-travail-regles.js';
+import { evenementInterne } from './evenement-interne.js';
 
 /**
  * LES DEUX SEUILS DE DISPOSITION — écrits ici ET dans `interactive-menu.css`.
@@ -2629,7 +2630,7 @@ export default class extends Controller {
             if (searchInput) {
                 searchInput.value = '';
                 // On déclenche manuellement l'événement 'input' pour que la méthode filter() s'exécute.
-                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                searchInput.dispatchEvent(evenementInterne('input'));
             }
         }
     }

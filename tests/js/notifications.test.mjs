@@ -72,7 +72,8 @@ test('une erreur de formulaire n’est pas doublée par un toast : le pied du di
     const cerveau = source('assets/controllers/cerveau_controller.js');
     const cas = cerveau.slice(cerveau.indexOf("case 'app:form.validation-error':"), cerveau.indexOf('break;', cerveau.indexOf("case 'app:form.validation-error':")));
     assert.doesNotMatch(cas, /_showNotification\(/);
-    assert.match(source('assets/controllers/dialog-instance_controller.js'), /setAttribute\('aria-live', type === 'error' \? 'assertive' : 'polite'\)/);
+    // … dans la zone `alert` du pied, présente dès l'ouverture (dialogue-suivi.test.mjs).
+    assert.match(source('assets/controllers/dialog-instance_controller.js'), /const zone = type === 'error' \? zoneAlerte : zoneStatut;/);
 });
 
 test('les régions ne relisent pas tout à chaque message (aria-atomic="false")', () => {
