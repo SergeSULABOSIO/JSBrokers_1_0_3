@@ -1,4 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
+import { Modal } from 'bootstrap';
+import { decisionEchap, OUVERTS_DANS_LE_DIALOGUE } from './echap-dialogue.js';
 
 /**
  * @file Ce fichier contient le contrôleur Stimulus 'dialog-manager'.
@@ -86,6 +88,29 @@ export default class extends Controller {
         this.nomControleur = "Dialogue-Manager";
         this.boundOpen = this.open.bind(this);
         document.addEventListener('app:boite-dialogue:init-request', this.boundOpen);
+
+        // LA PILE DES DIALOGUES OUVERTS, dans l'ordre où ils se sont ouverts : c'est elle qui
+        // dit lequel est AU-DESSUS (l'ordre du DOM ne le dit pas — la confirmation est dans
+        // base.html.twig, avant les dialogues ajoutés à la volée). Empilé dès `show` (avant
+        // l'animation) : un second Échap rapide vise déjà la confirmation qui s'ouvre.
+        this.pile = [];
+        this.boundEmpiler = (event) => {
+            if (!event.target.classList?.contains('modal')) return;
+            this.pile = this.pile.filter((m) => m !== event.target);
+            this.pile.push(event.target);
+        };
+        this.boundDepiler = (event) => {
+            this.pile = this.pile.filter((m) => m !== event.target);
+            this._rendreLeFocus(event.target);
+        };
+        document.addEventListener('show.bs.modal', this.boundEmpiler);
+        document.addEventListener('hidden.bs.modal', this.boundDepiler);
+
+        // ÉCHAP, décidé en phase de CAPTURE : avant que l'autocomplétion, le menu ou le picker
+        // ouvert ne se referme lui-même — sinon on croirait qu'il n'y avait rien d'ouvert, et
+        // le dialogue se fermerait avec lui (chantier 2, echap-dialogue.js).
+        this.boundEchap = this._surEchap.bind(this);
+        document.addEventListener('keydown', this.boundEchap, true);
     }
 
     /**
@@ -94,6 +119,64 @@ export default class extends Controller {
      */
     disconnect() {
         document.removeEventListener('app:boite-dialogue:init-request', this.boundOpen);
+        document.removeEventListener('show.bs.modal', this.boundEmpiler);
+        document.removeEventListener('hidden.bs.modal', this.boundDepiler);
+        document.removeEventListener('keydown', this.boundEchap, true);
+    }
+
+    /**
+     * Échap : ferme le dialogue du DESSUS, sauf si quelque chose y est ouvert ou si l'on écrit
+     * dans un éditeur riche. Un dialogue de formulaire passe par SA fermeture (`close()`), qui
+     * demande confirmation quand une saisie n'est pas enregistrée.
+     * @param {KeyboardEvent} event
+     * @private
+     */
+    _surEchap(event) {
+        const dessus = [...this.pile].reverse().find((m) => m.isConnected);
+        const instance = dessus?.querySelector('[data-controller~="dialog-instance"]');
+        const genre = !dessus ? null
+            : instance ? 'formulaire'
+            : dessus.id === 'confirmation-dialog-modal' ? 'confirmation'
+            : dessus.classList.contains('app-dialog') ? 'simple'
+            : 'autre';
+        const focus = document.activeElement;
+
+        const decision = decisionEchap({
+            touche: event.key,
+            enComposition: event.isComposing,
+            dejaTraitee: event.defaultPrevented,
+            repetee: event.repeat,
+            echapLocal: !!focus?.closest?.('[data-pagination-jump-input], [data-echap-local]'),
+            dessus: genre,
+            dansEditeurRiche: !!focus?.closest?.('.ql-editor, .ql-tooltip'),
+            sousElementOuvert: !!dessus?.querySelector(OUVERTS_DANS_LE_DIALOGUE),
+        });
+        if (decision === 'laisser') return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        if (decision === 'fermer-formulaire') {
+            this.application.getControllerForElementAndIdentifier(instance, 'dialog-instance')?.close();
+        } else if (decision === 'fermer-confirmation') {
+            // Annuler la question : son propre contrôleur fait le ménage (confirmation-dialog#close).
+            document.dispatchEvent(new CustomEvent('ui:confirmation.close'));
+        } else {
+            Modal.getOrCreateInstance(dessus).hide();
+        }
+    }
+
+    /**
+     * Le focus revient à l'élément qui a OUVERT le dialogue (WCAG 2.4.3) — s'il existe encore
+     * et qu'aucun autre dialogue ne l'a pris entre-temps.
+     * @param {HTMLElement} modale
+     * @private
+     */
+    _rendreLeFocus(modale) {
+        const ouvreur = modale?.__ouvreur;
+        if (!ouvreur || !ouvreur.isConnected || typeof ouvreur.focus !== 'function') return;
+        const actif = document.activeElement;
+        if (actif && actif !== document.body && !modale.contains(actif)) return;
+        ouvreur.focus({ preventScroll: true });
     }
 
     /**
@@ -143,6 +226,10 @@ export default class extends Controller {
 
         // NOUVEAU : On demande les icônes des boutons en amont, dès la création de la modale.
         this.requestButtonIcons(detail.dialogId);
+
+        // L'élément qui a ouvert le dialogue : le focus y reviendra à la fermeture.
+        const ouvreur = document.activeElement;
+        if (ouvreur && ouvreur !== document.body) modalElement.__ouvreur = ouvreur;
 
         // On ajoute l'élément au body. Stimulus va maintenant le détecter et connecter le contrôleur.
         document.body.appendChild(modalElement);

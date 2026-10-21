@@ -71,6 +71,10 @@ export default class extends BaseController {
 
         this.destroyTomSelects();
         this.advancedFormContainerTarget.innerHTML = this.renderForm();
+        // L'élément qui a ouvert la recherche : le focus y revient à la fermeture (Échap compris,
+        // dialog-manager#_rendreLeFocus — WCAG 2.4.3).
+        const ouvreur = document.activeElement;
+        this.advancedSearchModalTarget.__ouvreur = ouvreur && ouvreur !== document.body ? ouvreur : null;
         this.modal.show();
 
         this.initTomSelects();

@@ -101,13 +101,17 @@
 		   Les toasts s'empilent verticalement (flex-column), alignés du haut vers
 		   le bas et calés sur le bord droit (align-items-end). #}
 		<div
-			aria-live="polite"
-			aria-atomic="true"
 			class="position-fixed end-0 p-3 d-flex flex-column align-items-end"
 			style="top: var(--jsb-toast-top, 4.5rem); z-index: 1100"
 			data-controller="notification-manager"
 		>
-			{# Les toasts seront injectés ici par Stimulus #}
+			{# DEUX RÉGIONS D'ANNONCE, PRÉSENTES DÈS LE CHARGEMENT (chantier 2) : le message y est
+			   INSÉRÉ — une région créée en même temps que son message n'est pas annoncée de façon
+			   fiable. `alert` (immédiate) est réservée aux ERREURS ; tout le reste passe par
+			   `status` (polie), qui n'interrompt pas le lecteur d'écran. Règles :
+			   assets/controllers/notification-regles.js. #}
+			<div role="alert" aria-atomic="false" class="d-flex flex-column align-items-end" data-notification-manager-target="alerte"></div>
+			<div role="status" aria-atomic="false" class="d-flex flex-column align-items-end" data-notification-manager-target="statut"></div>
 		</div>
 		{{ include("components/_confirmation_dialog.html.twig") }}
 	</body>

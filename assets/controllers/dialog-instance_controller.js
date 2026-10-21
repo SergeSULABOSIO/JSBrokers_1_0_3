@@ -4,6 +4,7 @@ import { urlAction } from './actions-groupees.js';
 import { BarreActions } from './barre-actions.js';
 import { nomAffiche } from './selecto.js';
 import { resumeDeFermeture } from './collection-tampon.js';
+import { empreinteDuFormulaire } from './echap-dialogue.js';
 import { champsSources, conteneurVisible, rangeeVisible, trouverChamp, valeurObservee } from './visibilite-conditions.js';
 /**
  * @file Ce fichier contient le contrôleur Stimulus 'dialog-instance'.
@@ -94,6 +95,13 @@ export default class extends Controller {
             libelles: true,
         });
         this.boundSurSaisie = this._surSaisie.bind(this);
+        // L'empreinte du formulaire se prend au PREMIER GESTE n'importe où dans le dialogue
+        // (Tab depuis l'entête ou le pied compris), ou dans une liste d'autocomplétion, que
+        // Tom Select attache au <body> : un clic sur une option se fait HORS du formulaire.
+        this.boundPrendreLEmpreinte = this._prendreLEmpreinte.bind(this);
+        for (const geste of ['keydown', 'pointerdown', 'dragenter']) {
+            document.addEventListener(geste, this.boundPrendreLEmpreinte, true);
+        }
 
         const detail = this.element.dialogDetail;
 
@@ -121,6 +129,9 @@ export default class extends Controller {
         document.removeEventListener('cerveau:event', this.boundAbandon);
         window.removeEventListener('beforeunload', this.boundAvantDechargement);
         document.removeEventListener('app:fiche.modifiee', this.boundFicheModifiee);
+        for (const geste of ['keydown', 'pointerdown', 'dragenter']) {
+            document.removeEventListener(geste, this.boundPrendreLEmpreinte, true);
+        }
         // Referme un menu de famille resté déplié et retire les écouteurs de la barre.
         this.barreActions.detruire();
     }
@@ -816,20 +827,26 @@ export default class extends Controller {
      * l'ancienne valeur, et l'« Enregistrer » suivant la réécrivait. La barre est donc
      * grisée — pas masquée : son infobulle dit quoi faire.
      *
-     * L'état « modifié » se mesure contre une EMPREINTE du formulaire prise au
-     * chargement, et non au premier événement : un widget qui se signale sans rien
-     * changer ne grise rien, et une saisie défaite rend la barre.
+     * L'état « modifié » se mesure contre une EMPREINTE du formulaire, et non au premier
+     * événement : un widget qui se signale sans rien changer ne grise rien, et une saisie
+     * défaite rend la barre.
+     *
+     * L'EMPREINTE EST PRISE AU PREMIER GESTE de l'utilisateur dans le formulaire (touche,
+     * clic, fichier glissé), pas au chargement : l'éditeur riche remet en forme son contenu
+     * juste APRÈS l'affichage, ce qui passait pour une saisie. Avant tout geste, rien n'a pu
+     * être saisi. CRÉATION COMPRISE (chantier 2) : c'est là qu'une saisie perdue n'existe
+     * nulle part ailleurs — Échap et « Fermer » la protègent (close()).
      * @private
      */
     _armerGardeDeSaisie() {
         const form = this.contentTarget.querySelector('form');
         this.barreActions.desactiver(false);
         this._empreinteInitiale = null;
-        // Suivie pour TOUTE fiche en édition, barre ou non : c'est aussi elle qui décide
-        // si une fiche modifiée ailleurs peut être rechargée sans rien perdre.
-        if (!form || this.isCreateMode) return;
+        // Suivie pour TOUTE fiche, barre ou non : elle décide aussi si une fiche modifiée
+        // ailleurs peut être rechargée sans rien perdre, et si la fermeture doit demander.
+        if (!form) return;
 
-        this._empreinteInitiale = this._empreinteDuFormulaire(form);
+        // L'empreinte elle-même est prise par _prendreLEmpreinte, au premier geste.
         form.addEventListener('input', this.boundSurSaisie);
         form.addEventListener('change', this.boundSurSaisie);
     }
@@ -932,8 +949,7 @@ export default class extends Controller {
      * @private
      */
     _empreinteDuFormulaire(form) {
-        return JSON.stringify([...new FormData(form).entries()]
-            .map(([nom, valeur]) => [nom, valeur instanceof File ? valeur.name : valeur]));
+        return empreinteDuFormulaire(new FormData(form).entries());
     }
 
     /**
@@ -1123,6 +1139,9 @@ export default class extends Controller {
     showFeedback(type, message) {
         const feedbackContainer = this.feedbackContainerTarget;
         if (!feedbackContainer) return;
+        // Une ERREUR est annoncée tout de suite : c'est ici, au pied du dialogue, qu'elle se lit
+        // — le cerveau ne la double plus d'un toast (chantier 2).
+        feedbackContainer.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
 
         // On formate la date et l'heure actuelles
         const now = new Date();
@@ -1261,15 +1280,25 @@ export default class extends Controller {
      * Ferme la modale et notifie le cerveau de cette action.
      */
     close() {
+        // PENDANT UN ENVOI (« Patientez… »), rien ne se ferme : les boutons Fermer sont
+        // verrouillés, et Échap passait outre — l'abandon confirmé n'arrêtait pas la requête,
+        // la fiche s'enregistrait quand même, sous un message disant le contraire.
+        if (this.hasCloseButtonTarget && this.closeButtonTarget.disabled) return false;
+
         // GARDE-FOU : cette boîte porte peut-être une saisie qui n'existe NULLE PART
         // ailleurs. La fermer sans rien dire la perdrait — silencieusement, et sans
         // aucun moyen de la retrouver, puisqu'elle n'a jamais atteint la base.
         const resume = resumeDeFermeture(this._widgetsEnAttente().map((widget) => widget.groupe));
-        if (resume.doitConfirmer) {
+        // LE FORMULAIRE LUI-MÊME a pu changer depuis l'ouverture (Quill et fichiers compris) :
+        // Échap ou « Fermer » le perdrait aussi sans un mot (chantier 2).
+        const formulaireModifie = this._saisieEnCours();
+        if (resume.doitConfirmer || formulaireModifie) {
             document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
                 detail: {
                     title: 'Abandonner la saisie en cours ?',
-                    body: `${resume.nombre} élément(s) n'ont pas encore été enregistrés. Ils seront perdus.`,
+                    body: resume.doitConfirmer
+                        ? `${resume.nombre} élément(s) n'ont pas encore été enregistrés. Ils seront perdus.`
+                        : "Vos modifications n'ont pas été enregistrées. Elles seront perdues.",
                     // Nommer ce qui disparaît, plutôt qu'un nombre que l'utilisateur
                     // devrait interpréter (Nielsen 1 — visibilité de l'état du système).
                     itemDescriptions: resume.libelles,
@@ -1279,12 +1308,28 @@ export default class extends Controller {
                     },
                 },
             }));
-            return;
+            return false;
         }
 
         // On ne ferme plus directement. On demande au cerveau de le faire.
         // Cela garantit que la fermeture est ciblée et orchestrée.
         this.notifyCerveau('ui:dialog.close-request', { dialogId: this.dialogId });
+        return true;
+    }
+
+    /**
+     * Premier geste de l'utilisateur dans CE dialogue (ou dans une liste d'autocomplétion,
+     * attachée au <body>) : on photographie le formulaire AVANT que ce geste ne le change.
+     * @param {Event} event
+     * @private
+     */
+    _prendreLEmpreinte(event) {
+        if (!event.isTrusted || this._empreinteInitiale !== null) return;
+        const cible = event.target;
+        const ici = cible instanceof Node && (this.element.contains(cible) || !!cible.closest?.('.ts-dropdown'));
+        if (!ici) return;
+        const form = this.contentTarget.querySelector('form');
+        if (form) this._empreinteInitiale = this._empreinteDuFormulaire(form);
     }
 
     /** Les widgets de collection de CETTE boîte qui gardent une saisie en mémoire. @private */
@@ -1319,7 +1364,7 @@ export default class extends Controller {
      */
     _avertirAvantDechargement(event) {
         const resume = resumeDeFermeture(this._widgetsEnAttente().map((widget) => widget.groupe));
-        if (!resume.doitConfirmer) return;
+        if (!resume.doitConfirmer && !this._saisieEnCours()) return;
         event.preventDefault();
         event.returnValue = '';
     }
@@ -1627,8 +1672,10 @@ export default class extends Controller {
         const geste = this._gesteDeSuite;
         if (!geste) return;
 
+        // La fermeture peut DEMANDER (saisie non enregistrée) : l'écran suivant ne s'ouvre
+        // alors pas par-dessus la question, et le geste reste disponible si l'on annule.
+        if (!this.close()) return;
         this._gesteDeSuite = null;
-        this.close();
         this.notifyCerveau(geste.event, { url: geste.url });
     }
 

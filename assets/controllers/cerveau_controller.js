@@ -354,8 +354,10 @@ export default class extends Controller {
                 }
                 break;
             case 'app:form.validation-error':
+                // Le message est déjà au pied du dialogue, annoncé tout de suite (dialog-instance
+                // #showFeedback) : un toast le doublait, ne partait plus seul et recouvrait le
+                // dialogue (revue du chantier 2).
                 this._publishSelectionStatus('Erreur de validation. Veuillez corriger le formulaire.');
-                this._showNotification(payload.message || 'Erreur de validation.', 'error');
                 break;
             case 'app:base-données:sélection-request':
                 console.log(`[${++window.logSequence}] ${this.nomControleur} - Code: 1986 - Recherche`, payload);

@@ -10,7 +10,8 @@ import { Controller } from '@hotwired/stimulus';
  *
  * Ergonomie / accessibilité :
  *  - Visibilité de l'état du système (Nielsen #1) : retour immédiat, non intrusif.
- *  - Le toast applicatif porte déjà `role="alert"` / `aria-live` (notification-manager).
+ *  - Le message est annoncé par la région de notification-manager : `role="status"`, ou
+ *    `role="alert"` pour une erreur (qui reste alors affichée jusqu'à ce qu'on la ferme).
  *
  * Markup attendu :
  *   <div data-controller="flash-toast"

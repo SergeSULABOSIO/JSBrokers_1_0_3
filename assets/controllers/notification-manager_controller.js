@@ -1,8 +1,12 @@
 // assets/controllers/notification-manager_controller.js
 import { Controller } from '@hotwired/stimulus';
 import { Toast } from 'bootstrap'; // Important: importer Toast
+import { regionDuMessage, delaiDuMessage, messageEnDouble, erreursARetirer } from './notification-regles.js';
 
 export default class extends Controller {
+    // Les deux régions d'annonce, présentes dès le chargement (base.html.twig).
+    static targets = ['statut', 'alerte'];
+
     connect() {
         this.nomControleur = "NOTIFICATION-MANAGER";
         // --- CORRECTION : Lier la méthode une seule fois et écouter l'événement diffusé par le cerveau ---
@@ -31,13 +35,26 @@ export default class extends Controller {
 
         const config = options[type] || options.info;
 
+        // DÉJÀ À L'ÉCRAN, À L'IDENTIQUE : on ne l'empile pas une seconde fois (une même panne
+        // répétée, réseau coupé, ne doit pas couvrir l'écran du même texte).
+        const affiches = [...this.element.querySelectorAll('.toast.show, .toast.showing')].map((t) => ({
+            type: t.dataset.type, texte: t.querySelector('.toast-body')?.firstChild?.textContent ?? '',
+        }));
+        if (messageEnDouble({ type, texte: text ?? '' }, affiches)) return;
+
+        // AU PLUS TROIS ERREURS : elles ne partent plus seules — la plus ancienne cède la place.
+        if (type === 'error' && this.hasAlerteTarget) {
+            const erreurs = [...this.alerteTarget.querySelectorAll('.toast')];
+            erreurs.slice(0, erreursARetirer(erreurs.length)).forEach((t) => t.remove());
+        }
+
         // Détermine la classe du bouton de fermeture en fonction du fond
         const closeButtonClass = (config.text === 'text-white') ? 'btn-close-white' : '';
 
         // Création dynamique de l'HTML du toast — même structure que le toast
         // « Paramètres de l'espace de travail » : en-tête (icône + titre) + corps.
         const toastHTML = `
-            <div class="toast jsb-toast ${config.bg} ${config.text} bg-opacity-75" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast jsb-toast ${config.bg} ${config.text} bg-opacity-75" aria-atomic="true" data-type="${type}">
                 <div class="toast-header">
                     <span aria-hidden="true">${config.icon}</span>
                     <strong class="ms-2 me-auto">${config.title}</strong>
@@ -47,10 +64,14 @@ export default class extends Controller {
             </div>
         `;
 
-        // Ajout du toast au conteneur
-        this.element.insertAdjacentHTML('beforeend', toastHTML);
+        // Inséré dans SA région d'annonce : `alert` pour une erreur, `status` sinon. Le toast
+        // n'est plus lui-même une région (ils étaient imbriqués, et tout sonnait l'alarme).
+        const region = regionDuMessage(type) === 'alerte'
+            ? (this.hasAlerteTarget ? this.alerteTarget : this.element)
+            : (this.hasStatutTarget ? this.statutTarget : this.element);
+        region.insertAdjacentHTML('beforeend', toastHTML);
 
-        const newToastEl = this.element.lastElementChild; //
+        const newToastEl = region.lastElementChild;
 
         // LE MESSAGE EST DU TEXTE, posé par textContent — jamais interpolé dans le HTML
         // ci-dessus. Il cite des noms saisis (client, échéance, fichier, référence de
@@ -77,10 +98,10 @@ export default class extends Controller {
             newToastEl.querySelector('.toast-body').appendChild(bouton);
         }
 
-        const toast = new Toast(newToastEl, {
-            // 10 secondes ; davantage quand il y a un geste à faire, le temps de lire PUIS d'agir.
-            delay: action ? 20000 : 10000
-        });
+        // Une ERREUR reste jusqu'à ce qu'on la ferme ; les autres 10 s, 20 s avec un geste à
+        // faire. Le minuteur s'arrête au survol et au focus (Toast de Bootstrap).
+        const delai = delaiDuMessage(type, !!action);
+        const toast = new Toast(newToastEl, delai === null ? { autohide: false } : { delay: delai });
 
         // Supprimer le toast du DOM une fois qu'il est caché pour garder le HTML propre
         newToastEl.addEventListener('hidden.bs.toast', () => {

@@ -215,6 +215,10 @@ export default class extends Controller {
      * @param {object} payload.onConfirm - L'action à notifier au Cerveau en cas de confirmation.
      */
     open(payload) {
+        // L'élément qui a demandé la confirmation : le focus y revient à la fermeture
+        // (dialog-manager#_rendreLeFocus, WCAG 2.4.3).
+        const ouvreur = document.activeElement;
+        this.element.__ouvreur = ouvreur && ouvreur !== document.body && !this.element.contains(ouvreur) ? ouvreur : null;
         const { title, onConfirm, itemDescriptions, headerClass, confirmClass, showIrreversible, requirePassword } = payload;
 
         // Repart toujours d'un état propre : bouton réactivé, message d'erreur effacé,

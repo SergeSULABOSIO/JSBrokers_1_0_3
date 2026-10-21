@@ -137,6 +137,20 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   `ui:search.submitted` passe son `workspaceTabId`. Un contexte publié pour un onglet en
   arrière-plan porte `arrierePlan: true` ; un contexte provisoire (`etatProvisoire`) ne se
   mémorise jamais (`ongletAMemoriser`). Garde-fou : `tests/js/routage-onglet.test.mjs`.
+- **Échap dans les dialogues** (chantier 2 ; règles `assets/controllers/echap-dialogue.js`, un
+  seul gestionnaire dans `dialog-manager`, en phase de CAPTURE, d'après la PILE des modales) :
+  d'abord ce qui est ouvert dans le dialogue (autocomplétion, menu, picker, liste « +N » —
+  repérés par `aria-haspopup`/`combobox` + `aria-expanded="true"`, `.jsb-picker-overlay`…),
+  puis le dialogue du DESSUS seulement ; rien pendant une saisie Quill, un envoi en cours
+  (Fermer verrouillé), une touche maintenue, ni dans un champ `[data-echap-local]`. Un
+  formulaire se ferme par `dialog-instance#close()`, qui demande si l'EMPREINTE du formulaire
+  (prise au premier geste, création comprise, Quill et fichiers compris) a changé ; la question
+  se ferme par `ui:confirmation.close`. Le focus revient à l'ouvreur (`__ouvreur` posé à
+  l'ouverture). Un nouveau dialogue garde `data-bs-keyboard="false"`.
+- **Messages** (chantier 2 ; `notification-regles.js`) : deux régions permanentes dans
+  `base.html.twig` — `role="status"` pour l'information, `role="alert"` réservée aux ERREURS ;
+  le toast n'a pas de rôle. Une erreur reste jusqu'à ce qu'on la ferme (au plus 3, pas de
+  doublon) ; ne pas doubler d'un toast une erreur déjà affichée au pied d'un dialogue.
 - **Le texte d'une erreur technique ne sort pas** (chantier 10, 2026-10-19). Un message
   d'exception va à l'écran (JSON, flash, Twig, NDJSON, rapport d'import) par
   `App\Service\Erreur\MessageDErreur::pourLEcran($e, $repli)` : relayé si l'exception porte
@@ -246,10 +260,7 @@ Inscrits le 2026-10-16 (décisions de Serge), après l'inventaire fait pour la s
    espace de travail / recherche, C5 cloisonnement de `getFormApi` et de ses huit frères (404),
    C6 texte riche assaini, C7 caches du `localStorage` et infobulle d'attribut. Les règles qui en
    restent sont au §4. Production vérifiée : aucune trace d'exploitation.
-2. **Dialogues et toasts.** Échap ferme un dialogue, avec une confirmation s'il y a une saisie
-   non enregistrée (aujourd'hui `data-bs-keyboard="false"`, `dialog-manager_controller.js:30`).
-   Toasts : `role="status"` pour une information, `role="alert"` réservé aux erreurs
-   (aujourd'hui `role="alert"` partout, `notification-manager_controller.js:40`).
+2. ✅ **FAIT (2026-10-21) — Dialogues et toasts.** Règles au §4 (« Échap » et « Messages »).
 3. **Composants dupliqués.** Quatre infobulles (`infobulle`/`.jsb-ctx-tip`, `#db-meta-tip` et
    `data-renew-tip` dans `assets/app.js`, `soa-section-tip`) et quatre menus contextuels
    (`context-menu`, `console-context-menu`, `entreprise-context-menu`, `soa-context-menu`) :
