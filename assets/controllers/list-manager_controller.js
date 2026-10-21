@@ -833,6 +833,11 @@ export default class extends BaseController {
 
         this.listContainerTarget.classList.toggle('d-none', !hasRows);
         this.emptyStateContainerTarget.classList.toggle('d-none', hasRows);
+        // LA LISTE VIDE DIT POURQUOI (chantier 6) : le serveur a rendu l'état vide de CETTE
+        // recherche — aucune donnée, le portefeuille seul, ou d'autres filtres — avec le bon geste.
+        if (!hasRows && typeof event.detail.etatVide === 'string') {
+            this.emptyStateContainerTarget.innerHTML = event.detail.etatVide;
+        }
 
         if (pagination) {
             this._renderPagination(pagination);
@@ -902,6 +907,22 @@ export default class extends BaseController {
     resetSearch() {
         this._logDebug("Demande de réinitialisation de la recherche reçue depuis l'état vide.");
         this.notifyCerveau('ui:search.reset-request', {});
+    }
+
+    /**
+     * « Afficher tout le cabinet » / « Effacer les filtres » (chantier 6) : retire EXACTEMENT les
+     * critères que le serveur a mis sur le bouton (CauseDeListeVide) — « Mon portefeuille » n'y
+     * figure que s'il doit partir. Le cerveau relance la recherche de CET onglet.
+     * @param {{params: {cles?: string[]}}} event
+     */
+    retirerFiltres(event) {
+        const cles = Array.isArray(event?.params?.cles) ? event.params.cles.map(String) : [];
+        if (cles.length === 0) return;
+        this.notifyCerveau('ui:liste-vide.retirer-filtres', {
+            cles,
+            tabId: estListePrincipale(this.element.id) ? 'principal' : this.element.id,
+            ...(this.workspaceTabId ? { workspaceTabId: this.workspaceTabId } : {}),
+        });
     }
 
     /**

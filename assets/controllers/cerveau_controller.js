@@ -248,6 +248,9 @@ export default class extends Controller {
             case 'ui:fiche-hors-filtre.afficher-request':
                 this._afficherLaFicheHorsFiltre(payload);
                 break;
+            case 'ui:liste-vide.retirer-filtres':
+                this._retirerLesFiltresDeLaListeVide(payload);
+                break;
             case 'ui:filter.preset': {
                 // Chip de filtre rapide (ex. statut de paiement des tranches) : pose ou
                 // retire (valeur vide = « Toutes ») les critères synthétiques en conservant
@@ -1193,6 +1196,8 @@ export default class extends Controller {
                     html: data.html,
                     originatorId: tabState.elementId,
                     pagination: data.pagination || null,
+                    // La cause d'une liste vide, rendue par le serveur (chantier 6).
+                    etatVide: data.etatVide?.html ?? null,
                     workspaceTabId,
                 });
 
@@ -1295,6 +1300,22 @@ export default class extends Controller {
      * normal (badges, chips et persistance suivent), si l'on est toujours sur la liste.
      * @private
      */
+    /**
+     * LISTE VIDE : retirer les critères que le serveur a désignés (chantier 6, CauseDeListeVide).
+     * Sur l'onglet qui l'a demandé, avec ses autres critères intacts.
+     * @private
+     */
+    _retirerLesFiltresDeLaListeVide(payload) {
+        const cles = Array.isArray(payload?.cles) ? payload.cles : [];
+        if (cles.length === 0) return;
+        const cible = cibleDeRecherche(payload.workspaceTabId, this.currentWorkspaceTabId, this.activeTabId);
+        // La liste demandeuse doit être celle que l'on vise : jamais les critères d'une autre.
+        if (payload.tabId && payload.tabId !== cible.listeId) return;
+        const etat = cible.affiche ? this._getActiveTabState() : this.tabsState[cible.workspaceTabId]?.[cible.listeId];
+        if (!etat) return;
+        this._handleSearchRequest(criteresSans(etat.searchCriteria || {}, cles), payload.workspaceTabId ?? null);
+    }
+
     _afficherLaFicheHorsFiltre(payload) {
         if (payload.workspaceTabId !== this.currentWorkspaceTabId || payload.tabId !== this.activeTabId) {
             this._showNotification("La liste a changé depuis l'enregistrement : retirez le filtre depuis sa barre de recherche.", 'info');

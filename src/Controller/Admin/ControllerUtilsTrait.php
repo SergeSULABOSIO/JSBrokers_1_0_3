@@ -1068,6 +1068,87 @@ trait ControllerUtilsTrait
     }
 
     /**
+     * L'ÉTAT VIDE D'UNE LISTE : sa cause et les paramètres de `_empty_state.html.twig`
+     * (chantier 6, décisions de Serge du 2026-10-21 ; règle : CauseDeListeVide).
+     *
+     * @param array<string, mixed> $criteresVus   ce que l'utilisateur voit filtrer
+     * @param array<string, mixed> $criteresImposes ce que le serveur pose de lui-même (gardés pour compter)
+     *
+     * @return array{cause: string, parametres: array<string, mixed>}
+     */
+    private function etatVideParametres(string $entityClass, array $criteresVus, array $criteresImposes, ?array $parentContext, Entreprise $entreprise): array
+    {
+        // Sans critère actif, la cause est « aucune donnée » quoi qu'il en soit : pas de requête.
+        $existeDesFiches = \App\Service\Liste\CauseDeListeVide::aDesCriteresActifs($criteresVus)
+            && (int) ($this->searchService->search($entityClass, $criteresImposes, $entreprise, $parentContext, 1, 1)['totalItems'] ?? 0) > 0;
+        ['cause' => $cause, 'cles' => $cles] = \App\Service\Liste\CauseDeListeVide::determiner(
+            $criteresVus,
+            $existeDesFiches,
+            $this->workspaceAccessResolver->estAdministrateurDuCabinet($this->getInvite()),
+        );
+
+        $icone = $this->canvasBuilder->getEntityCanvas($entityClass)['parametres']['icone'] ?? 'lucide:search-x';
+        $parametres = match ($cause) {
+            \App\Service\Liste\CauseDeListeVide::PORTEFEUILLE => [
+                'title' => 'Aucune fiche dans votre portefeuille',
+                'description' => "D'autres fiches existent dans le cabinet, hors de votre portefeuille.",
+                'icon_name' => $icone,
+                'button_2_text' => 'Afficher tout le cabinet',
+                'button_2_action' => 'click->list-manager#retirerFiltres',
+                'button_2_cles' => $cles,
+                'button_2_class' => 'btn btn-link',
+                'button_2_icon' => 'lucide:rotate-cw',
+            ],
+            \App\Service\Liste\CauseDeListeVide::FILTRES => [
+                'title' => 'Aucune fiche ne correspond à vos filtres',
+                'description' => 'Des fiches existent dans le cabinet, mais vos filtres les écartent.',
+                'icon_name' => 'lucide:search-x',
+                'button_2_text' => 'Effacer les filtres',
+                'button_2_action' => 'click->list-manager#retirerFiltres',
+                'button_2_cles' => $cles,
+                'button_2_icon' => 'lucide:rotate-cw',
+            ],
+            default => [
+                'title' => 'Aucune donnée',
+                'description' => "Aucune fiche n'a encore été enregistrée ici.",
+                'icon_name' => $icone,
+            ],
+        };
+        // « Ajouter » : avec les mêmes droits que la barre d'outils (création permise). JAMAIS dans
+        // un onglet contextuel : ses droits d'ajout se jugent sur la collection
+        // (droitsSurLaCollection) — l'état vide ne doit pas rouvrir une porte fermée.
+        $formulaire = $parentContext === null
+            ? $this->applyPermissionToFormCanvas($this->canvasBuilder->getEntityFormCanvas(new $entityClass(), (int) $entreprise->getId()), $entityClass)
+            : ['parametres' => ['creation_interdite' => true]];
+        if (($formulaire['parametres']['creation_interdite'] ?? false) !== true) {
+            $parametres += ['button_text' => 'Ajouter', 'button_action' => 'click->list-manager#requestAddItem', 'button_icon' => 'lucide:plus-circle'];
+        }
+
+        return ['cause' => $cause, 'parametres' => $parametres];
+    }
+
+    /**
+     * Les critères que le SERVEUR impose à une liste, quels que soient ceux reçus — la même
+     * frontière que DemandeCongeController::query() pose en `$extraCriteria`.
+     *
+     * @return array<string, mixed>
+     */
+    private function criteresImposesALaListe(string $entityClass): array
+    {
+        return (new \ReflectionClass($entityClass))->getShortName() === 'DemandeConge'
+            ? $this->congeVisibiliteScope->critereFor($this->getInvite())
+            : [];
+    }
+
+    /** L'état vide RENDU par le serveur, pour une recherche (réponse JSON). @return array{cause: string, html: string} */
+    private function etatVideRendu(string $entityClass, array $criteresVus, array $criteresImposes, ?array $parentContext, Entreprise $entreprise): array
+    {
+        $etat = $this->etatVideParametres($entityClass, $criteresVus, $criteresImposes, $parentContext, $entreprise);
+
+        return ['cause' => $etat['cause'], 'html' => $this->renderView('components/_empty_state.html.twig', $etat['parametres'])];
+    }
+
+    /**
      * Renders either the full view manager or just the list component for a given entity.
      * This method handles both initial page loads (index) and dynamic search queries (query).
      *
@@ -1156,6 +1237,11 @@ trait ControllerUtilsTrait
                 ],
             ] + (isset($payload['verifier']) ? ['verification' => $this->verifierLaFicheEnregistree(
                 $entityClass, (int) $payload['verifier'], $criteria, array_keys($payload['criteria'] ?? []), $entreprise, $parentContext,
+            )] : []) + ((int) $searchResult['totalItems'] === 0 && empty($searchResult['status']['error']) ? ['etatVide' => $this->etatVideRendu(
+                // Les critères VUS par l'utilisateur — pas ceux que le serveur IMPOSE (frontière
+                // des congés…), qui restent posés pour compter : la question « existe-t-il des
+                // fiches ? » ne regarde jamais au-delà de la frontière.
+                $entityClass, array_diff_key($payload['criteria'] ?? [], $extraCriteria), $extraCriteria, $parentContext, $entreprise,
             )] : [])));
         }
         // CAS 2: C'est le chargement initial de la page, on rend le conteneur principal.
@@ -1196,6 +1282,15 @@ trait ControllerUtilsTrait
                     'totalItems'   => $searchResult['totalItems'],
                     'itemsPerPage' => 20,
                 ];
+                // VIDE DÈS L'OUVERTURE (« Mon portefeuille » cache tout, typiquement) : la liste
+                // dit pourquoi, et propose le bon geste.
+                if ((int) $searchResult['totalItems'] === 0 && empty($searchResult['status']['error'])) {
+                    // La FRONTIÈRE du premier affichage (congés d'autrui) compte comme imposée,
+                    // comme à la recherche : sinon « des fiches existent » trahirait des demandes
+                    // qu'on ne doit pas voir (revue du chantier 6).
+                    $imposes = $this->criteresImposesALaListe($entityClass);
+                    $etatVide = $this->etatVideParametres($entityClass, array_diff_key($initialCriteria, $imposes), $imposes, null, $entreprise);
+                }
             } else {
                 $data = [];
                 $paginationMeta = ['currentPage' => 1, 'totalPages' => 0, 'totalItems' => 0, 'itemsPerPage' => 20];
@@ -1242,6 +1337,8 @@ trait ControllerUtilsTrait
             // Critères actifs par défaut (amorçage de l'état Cerveau + badge de filtre).
             'initialSearchCriteria' => $initialCriteria ?? [],
             'vueCartes' => $vueCartes ?? null,
+            // Les paramètres de l'état vide, si la liste l'est (chantier 6, CauseDeListeVide).
+            'etatVide' => $etatVide['parametres'] ?? null,
         ];
 
         // dd("Paramètres - searchCanvas:", $parameters["searchCanvas"]);

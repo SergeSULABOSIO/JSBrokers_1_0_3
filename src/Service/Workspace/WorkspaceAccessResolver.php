@@ -282,6 +282,30 @@ class WorkspaceAccessResolver
             && $entreprise->getUtilisateur() === $invite->getUtilisateur();
     }
 
+    /**
+     * ADMINISTRATEUR DE TOUT LE CABINET (chantier 6, décision de Serge du 2026-10-21 : « lire et
+     * écrire dans tous les portefeuilles et rubriques ») : le propriétaire, ou un invité qui a
+     * au moins Lecture, Écriture et Modification sur CHAQUE rubrique gouvernée. Il n'existe pas
+     * de droit par portefeuille : la mesure porte sur les rubriques. Sert à « Effacer les
+     * filtres », qui ne retire « Mon portefeuille » que pour lui.
+     */
+    public function estAdministrateurDuCabinet(Invite $invite): bool
+    {
+        if ($this->isOwner($invite)) {
+            return true;
+        }
+        foreach (array_keys(self::MAP) as $entite) {
+            $niveaux = $this->allowedLevels($invite, $entite);
+            foreach ([Invite::ACCESS_LECTURE, Invite::ACCESS_ECRITURE, Invite::ACCESS_MODIFICATION] as $requis) {
+                if (!\in_array($requis, $niveaux, true)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     /** Peut administrer les invités et attribuer des rôles : propriétaire ou délégué. */
     public function canManageInvites(Invite $invite): bool
     {

@@ -430,6 +430,11 @@
                     {% set emptyStateParams = emptyStateParams|merge({ button_text: "Ajouter", button_action: "click->list-manager#requestAddItem", button_icon: "lucide:plus-circle" }) %}
                 {% endif %}
             {% endif %}
+            {# LA CAUSE DU VIDE, DITE PAR LE SERVEUR (chantier 6, CauseDeListeVide) : elle remplace
+               le message générique, et une recherche la renouvelle (list-manager). #}
+            {% if etatVide is defined and etatVide %}
+                {% set emptyStateParams = etatVide %}
+            {% endif %}
 
             {{ include('components/_empty_state.html.twig', emptyStateParams) }}
         </div>

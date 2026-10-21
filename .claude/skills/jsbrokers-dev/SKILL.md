@@ -292,8 +292,15 @@ Inscrits le 2026-10-16 (décisions de Serge), après l'inventaire fait pour la s
    `color:#0d2440` hors charte, en style inline, sur 11 titres et libellés du picker de
    facturation (`_facturation_picker.html.twig:110` à :351) ; format de date `d/m/Y` écrit en
    dur sur la carte de piste (`_carte_piste.html.twig:40`), au lieu de `format_datetime`.
-6. **État vide.** Distinguer « aucune donnée » de « tout est filtré »
-   (`_list_manager.html.twig:420-425`).
+6. ✅ **FAIT (2026-10-21) — État vide.** Le SERVEUR dit pourquoi une liste est vide
+   (`App\Service\Liste\CauseDeListeVide`, `ControllerUtilsTrait::etatVideParametres`) et rend
+   l'état vide, au premier affichage comme à chaque recherche (`etatVide` de la réponse) :
+   « Aucune donnée » ; « Aucune fiche dans votre portefeuille » + « Afficher tout le cabinet »
+   (proposé à tous) ; « Aucune fiche ne correspond à vos filtres » + « Effacer les filtres »,
+   qui ne retire « Mon portefeuille » que pour un administrateur du cabinet
+   (`WorkspaceAccessResolver::estAdministrateurDuCabinet` : propriétaire, ou Lecture + Écriture +
+   Modification sur toutes les rubriques gouvernées). Les boutons portent les clés à retirer
+   (`button_2_cles`) ; le navigateur ne décide rien. Test : `ListeVideExpliqueeTest`.
 7. **Routes et code morts** : `/admin/piste/test` (`PisteController.php:65-69`) ;
    `/admin/demande_contact` répond 500 en GET (gabarit absent) — le POST, lui, passe par
    `GardeDuFormulaireDeContact` ; `RetroAgentController::assertPeutConsulter`, jamais appelée.

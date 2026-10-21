@@ -154,6 +154,39 @@ class CongeConfidentialiteTest extends WebTestCase
         return $this->em()->getRepository(Utilisateur::class)->findOneBy(['email' => $email]);
     }
 
+    // ═══════════ La liste vide ne trahit rien (chantier 6) ═══════════
+
+    /**
+     * Alice n'a AUCUNE demande ; Bob en a une. Sa liste vide doit dire « Aucune donnée » — jamais
+     * « des fiches existent, vos filtres les écartent », qui révélerait que d'autres demandes
+     * existent (le nombre comme l'existence sont déjà des données personnelles). La question
+     * « existe-t-il des fiches ? » se pose DANS la frontière, au premier affichage comme à la
+     * recherche (revue du chantier 6).
+     */
+    public function testLaListeVideNeTrahitPasLesDemandesDAutrui(): void
+    {
+        $s = $this->semer();
+        $this->em()->remove($this->em()->find(DemandeConge::class, $s['demandeAlice']->getId()));
+        $this->em()->flush();
+        $this->client->loginUser($this->compte(self::ALICE_EMAIL));
+
+        $this->client->request('GET', sprintf('/admin/demandeconge/index/%d/%d', $s['alice']->getId(), $s['entreprise']->getId()));
+        self::assertResponseIsSuccessful();
+        $html = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('Aucune donnée', $html, 'Premier affichage : rien à montrer, et rien à suggérer.');
+        self::assertStringNotContainsString('Effacer les filtres', $html);
+        self::assertStringNotContainsString('Des fiches existent', $html);
+
+        // La recherche, MÊME sans le badge « Mes demandes » envoyé par le navigateur.
+        foreach ([[], ['nom' => ['operator' => 'LIKE', 'value' => 'x']]] as $criteres) {
+            $this->client->request('POST', sprintf('/admin/demandeconge/api/dynamic-query/%d/%d', $s['alice']->getId(), $s['entreprise']->getId()), [], [], ['CONTENT_TYPE' => 'application/json'],
+                json_encode(['criteria' => $criteres, 'parentContext' => null, 'page' => 1]));
+            self::assertResponseIsSuccessful();
+            $reponse = json_decode((string) $this->client->getResponse()->getContent(), true);
+            self::assertSame('aucune_donnee', $reponse['etatVide']['cause'] ?? null, json_encode($criteres));
+        }
+    }
+
     // ═══════════ La règle elle-même ═══════════
 
     public function testUnCollaborateurNeVoitQueSesPropresDemandes(): void

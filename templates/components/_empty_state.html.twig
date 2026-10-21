@@ -7,6 +7,9 @@
     @param string button_text    Le texte du bouton (ex: "Ajouter un élément")
     @param string button_action  L'action Stimulus à déclencher au clic (ex: "collection#addItem" ou "list-manager#handleAddRequest")
     @param string icon_name      (Optionnel) Le nom de l'icône UX à afficher.
+    @param array  button_2_cles  (Optionnel) Les critères que le bouton secondaire RETIRE — choisis
+                                 par le serveur (CauseDeListeVide), lus par list-manager#retirerFiltres.
+    @param string button_2_class (Optionnel) Classe du bouton secondaire (ex. un lien).
 #}
 <div class="empty-state-container">
     <div class="empty-state-content">
@@ -25,7 +28,8 @@
         <div class="d-flex justify-content-center gap-2 mt-4">
             {# NOUVEAU : Bouton d'action secondaire (ex: Réinitialiser) #}
             {% if button_2_text is defined and button_2_text and button_2_action is defined and button_2_action %}
-                <button type="button" class="btn btn-secondary empty-state-button-secondary" data-action="{{ button_2_action }}">
+                <button type="button" class="{{ button_2_class|default('btn btn-secondary') }} empty-state-button-secondary" data-action="{{ button_2_action }}"
+                        {%- if button_2_cles is defined %} data-list-manager-cles-param="{{ button_2_cles|json_encode }}"{% endif %}>
                     {% if button_2_icon is defined and button_2_icon %}
                         <twig:UX:Icon name="{{ resolve_icon_name(button_2_icon) }}" class="me-2" />
                     {% endif %}
