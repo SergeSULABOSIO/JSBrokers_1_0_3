@@ -2,7 +2,7 @@ import { Controller } from '@hotwired/stimulus';
 // Quill et ses dépendances sont vendorisés (importmap.php, assets/vendor/) : aucun CDN.
 import Quill from 'quill';
 import { texteRicheSur } from './texte-riche.js';
-import { estTexteRiche, FORMATS_DE_LA_BARRE } from './texte-riche-regles.js';
+import { estTexteRiche, FORMATS_DE_LA_BARRE, SANS_TABULATION } from './texte-riche-regles.js';
 import { evenementInterne } from './evenement-interne.js';
 
 /**
@@ -37,7 +37,8 @@ export default class extends Controller {
         // 2. Initialiser Quill sur ce conteneur.
         // Quill va automatiquement créer la barre d'outils (.ql-toolbar) comme un frère juste avant l'éditeur.
         this.quill = new Quill(editorContainer, {
-            modules: { toolbar: inerte ? false : toolbarOptions },
+            // Tab et Maj+Tab SORTENT de l'éditeur (aucun piège clavier) : cf. SANS_TABULATION.
+            modules: { toolbar: inerte ? false : toolbarOptions, keyboard: { bindings: SANS_TABULATION } },
             // LES FORMATS DE LA BARRE D'OUTILS, ET EUX SEULS. Sans cette liste, un COLLAGE
             // produisait tout ce que Quill sait faire — lien, image, vidéo, code — que
             // l'assainissement du serveur retire ensuite : mieux vaut ne pas l'offrir.

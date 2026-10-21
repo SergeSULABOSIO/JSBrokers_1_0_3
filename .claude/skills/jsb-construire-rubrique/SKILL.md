@@ -108,6 +108,18 @@ ici ou dans une skill sœur, la skill est corrigée **dans le même chantier**.
 - Les tests de rendu qui lisent une balise par expression régulière sautent les valeurs entre
   guillemets (`(?:[^>"]|"[^"]*")*`) : `click->x#y` contient un « > ».
 
+**Clavier dans un dialogue** (chantier 2, WCAG 2.1.2 et 2.4.3) :
+
+- **Aucun piège clavier.** Tab et Maj+Tab sortent TOUJOURS d'un champ vers le suivant ou le
+  précédent — éditeur riche et listes compris. Quill est créé sans ses raccourcis Tab
+  (`SANS_TABULATION`, `texte-riche-regles.js`) ; une indentation de liste ne passerait que par
+  un bouton de la barre d'outils (il n'y en a pas aujourd'hui). Garde-fou :
+  `tests/js/texte-riche-tabulation.test.mjs`, qui relit la copie de Quill du dépôt.
+- Échap ferme d'abord ce qui est ouvert, puis le dialogue du dessus, avec « Abandonner ? » si
+  la saisie n'est pas enregistrée ; le focus revient à l'ouvreur (`jsbrokers-dev` §4).
+- Un composant qui modifie une valeur par script émet `input`/`change` par
+  `evenementInterne()`, jamais `new Event(...)`.
+
 **L'ordre réel de `handleFormSubmission`** (`ControllerUtilsTrait.php:1712-2002`) — un
 contrôleur ne le contourne pas, il passe ses ajouts par `beforePersist` :
 
