@@ -36,7 +36,7 @@
                 <span class="input-group-text border-0 bg-light px-2">
                     <twig:UX:Icon name="hugeicons:search-01" style="width:13px;height:13px;color:#6c757d;" />
                 </span>
-                <input type="search"
+                <input {{ attributs_champ_recherche('jsb-filtre') }} type="search"
                        aria-label="Filtrer les notes"
                        placeholder="Réf., nom, client…"
                        class="form-control form-control-sm border-0 bg-light"

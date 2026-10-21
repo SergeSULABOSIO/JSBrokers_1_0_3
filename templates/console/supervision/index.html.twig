@@ -73,7 +73,7 @@
             <div class="cs-filter"><label class="form-label" for="f-q" title="Recherche (message, type, fichier)">Recherche</label>
                 <div class="cs-field">
                     <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('action:search'), {height:'18px', width:'18px'}) }}</span>
-                    <input id="f-q" type="text" name="q" value="{{ filtres.q }}" class="form-control" placeholder="Message, type, fichier…">
+                    <input {{ attributs_champ_recherche() }} id="f-q" type="search" name="q" value="{{ filtres.q }}" class="form-control" placeholder="Message, type, fichier…">
                 </div>
             </div>
             <div class="cs-filter cs-filter-actions">

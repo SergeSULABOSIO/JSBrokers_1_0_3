@@ -7978,3 +7978,13 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 @media (prefers-reduced-motion: reduce) {
     .jsb-carte { transition: none; }
 }
+
+/* ── LE SIGNAL DU REMPLISSAGE AUTOMATIQUE (chantier 16) ──────────────────────
+   Le navigateur qui remplit un champ de recherche (:autofill) déclenche cette animation
+   invisible ; assets/champs-de-recherche.js l'entend (animationstart) et vide le champ.
+   Une valeur posée par l'application n'en déclenche aucune : elle survit. Deux règles
+   séparées : un sélecteur inconnu invaliderait toute une liste. Aucune propriété animée,
+   donc rien à couper pour prefers-reduced-motion. */
+@keyframes jsb-remplissage-auto { from { outline-color: inherit; } to { outline-color: inherit; } }
+input[data-champ-recherche]:-webkit-autofill { animation: jsb-remplissage-auto 1ms; }
+input[data-champ-recherche]:autofill { animation: jsb-remplissage-auto 1ms; }

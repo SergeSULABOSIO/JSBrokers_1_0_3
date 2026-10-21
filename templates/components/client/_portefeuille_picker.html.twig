@@ -79,11 +79,11 @@
                 <twig:UX:Icon name="hugeicons:search-01" style="width:16px;height:16px;" />
             </span>
             <label for="jsb-pf-picker-search-input" class="visually-hidden">Rechercher un portefeuille par nom ou gestionnaire</label>
-            <input type="text"
+            <input {{ attributs_champ_recherche('jsb-filtre') }} type="search"
                    id="jsb-pf-picker-search-input"
                    class="form-control"
                    placeholder="Rechercher par nom ou gestionnaire…"
-                   autocomplete="off"
+                  
                    data-picker-search>
         </div>
 

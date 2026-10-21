@@ -10,6 +10,9 @@ import './veille-erreurs.js';
 // enveloppe donc le fetch qui retente, et voit la reponse finale (reprise-reseau.js).
 import './reprise-reseau.js';
 import './cabinet-ferme.js';
+// Vide un champ de recherche que le NAVIGATEUR a rempli (adresse e-mail collée dans un filtre),
+// jamais une valeur posée par l'application (chantier 16).
+import './champs-de-recherche.js';
 import './bootstrap.js';
 /*
  * Welcome to your app's main JavaScript file!

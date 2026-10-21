@@ -548,20 +548,10 @@ export default class extends Controller {
         this.tabContainerTarget.appendChild(tabElement);
         this.tabContentContainerTarget.appendChild(contentElement);
 
-        // Filet de sécurité contre le remplissage automatique : le champ de filtre
-        // porte déjà tout ce qu'il faut pour être ignoré (type search, name,
-        // autocomplete off), mais navigateurs et gestionnaires de mots de passe
-        // écrivent APRÈS insertion dans le DOM et n'obéissent pas tous. Une fiche
-        // qui s'ouvre ne peut contenir que du texte que l'utilisateur n'a pas
-        // tapé : on repart d'un filtre vide, et on rejoue `input` pour que les
-        // attributs éventuellement masqués entre-temps reviennent.
-        requestAnimationFrame(() => {
-            const filtre = contentElement.querySelector('.accordion-search-input');
-            if (filtre && filtre.value !== '') {
-                filtre.value = '';
-                filtre.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-        });
+        // Remplissage automatique du champ de filtre : traité par le filet GLOBAL
+        // (assets/champs-de-recherche.js), qui ne vide que ce que le NAVIGATEUR a rempli
+        // (`:autofill`). L'ancien filet vidait toute valeur présente à l'ouverture : il
+        // aurait effacé un filtre restauré par l'application (chantier 15).
 
         // Activer le nouvel onglet créé
         this.activateTab({ currentTarget: tabElement });

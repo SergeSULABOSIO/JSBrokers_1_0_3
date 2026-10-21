@@ -77,11 +77,11 @@
             <span class="jsb-picker-search-icon" aria-hidden="true">
                 {{ ux_icon(resolve_icon_name('action:search'), {width: '16px', height: '16px'}) }}
             </span>
-            <input type="search"
+            <input {{ attributs_champ_recherche('jsb-filtre') }} type="search"
                    id="aimsg-recherche"
                    class="form-control"
                    placeholder="Nom, e-mail, fonction, client… (ex. « sinistre sonas »)"
-                   autocomplete="off"
+                  
                    aria-describedby="aimsg-recherche-aide"
                    data-picker-search>
         </div>

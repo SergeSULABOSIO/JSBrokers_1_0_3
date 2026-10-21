@@ -21,7 +21,9 @@
                     aria-label="Fermer la recherche avancée"></button>
             </div>
             <div class="modal-body bg-white">
-                <form aria-label="Formulaire de recherche avancée">
+                {# Entrée envoie ce formulaire (envoi implicite du navigateur) : il est intercepté et
+                   lance la recherche — sans quoi la page entière se rechargeait en GET. #}
+                <form aria-label="Formulaire de recherche avancée" data-action="submit->search-bar-dialog#submitAdvancedSearch">
                     <div
                         data-search-bar-dialog-target="advancedFormContainer"
                         class="form-scrollable-content jsb-advanced-form"

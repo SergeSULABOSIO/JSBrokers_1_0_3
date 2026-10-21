@@ -31,16 +31,16 @@
             </span>
             {# Anti remplissage automatique de l'e-mail connecté (cf. bloc ventes) :
                readonly au chargement, levé au focus par « dashboard-list ». #}
-            <input type="search"
-                   name="cs-db-coupons-filter"
-                   autocomplete="off"
-                   autocapitalize="off"
+            <input {{ attributs_champ_recherche('cs-db-coupons-filter') }} type="search"
+                  
+                  
+                  
                    autocorrect="off"
-                   spellcheck="false"
+                  
                    readonly
-                   data-form-type="other"
-                   data-lpignore="true"
-                   data-1p-ignore="true"
+                  
+                  
+                  
                    class="form-control form-control-sm border-0 bg-light"
                    style="font-size:.78rem;"
                    placeholder="Filtrer (code, paquet…)"

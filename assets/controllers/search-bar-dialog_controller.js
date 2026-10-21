@@ -3,6 +3,11 @@ import BaseController from './base_controller.js';
 import { Modal } from 'bootstrap';
 import TomSelect from 'tom-select';
 import { echapper } from './echapper.js';
+// Le champ de valeur d'un critère texte est un champ de recherche : mêmes protections que les
+// gabarits (chantier 16, remplissage automatique du navigateur). Protections SEULES, sans
+// détachement : il est lu en direct (querySelector), et le retirer du <form> changerait la règle
+// d'envoi implicite par Entrée (un seul champ de saisie restant → la page se rechargerait).
+import { attributsChampRecherche } from './champ-recherche.js';
 
 /**
  * @class SearchBarDialogController
@@ -162,7 +167,7 @@ export default class extends BaseController {
                         ${this.opt('starts', 'Commence par', mode)}
                         ${this.opt('exact', 'Exact', mode)}
                     </select>
-                    <input type="text" id="${id}" class="form-control" data-role="text-value"
+                    <input type="search" ${attributsChampRecherche()} id="${id}" class="form-control" data-role="text-value"
                            value="${value}" placeholder="Saisir ${echapper(label)}…"
                            aria-label="${echapper(criterion.Display)}">
                 </div>`;

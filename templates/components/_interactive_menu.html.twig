@@ -661,19 +661,19 @@
                    est le seul état qu'aucun remplisseur ne franchit ; il ne coûte
                    rien à l'usage (le champ reste focusable et se libère au clic ou
                    à la tabulation). #}
-                <input type="search"
+                <input {{ attributs_champ_recherche('filtre-attributs') }} type="search"
                     class="accordion-search-input"
-                    name="filtre-attributs"
+                   
                     placeholder="Filtrer Ici"
                     aria-label="Filtrer les attributs"
                     readonly
-                    autocomplete="off"
-                    autocapitalize="off"
+                   
+                   
                     autocorrect="off"
-                    spellcheck="false"
-                    data-form-type="other"
-                    data-lpignore="true"
-                    data-1p-ignore
+                   
+                   
+                   
+                   
                     data-action="focus->workspace-manager#activerFiltre input->workspace-manager#filter"
                     data-workspace-manager-target="searchInput"
                 >

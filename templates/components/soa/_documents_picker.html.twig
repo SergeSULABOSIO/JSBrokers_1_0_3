@@ -196,11 +196,11 @@
                     <twig:UX:Icon name="hugeicons:search-01" style="width:16px;height:16px;" />
                 </span>
                 <label for="soa-docs-search-input" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Rechercher un document par nom, niveau ou format</label>
-                <input type="text"
+                <input {{ attributs_champ_recherche('jsb-filtre') }} type="search"
                        id="soa-docs-search-input"
                        class="form-control"
                        placeholder="Rechercher par nom, niveau ou format…"
-                       autocomplete="off"
+                      
                        data-picker-search>
             </div>
         {% endif %}

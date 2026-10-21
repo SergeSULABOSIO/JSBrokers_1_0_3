@@ -442,7 +442,7 @@
                     <label for="kr-q">Rechercher un outil</label>
                     <span class="kr-champ-loupe">
                         {{ ux_icon(resolve_icon_name('action:search'), {height:'17px', width:'17px'}) }}
-                        <input type="search" id="kr-q" name="q" value="{{ recherche }}"
+                        <input {{ attributs_champ_recherche() }} type="search" id="kr-q" name="q" value="{{ recherche }}"
                                placeholder="Nom de l’outil, mot-clé…">
                     </span>
                 </div>

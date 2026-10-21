@@ -35,16 +35,16 @@
                - readonly au chargement (un champ en lecture seule n'est jamais
                  auto-rempli), levé au focus par le contrôleur « dashboard-list ».
                Le champ démarre donc toujours vide. #}
-            <input type="search"
-                   name="cs-db-ventes-filter"
-                   autocomplete="off"
-                   autocapitalize="off"
+            <input {{ attributs_champ_recherche('cs-db-ventes-filter') }} type="search"
+                  
+                  
+                  
                    autocorrect="off"
-                   spellcheck="false"
+                  
                    readonly
-                   data-form-type="other"
-                   data-lpignore="true"
-                   data-1p-ignore="true"
+                  
+                  
+                  
                    class="form-control form-control-sm border-0 bg-light"
                    style="font-size:.78rem;"
                    placeholder="Filtrer (acheteur, paquet…)"

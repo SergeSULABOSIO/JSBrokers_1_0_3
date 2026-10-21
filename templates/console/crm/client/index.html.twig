@@ -21,7 +21,7 @@
         {% if type %}<input type="hidden" name="type" value="{{ type }}">{% endif %}
         <div class="cs-field" style="max-width:420px;">
             <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('action:search'), {height:'18px', width:'18px'}) }}</span>
-            <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Rechercher (nom, e-mail)…">
+            <input {{ attributs_champ_recherche() }} type="search" name="q" value="{{ q }}" class="form-control" placeholder="Rechercher (nom, e-mail)…">
         </div>
     </form>
 

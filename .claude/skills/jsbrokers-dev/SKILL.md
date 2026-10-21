@@ -334,3 +334,13 @@ Inscrits le 2026-10-20 (décisions de Serge) :
     cerveau l'applique à l'onglet ACTIF (`_handleSearchRequest` → `_getActiveTabState()`) ; le chip
     d'échéance des Avenants a été vu dans une requête Tranche (500 en production, corrigé côté
     serveur, fuite non encore reproduite au navigateur).
+16. ✅ **FAIT (2026-10-21) — champs de recherche protégés du remplissage automatique.** Chrome/Edge
+    collaient l'e-mail de l'utilisateur dans les filtres du tableau de bord. 29 champs (28 gabarits,
+    1 JS). **Règle** : tout champ de recherche/filtre passe par `{{ attributs_champ_recherche(nom?) }}`
+    (JS : `attributsChampRecherche()`), et `ChampsDeRechercheProtegesTest` le refuse sinon.
+    - avec un nom → `form="jsb-hors-formulaire"` : jamais envoyé avec un formulaire (un champ en
+      trop ferait refuser un dialogue) ;
+    - sans nom → protections seules : champ d'un `<form method="get">` (doit rester envoyé — test)
+      ou champ lu en direct dans un <form> (le détacher change l'envoi implicite par Entrée) ;
+    - filet `assets/champs-de-recherche.js` : vide UNIQUEMENT ce que le navigateur a rempli
+      (`:autofill`), jamais une valeur posée par l'application (contrainte du chantier 15).
