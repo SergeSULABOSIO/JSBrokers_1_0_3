@@ -9,3 +9,8 @@ when@test:
     framework:
         validation:
             not_compromised_password: false
+
+when@e2e:
+    framework:
+        validation:
+            not_compromised_password: false

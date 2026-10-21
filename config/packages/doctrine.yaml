@@ -90,3 +90,9 @@ when@prod:
                     adapter: cache.app
                 doctrine.system_cache_pool:
                     adapter: cache.system
+
+# Environnement e2e (navigateur piloté) : la base de TEST, jamais celle de développement.
+when@e2e:
+    doctrine:
+        dbal:
+            dbname_suffix: '_test'

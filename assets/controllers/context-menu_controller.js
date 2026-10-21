@@ -76,6 +76,9 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `app:context.changed`.
      */
     handleContextUpdate(event) {
+        // Le contexte d'un onglet EN ARRIÈRE-PLAN (réponse lente arrivée après un changement
+        // d'onglet) ne concerne pas l'écran : il n'efface ni la sélection retenue ni le menu ouvert.
+        if (event.detail?.arrierePlan) return;
         // REFACTORING : On récupère maintenant le formCanvas depuis le niveau supérieur de l'événement,
         // car c'est un contexte partagé, et non plus spécifique à un élément sélectionné.
         const { selection: selectos, contextMenuPosition, formCanvas } = event.detail;

@@ -165,12 +165,13 @@ class FiltreApresEtatOngletTest extends TestCase
         );
 
         // On s'ancre sur la reconstruction de la barre — la ligne qui EST la restauration,
-        // et non sur le nom de la méthode, qui apparaît aussi à son appel.
-        $debut = strpos($code, 'this.workspaceTabs = tabs;');
+        // et non sur le nom de la méthode, qui apparaît aussi à son appel. (Chantier 15 : les
+        // onglets qui ne se recréent pas sont écartés — restauration partielle, sans erreur.)
+        $debut = strpos($code, 'this.workspaceTabs = tabs.filter(');
         self::assertNotFalse($debut, 'La reconstruction des onglets restaurés est introuvable.');
         self::assertStringContainsString(
-            'criteresARestaurer',
-            substr($code, $debut, 1200),
+            'criteresARestaurer(this.workspaceTabs)',
+            substr($code, $debut, 1500),
             'La restauration doit remettre les filtres en attente, sans quoi les onglets '
             . 'reviennent vidés de leur filtre — le défaut à corriger.',
         );

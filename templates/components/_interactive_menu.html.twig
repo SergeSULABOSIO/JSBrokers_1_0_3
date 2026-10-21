@@ -88,8 +88,14 @@
                     || window.matchMedia('(max-width: 1199.98px)').matches) {
                     racine.classList.add('col2-collapsed');
                 }
-                var panneau = JSON.parse(localStorage.getItem('visualizationHtmlTab_' + id) || 'null');
+                // Clé par UTILISATEUR et cabinet (chantier 15) : celle de cet onglet du
+                // navigateur d'abord, sinon la copie durable si elle n'a pas expiré.
+                var utilisateur = document.documentElement.dataset.jsbUtilisateur;
+                if (!utilisateur) return;
+                var cle = 'visualizationHtmlTab_' + utilisateur + '_' + id;
+                var panneau = JSON.parse(sessionStorage.getItem(cle) || localStorage.getItem(cle) || 'null');
                 if (!panneau || !panneau.sourceUrl || !panneau.tabKey) return;
+                if (typeof panneau.expireLe === 'number' && panneau.expireLe <= Date.now()) return;
                 // LA COLONNE 4 EXISTE DÈS LE PREMIER RENDU, plein écran OU NON.
                 //
                 // Ce pré-positionnement ne valait auparavant que pour le plein écran : dans

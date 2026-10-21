@@ -8,6 +8,7 @@ import {
     criteresARestaurer,
     memoriserCriteres,
     memoriserSelection,
+    ongletAMemoriser,
     selectionARestaurer,
 } from './criteres-persistes.js';
 import { dedoublonnerOnglets, ongletExistantPourRubrique } from './onglets-uniques.js';
@@ -15,6 +16,7 @@ import { echapper } from './echapper.js';
 import { texteRicheEnTexte, texteRicheSur } from './texte-riche.js';
 import { estTexteRiche } from './texte-riche-regles.js';
 import { urlDeMemeOrigine } from './url-de-confiance.js';
+import { cleOnglets, clePanneauVisualisation, copieLocale, lireCopieLocale, copiePanneau, lirePanneau, peutEcrire } from '../stockage-de-travail-regles.js';
 
 /**
  * LES DEUX SEUILS DE DISPOSITION — écrits ici ET dans `interactive-menu.css`.
@@ -578,11 +580,15 @@ export default class extends Controller {
 
         // Persistance : un panneau qui fournit son URL source (ex. chat de
         // l'assistant IA) est restauré au rechargement de la page (re-fetch).
-        if (sourceUrl) {
-            localStorage.setItem(
-                `visualizationHtmlTab_${this.idEntrepriseValue}`,
-                JSON.stringify({ tabKey, title, iconAlias, sourceUrl }),
-            );
+        // Deux copies, clé par utilisateur et cabinet (chantier 15) : l'onglet du navigateur
+        // garde le titre ; la copie durable, non — celui d'une conversation nomme souvent un client.
+        const clePanneau = clePanneauVisualisation(this._idUtilisateur(), this.idEntrepriseValue);
+        if (sourceUrl && clePanneau) {
+            try {
+                if (!peutEcrire(localStorage, this._idUtilisateur())) throw new Error('autre utilisateur');
+                sessionStorage.setItem(clePanneau, JSON.stringify({ tabKey, title, iconAlias, sourceUrl }));
+                localStorage.setItem(clePanneau, JSON.stringify(copiePanneau({ tabKey, iconAlias, sourceUrl }, Date.now())));
+            } catch { /* stockage indisponible : le panneau ne reviendra pas au F5 */ }
         }
 
         const revealColumn = () => {
@@ -1199,13 +1205,7 @@ export default class extends Controller {
         // Fermeture volontaire d'un panneau HTML persisté (ex. chat IA) : on
         // oublie sa restauration — le user ne veut plus le retrouver au reload.
         if (tabToClose?.dataset.entityType === 'html') {
-            const storageKey = `visualizationHtmlTab_${this.idEntrepriseValue}`;
-            try {
-                const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
-                if (saved?.tabKey === tabToClose.dataset.entityId) {
-                    localStorage.removeItem(storageKey);
-                }
-            } catch { localStorage.removeItem(storageKey); }
+            this._oublierPanneauMemorise(tabToClose.dataset.entityId);
         }
 
         if (tabToClose) tabToClose.remove();
@@ -1906,7 +1906,9 @@ export default class extends Controller {
         if (tabId !== this.activeWorkspaceTabId) return;
 
         delete this._criteresEnAttente[tabId];
-        this.notifyCerveau('ui:search.submitted', { criteria: criteres });
+        // L'onglet est NOMMÉ : le Cerveau ne devine plus le destinataire d'après l'onglet
+        // qu'il croit affiché (routage-onglet.js).
+        this.notifyCerveau('ui:search.submitted', { criteria: criteres, workspaceTabId: tabId });
     }
 
     /**
@@ -2296,7 +2298,11 @@ export default class extends Controller {
      * recherche peut aboutir. On y pose le filtre mis en attente, s'il y en avait un.
      */
     handleTabStateReady(event) {
-        this._appliquerCriteresEnAttente(event.detail?.workspaceTabId);
+        const tabId = event.detail?.workspaceTabId;
+        // Retenu même quand l'onglet n'est pas l'actif : à son retour, son filtre en attente
+        // pourra être posé sans attendre un signal qui ne reviendra pas.
+        if (tabId) (this._etatsPrets ??= new Set()).add(tabId);
+        this._appliquerCriteresEnAttente(tabId);
     }
 
     /**
@@ -2349,7 +2355,10 @@ export default class extends Controller {
      * décision de ce qu'on garde vit dans `criteres-persistes.js`, éprouvée sans DOM.
      */
     memoriserCriteresDOnglet(event) {
-        const tabId = event.detail?.workspaceTabId;
+        // Quel onglet ce contexte peut-il écrire ? Aucun s'il s'agit d'une collection, d'un
+        // contexte PROVISOIRE (onglet en chargement), ou d'un onglet dont le filtre restauré
+        // n'est pas encore reposé — cf. ongletAMemoriser (criteres-persistes.js).
+        const tabId = ongletAMemoriser(event.detail, this._criteresEnAttente);
         if (!tabId) return;
 
         // SEULE LA LISTE PRINCIPALE EST PERSISTÉE, et cette garde n'est pas cosmétique.
@@ -2364,8 +2373,7 @@ export default class extends Controller {
         // d'ailleurs. Constaté au navigateur après un F5.
         //
         // Les onglets contextuels ne sont de toute façon pas restaurés : ils naissent d'une
-        // sélection, qui ne survit pas au rechargement.
-        if ((event.detail?.tabId ?? 'principal') !== 'principal') return;
+        // sélection, qui ne survit pas au rechargement. (Garde tenue par ongletAMemoriser.)
 
         // LES DEUX ÉTATS D'UN ONGLET VOYAGENT DANS LE MÊME ÉVÉNEMENT : `app:context.changed`
         // porte `searchCriteria` ET `selection`. Rien de nouveau à émettre, rien à
@@ -2805,6 +2813,8 @@ export default class extends Controller {
                 } else {
                     this.pendingWorkspaceTabId = tabId;
                     this.progressBarTarget.style.display = 'block';
+                    // Un composant (re)chargé repart sans état enregistré au cerveau.
+                    this._etatsPrets?.delete(tabId);
                     this.notifyCerveau('ui:component.load', {
                         componentName: tabData.componentName,
                         entityName: tabData.entityName,
@@ -2822,6 +2832,13 @@ export default class extends Controller {
                 bubbles: true,
                 detail: { workspaceTabId: tabId }
             }));
+            // UN FILTRE RESTAURÉ RESTÉ EN ATTENTE est reposé au retour sur l'onglet — mais
+            // seulement si son état est DÉJÀ enregistré au cerveau (`app:tab.state-ready` reçu
+            // pendant qu'on était ailleurs). Sinon la recherche partirait sans adresse
+            // (incident du 2026-08-24) ; elle attendra ce signal, l'onglet étant désormais actif.
+            // Sans cela, le filtre restait en attente pour toute la session, et l'onglet ne
+            // mémorisait plus rien (ongletAMemoriser).
+            if (this._etatsPrets?.has(tabId)) this._appliquerCriteresEnAttente(tabId);
         }
 
         // Synchroniser le menu col-1/col-2 avec cet onglet
@@ -3104,11 +3121,51 @@ export default class extends Controller {
     }
 
     /**
-     * Persiste les métadonnées des onglets en cours dans le localStorage.
+     * L'utilisateur connecté (identifiant numérique, posé par base.html.twig sur <html>).
+     * Les clés de stockage le portent : un collègue sur le même poste ne relit jamais rien.
+     * @private
+     */
+    _idUtilisateur() {
+        return document.documentElement.dataset.jsbUtilisateur || null;
+    }
+
+    /**
+     * Persiste les onglets, en DEUX copies (chantier 15, décisions de Serge) :
+     *   — sessionStorage : l'état COMPLET de cet onglet du navigateur (termes saisis,
+     *     sélection, aperçus) — F5 et reprise après plantage le retrouvent à l'identique ;
+     *   — localStorage : la DISPOSITION et les filtres structurés seulement, pour un NOUVEL
+     *     onglet du navigateur ; rien qui nomme quelqu'un, et elle expire en 7 jours.
+     * Clés par utilisateur ET cabinet (stockage-de-travail-regles.js).
      */
     _saveWorkspaceTabsToStorage() {
-        const state = { tabs: this.workspaceTabs, activeTabId: this.activeWorkspaceTabId };
-        localStorage.setItem(`workspaceTabs_${this.idEntrepriseValue}`, JSON.stringify(state));
+        const cle = cleOnglets(this._idUtilisateur(), this.idEntrepriseValue);
+        if (!cle) return;
+        try {
+            // Page restée ouverte alors qu'un autre s'est connecté depuis : on n'écrit plus.
+            if (!peutEcrire(localStorage, this._idUtilisateur())) return;
+            sessionStorage.setItem(cle, JSON.stringify({ tabs: this.workspaceTabs, activeTabId: this.activeWorkspaceTabId }));
+            localStorage.setItem(cle, JSON.stringify(copieLocale(this.workspaceTabs, this.activeWorkspaceTabId, Date.now())));
+        } catch { /* stockage indisponible ou plein : les onglets ne survivront pas au F5, rien de plus */ }
+    }
+
+    /**
+     * L'état à restaurer : celui de CET onglet du navigateur s'il existe (F5), sinon la copie
+     * durable non expirée (nouvel onglet), sinon rien.
+     * @private
+     * @returns {{tabs: Array<object>, activeTabId: string|null}|null}
+     */
+    _lireOngletsMemorises() {
+        const cle = cleOnglets(this._idUtilisateur(), this.idEntrepriseValue);
+        if (!cle) return null;
+        try {
+            const session = JSON.parse(sessionStorage.getItem(cle) || 'null');
+            if (session && Array.isArray(session.tabs)) return session;
+        } catch { /* illisible : on tente la copie durable */ }
+        try {
+            return lireCopieLocale(localStorage.getItem(cle), Date.now());
+        } catch {
+            return null;
+        }
     }
 
     /**
@@ -3116,15 +3173,11 @@ export default class extends Controller {
      * Remplace l'ancienne méthode restoreLastState().
      */
     _restoreWorkspaceTabsFromStorage() {
-        const savedJSON = localStorage.getItem(`workspaceTabs_${this.idEntrepriseValue}`);
-
-        if (!savedJSON) {
+        const saved = this._lireOngletsMemorises();
+        if (!saved) {
             this._openDefaultTab();
             return;
         }
-
-        let saved;
-        try { saved = JSON.parse(savedJSON); } catch { this._openDefaultTab(); return; }
 
         const { tabs: tabsStockes, activeTabId: actifStocke } = saved;
 
@@ -3142,22 +3195,33 @@ export default class extends Controller {
         const initialSkeleton = this.workspaceTabPanelsTarget.querySelector('.workspace-initial-skeleton');
         if (initialSkeleton) initialSkeleton.remove();
 
-        // Reconstruire la barre d'onglets
-        this.workspaceTabs = tabs;
-        tabs.forEach(tabData => this._createTabStructure(tabData));
+        // Reconstruire la barre d'onglets. UN ÉTAT OBSOLÈTE SE RESTAURE EN PARTIE, SANS ERREUR
+        // (chantier 15) : une entrée qu'une version antérieure a laissée et qui ne se recrée
+        // plus est écartée ; les autres reviennent. Ses filtres inconnus du serveur sont
+        // ignorés par lui (JSBDynamicSearchService), la liste s'affiche sans eux.
+        this.workspaceTabs = tabs.filter((tabData) => {
+            try {
+                this._createTabStructure(tabData);
+                return true;
+            } catch (erreur) {
+                console.warn('[WorkspaceManager] onglet mémorisé écarté :', erreur);
+                return false;
+            }
+        });
+        if (this.workspaceTabs.length === 0) { this._openDefaultTab(); return; }
 
         // LES FILTRES REVIENNENT AVEC LEURS ONGLETS, par le chemin qui existe déjà : ils
         // sont mis EN ATTENTE, et posés quand `app:tab.state-ready` annoncera que l'état de
         // l'onglet est enregistré. Exactement le geste du bouton d'un rapport ou de
         // `ouvrir_rubrique` de l'assistant — restaurer un filtre n'est rien d'autre
         // qu'ouvrir une rubrique filtrée.
-        this._criteresEnAttente = { ...(this._criteresEnAttente || {}), ...criteresARestaurer(tabs) };
+        this._criteresEnAttente = { ...(this._criteresEnAttente || {}), ...criteresARestaurer(this.workspaceTabs) };
         // LA SÉLECTION ATTEND PLUS LONGTEMPS QUE LES FILTRES. Les lignes n'existent
         // qu'une fois la liste rendue — et la restauration d'un filtre déclenche
         // justement une recherche, qui VIDE la sélection (cf. cerveau_controller.js,
         // « la sélection est perdue après un rafraîchissement »). On la repose donc
         // après le rendu, pas avec les critères.
-        this._selectionEnAttente = { ...(this._selectionEnAttente || {}), ...selectionARestaurer(tabs) };
+        this._selectionEnAttente = { ...(this._selectionEnAttente || {}), ...selectionARestaurer(this.workspaceTabs) };
 
         // LE GROUPEMENT DES ONGLETS EN SURNOMBRE SE RECALCULE ICI AUSSI.
         //
@@ -3170,7 +3234,8 @@ export default class extends Controller {
         this._replierLesOngletsBientot();
 
         // Activer l'onglet précédemment actif (lazy-load déclenché automatiquement)
-        const targetId = (activeTabId && tabs.find(t => t.id === activeTabId)) ? activeTabId : tabs[tabs.length - 1].id;
+        const restes = this.workspaceTabs;
+        const targetId = (activeTabId && restes.find(t => t.id === activeTabId)) ? activeTabId : restes[restes.length - 1].id;
         this._activateWorkspaceTabById(targetId);
     }
 
@@ -3182,13 +3247,11 @@ export default class extends Controller {
      * en silence : le user retrouve simplement son workspace sans le panneau.
      */
     async _restoreHtmlVisualizationTab() {
-        const storageKey = `visualizationHtmlTab_${this.idEntrepriseValue}`;
-        let saved;
-        try { saved = JSON.parse(localStorage.getItem(storageKey) || 'null'); } catch { saved = null; }
+        const saved = this._lirePanneauMemorise();
         // Le HTML de cette URL part en innerHTML : une URL d'une autre origine est oubliée.
         const sourceUrl = urlDeMemeOrigine(saved?.sourceUrl);
         if (saved && !sourceUrl) {
-            try { localStorage.removeItem(storageKey); } catch { /* no-op */ }
+            this._oublierPanneauMemorise();
         }
         if (!sourceUrl || !saved?.tabKey) {
             // Rien à restaurer : si le script inline avait tout de même ouvert la
@@ -3207,7 +3270,7 @@ export default class extends Controller {
         try {
             const response = await fetch(sourceUrl);
             if (!response.ok) {
-                localStorage.removeItem(storageKey);
+                this._oublierPanneauMemorise();
                 this._finirRestaurationPleinEcran(false);
                 return;
             }
@@ -3215,7 +3278,8 @@ export default class extends Controller {
             this.openHtmlTabInVisualization({
                 detail: {
                     html,
-                    title: saved.title,
+                    // Copie durable (nouvel onglet du navigateur) : sans titre, par choix.
+                    title: saved.title || 'Assistant IA',
                     iconAlias: saved.iconAlias,
                     tabKey: saved.tabKey,
                     sourceUrl,
@@ -3227,6 +3291,40 @@ export default class extends Controller {
             this._finirRestaurationPleinEcran(false);
         } finally {
             document.dispatchEvent(new CustomEvent('app:loading.stop'));
+        }
+    }
+
+    /**
+     * Le panneau de la colonne 4 mémorisé : celui de cet onglet du navigateur, sinon la copie
+     * durable non expirée.
+     * @private
+     */
+    _lirePanneauMemorise() {
+        const cle = clePanneauVisualisation(this._idUtilisateur(), this.idEntrepriseValue);
+        if (!cle) return null;
+        try {
+            return lirePanneau(sessionStorage.getItem(cle), Date.now())
+                || lirePanneau(localStorage.getItem(cle), Date.now());
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * Oublie le panneau mémorisé — dans les deux copies. Avec `tabKey`, seulement si c'est lui.
+     * @private
+     */
+    _oublierPanneauMemorise(tabKey = null) {
+        const cle = clePanneauVisualisation(this._idUtilisateur(), this.idEntrepriseValue);
+        if (!cle) return;
+        // L'accès même à `sessionStorage` peut lever (stockage bloqué) : tout reste dans le try,
+        // sinon la fermeture de l'onglet échouerait avant de le retirer.
+        for (const nom of ['sessionStorage', 'localStorage']) {
+            try {
+                const stockage = window[nom];
+                const memorise = lirePanneau(stockage.getItem(cle), Date.now());
+                if (tabKey === null || !memorise || memorise.tabKey === tabKey) stockage.removeItem(cle);
+            } catch { /* stockage indisponible */ }
         }
     }
 

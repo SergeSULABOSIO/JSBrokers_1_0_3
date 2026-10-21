@@ -199,3 +199,12 @@ when@prod:
             supervision:
                 type: service
                 id: App\Supervision\HandlerDeSupervision
+
+when@e2e:
+    monolog:
+        handlers:
+            main:
+                type: stream
+                path: "%kernel.logs_dir%/%kernel.environment%.log"
+                level: info
+                channels: ["!event", "!assistant_tokens"]

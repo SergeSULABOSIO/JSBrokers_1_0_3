@@ -15,6 +15,7 @@
  * D'où ce module : UN seul endroit qui sait où vit un titre. Le renommage
  * depuis la liste et le renommage depuis l'onglet l'appellent tous les deux.
  */
+import { clePanneauVisualisation } from '../stockage-de-travail-regles.js';
 
 /** Le préfixe qui relie un onglet de la colonne 4 à sa conversation. */
 export const PREFIXE_ONGLET = 'ia-conv-';
@@ -80,14 +81,17 @@ export function appliquerTitre(convId, titre, idEntreprise = null) {
         onglet.title = titre;
     }
 
-    // 3. L'onglet MÉMORISÉ, restauré au prochain chargement de la page.
+    // 3. L'onglet MÉMORISÉ, restauré au prochain chargement de la page. Son titre ne vit que
+    //    dans la copie de l'onglet du navigateur (sessionStorage) : la copie durable n'en
+    //    garde pas, il nomme souvent un client (chantier 15, stockage-de-travail-regles.js).
     if (idEntreprise === null) return;
-    const cle = `visualizationHtmlTab_${idEntreprise}`;
+    const cle = clePanneauVisualisation(document.documentElement.dataset.jsbUtilisateur, idEntreprise);
+    if (!cle) return;
     try {
-        const memorise = JSON.parse(localStorage.getItem(cle) || 'null');
+        const memorise = JSON.parse(sessionStorage.getItem(cle) || 'null');
         if (memorise && memorise.tabKey === `${PREFIXE_ONGLET}${convId}`) {
             memorise.title = titre;
-            localStorage.setItem(cle, JSON.stringify(memorise));
+            sessionStorage.setItem(cle, JSON.stringify(memorise));
         }
     } catch (error) {
         // Un localStorage illisible ne doit pas faire échouer un renommage qui,

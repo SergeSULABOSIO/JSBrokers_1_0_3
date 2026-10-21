@@ -65,3 +65,14 @@ when@test:
         test: true
         session:
             storage_factory_id: session.storage.factory.mock_file
+
+# ── ENVIRONNEMENT e2e : le navigateur piloté (Edge headless) contre une instance Apache
+# locale. C'est l'environnement de test, SAUF les sessions : `mock_file` n'a aucun verrou,
+# et sous Apache multi-thread deux requêtes simultanées (un F5 en lance plusieurs)
+# s'écrasaient leur session — l'utilisateur se retrouvait déconnecté au hasard. Ici, le
+# gestionnaire natif de PHP, qui verrouille le fichier, dans un dossier à part.
+# ⚠ Activable sur le poste de développement SEULEMENT : voir App\Kernel.
+when@e2e:
+    framework:
+        session:
+            save_path: '%kernel.project_dir%/var/sessions/e2e'

@@ -150,3 +150,28 @@ function decorer(onglets, tabId, decoration) {
         onglet && onglet.id === tabId ? { ...onglet, ...decoration } : onglet
     ));
 }
+/**
+ * QUEL ONGLET UN CONTEXTE PEUT-IL MÉMORISER ? Son identifiant, ou null s'il ne doit rien écrire.
+ *
+ * Mémoriser, c'est affirmer « voici le filtre de l'utilisateur ». Trois contextes ne le
+ * disent pas, et les enregistrer effaçait ce qui l'était (chantier 15, constaté au F5) :
+ *   — une liste qui n'est pas la PRINCIPALE (collection contextuelle : autre entité, autres
+ *     critères — le badge affichait `__mon_portefeuille__ : "1"` rejoué sur les rétros) ;
+ *   — un contexte PROVISOIRE (`etatProvisoire`) : le cerveau remet les barres à zéro pendant
+ *     qu'un onglet se charge, avec des critères vides qui ne sont l'état de personne ;
+ *   — un onglet dont le filtre RESTAURÉ attend encore d'être reposé : ce qui arrive avant
+ *     lui (préréglage du serveur) n'est pas le choix de l'utilisateur.
+ *
+ * @param {{workspaceTabId?: string, tabId?: string, etatProvisoire?: boolean}|null|undefined} detail
+ * @param {Record<string, object>} [enAttente] filtres restaurés pas encore reposés, par onglet
+ * @returns {string|null}
+ */
+export function ongletAMemoriser(detail, enAttente = {}) {
+    const ongletId = detail?.workspaceTabId;
+    if (!ongletId) return null;
+    if ((detail.tabId ?? 'principal') !== 'principal') return null;
+    if (detail.etatProvisoire) return null;
+    if (enAttente && enAttente[ongletId]) return null;
+
+    return ongletId;
+}

@@ -13,6 +13,9 @@ import './cabinet-ferme.js';
 // Vide un champ de recherche que le NAVIGATEUR a rempli (adresse e-mail collée dans un filtre),
 // jamais une valeur posée par l'application (chantier 16).
 import './champs-de-recherche.js';
+// Le stockage du navigateur n'appartient qu'à son utilisateur : purge AVANT que Stimulus ne
+// restaure le moindre onglet (chantier 15, stockage-de-travail.js).
+import './stockage-de-travail.js';
 import './bootstrap.js';
 /*
  * Welcome to your app's main JavaScript file!

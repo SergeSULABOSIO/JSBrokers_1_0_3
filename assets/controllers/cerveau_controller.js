@@ -4,6 +4,7 @@ import { ouvrirPickerAutonome } from './picker-open.js';
 import { estDelegue, proprietaireDe } from './cerveau-delegations.js';
 import { libelleDeFiche, titreDeFiche } from './selecto.js';
 import { criteresSans, messageFicheHorsFiltre } from './fiche-hors-filtre.js';
+import { publicationApresInitialisation, cibleDeRecherche } from './routage-onglet.js';
 // Le même lecteur que la reprise de données : une suppression en chaîne peut emporter
 // cent lignes, et l'écran doit voir l'avancement du début à la fin.
 import { lireFluxNdjson } from './flux-ndjson.js';
@@ -208,6 +209,9 @@ export default class extends Controller {
                         searchCanvas: null, // null = « inconnu » : la barre de recherche garde ses critères en attendant
                         entiteNom: null,
                         workspaceTabId: this.currentWorkspaceTabId,
+                        // PROVISOIRE : ces critères vides ne sont l'état de personne. Mémorisés,
+                        // ils effaçaient le filtre restauré au F5 (criteres-persistes.js).
+                        etatProvisoire: true,
                     });
                 }
                 break;
@@ -233,8 +237,10 @@ export default class extends Controller {
                 });
                 break;
             }
-            case 'ui:search.submitted': // NOUVEAU : Point d'entrée unique pour toute soumission de recherche
-                this._handleSearchRequest(payload.criteria);
+            case 'ui:search.submitted': // Point d'entrée unique pour toute soumission de recherche
+                // L'émetteur NOMME son onglet de rubrique : sans lui, la recherche partait sur
+                // l'onglet affiché, quel qu'il soit (routage-onglet.js).
+                this._handleSearchRequest(payload.criteria, payload.workspaceTabId);
                 break;
             case 'ui:search.reset-request':
                 this._handleSearchRequest({}); // On passe un objet vide pour réinitialiser.
@@ -492,12 +498,20 @@ export default class extends Controller {
             case 'app:list.rendered': {
                 // Mémorise les compteurs (page + total) pour l'onglet courant et rafraîchit
                 // la barre de statut avec « X affiché(s) sur Y ».
-                const renderedState = this._getActiveTabState();
+                // UNE LISTE RENDUE EN ARRIÈRE-PLAN (réponse lente arrivée après un changement
+                // d'onglet, routage-onglet.js) garde ses compteurs pour elle : la barre de
+                // statut, unique, est celle de l'onglet AFFICHÉ.
+                const enArrierePlan = !!payload.workspaceTabId && payload.workspaceTabId !== this.currentWorkspaceTabId;
+                const renderedState = enArrierePlan
+                    ? (this.tabsState[payload.workspaceTabId]?.[payload.tabId ?? 'principal'] || {})
+                    : this._getActiveTabState();
                 renderedState.pageItemCount = payload.itemCount ?? 0;
                 renderedState.totalItems = payload.totalItems ?? payload.itemCount ?? null;
-                this.displayState.pageItemCount = renderedState.pageItemCount;
-                this.displayState.totalItems = renderedState.totalItems;
-                this._publishSelectionStatus();
+                if (!enArrierePlan) {
+                    this.displayState.pageItemCount = renderedState.pageItemCount;
+                    this.displayState.totalItems = renderedState.totalItems;
+                    this._publishSelectionStatus();
+                }
 
                 // ⚠ ON LE RE-DIFFUSE COMME ÉVÉNEMENT DU DOM, et il le faut.
                 //
@@ -547,27 +561,37 @@ export default class extends Controller {
                     wsStateTarget[tabId].totalItems = state.totalItems;
                 }
 
-                // Si l'onglet qui vient d'être initialisé est l'onglet actuellement actif,
-                // cela signifie qu'un nouvel onglet vient d'être chargé.
-                // On met donc à jour le contexte courant de l'application avec cet état initial.
-                if (this.activeTabId === tabId) {
+                // LE CONTEXTE PART SOUS LE NOM DE L'ONGLET QUI A CHARGÉ, pas de celui qu'on
+                // regarde à l'arrivée (chantier 15, défaut 3) : Avenants qui finit de charger
+                // après l'ouverture de Tranches publiait ses critères sous l'identifiant de
+                // Tranches, qui les mémorisait et les rejouait au F5. Voir routage-onglet.js.
+                const publication = publicationApresInitialisation({
+                    tabId,
+                    ongletInitialise: initWsId,
+                    ongletCourant: this.currentWorkspaceTabId,
+                    listeActive: this.activeTabId,
+                });
+                if (publication.publier) {
                     // Utiliser wsStateTarget[tabId] directement plutôt que _getActiveTabState() :
                     // _getActiveTabState() crée un état vide via currentWorkspaceTabId, qui peut pointer
                     // vers un autre onglet workspace en cas de chargements concurrents, ce qui préempte
                     // l'entrée et empêche le prochain ui:tab.initialized de stocker son serverRootName.
                     const activeTabState = wsStateTarget[tabId];
 
-                    this.displayState.selectionCount = activeTabState.selectionState.length;
-                    // Compteurs initiaux (page + total) fournis par le list-manager.
-                    this.displayState.pageItemCount = activeTabState.pageItemCount ?? 0;
-                    this.displayState.totalItems = activeTabState.totalItems ?? null;
-                    this._publishSelectionStatus(); // Affiche "0 sélection(s)"
+                    // La barre de statut est UNIQUE : seul l'onglet affiché y écrit.
+                    if (publication.affiche) {
+                        this.displayState.selectionCount = activeTabState.selectionState.length;
+                        // Compteurs initiaux (page + total) fournis par le list-manager.
+                        this.displayState.pageItemCount = activeTabState.pageItemCount ?? 0;
+                        this.displayState.totalItems = activeTabState.totalItems ?? null;
+                        this._publishSelectionStatus(); // Affiche "0 sélection(s)"
+                    }
 
                     // On publie le nouveau contexte pour que la toolbar, la barre des totaux et la barre de recherche se mettent à jour.
                     this.broadcast('app:context.changed', {
                         // L ONGLET INTERNE concerné (principal, ou une collection contextuelle) :
                         // `workspaceTabId` ne dit que l onglet de RUBRIQUE, qui en contient plusieurs.
-                        tabId: this.activeTabId,
+                        tabId,
                         selection: activeTabState.selectionState,
                         numericAttributesAndValues: activeTabState.numericAttributesAndValues,
                         formCanvas: activeTabState.activeTabFormCanvas,
@@ -575,17 +599,19 @@ export default class extends Controller {
                         searchCriteria: activeTabState.searchCriteria,
                         searchCanvas: activeTabState.searchCanvas || null,
                         entiteNom: activeTabState.entiteNom || null,
-                        workspaceTabId: this.currentWorkspaceTabId,
+                        workspaceTabId: publication.workspaceTabId,
+                        // Onglet en arrière-plan : ses barres se mettent à jour, l'écran non.
+                        arrierePlan: !publication.affiche,
                     });
 
-                    // L'ÉTAT EST ENREGISTRÉ ET L'ONGLET EST BIEN L'ACTIF : c'est le premier
+                    // L'ÉTAT EST ENREGISTRÉ : c'est le premier
                     // instant où une recherche sur cet onglet peut aboutir. Le workspace-manager
                     // y pose le filtre qu'il gardait en attente (bouton d'un rapport, ouverture
                     // de rubrique par l'assistant). Émis d'ICI et pas plus tôt : c'est cette
                     // ligne qui garantit qu'un `serverRootName` existe.
                     this.broadcast('app:tab.state-ready', {
                         tabId,
-                        workspaceTabId: this.currentWorkspaceTabId,
+                        workspaceTabId: publication.workspaceTabId,
                     });
                 }
 
@@ -1085,13 +1111,17 @@ export default class extends Controller {
 
     /**
      * Diffuse une demande de rafraîchissement de la liste.
-     * @param {string|null} [originatorId=null] - L'ID du composant qui a initié la demande, pour un rafraîchissement ciblé.
-     * @param {object} [criteriaPayload={}] - Le payload contenant les critères de recherche.
+     * @param {string|null} [tabId=null] - La liste visée (par défaut, l'active de l'onglet affiché).
+     * @param {object} [payload={}] - Le payload contenant les critères de recherche.
+     * @param {string|null} [workspaceTabId] - L'onglet de rubrique PROPRIÉTAIRE, capturé à la
+     *   DEMANDE : la réponse lui revient même si l'utilisateur a changé d'onglet entre-temps.
      * @private
      */
-    _requestListRefresh(tabId = null, payload = {}) {
+    _requestListRefresh(tabId = null, payload = {}, workspaceTabId = this.currentWorkspaceTabId) {
         const targetTabId = tabId || this.activeTabId;
-        const tabState = this._getCurrentWsTabState()[targetTabId];
+        const proprietaire = workspaceTabId || '__global__';
+        const affiche = proprietaire === (this.currentWorkspaceTabId || '__global__');
+        const tabState = (this.tabsState[proprietaire] || (this.tabsState[proprietaire] = {}))[targetTabId];
 
 
         // La logique de fetch est maintenant directement dans le cerveau.
@@ -1131,7 +1161,7 @@ export default class extends Controller {
                 criteria: tabState.searchCriteria || {},
                 // Le contexte parent est dérivé de l'onglet ACTIF : on ne l'ajoute que
                 // si c'est bien lui qu'on rafraîchit (cas des onglets de collection).
-                parentContext: targetTabId === this.activeTabId ? this._getParentContextForSearch() : null,
+                parentContext: affiche && targetTabId === this.activeTabId ? this._getParentContextForSearch() : null,
                 ...payload,
                 page: payload.page ?? tabState.currentPage ?? 1,
             }),
@@ -1154,11 +1184,14 @@ export default class extends Controller {
                 tabState.selectionIds.clear();
 
                 // 2. On diffuse l'événement pour que le list-manager mette à jour son contenu HTML et la pagination.
+                // ÉTIQUETÉ AVEC L'ONGLET DE LA DEMANDE (routage-onglet.js) : lu à l'arrivée, il
+                // nommait l'onglet ouvert entre-temps — la liste d'origine ignorait sa réponse
+                // et l'autre mémorisait des critères qui n'étaient pas les siens.
                 this.broadcast('app:list.refreshed', {
                     html: data.html,
                     originatorId: tabState.elementId,
                     pagination: data.pagination || null,
-                    workspaceTabId: this.currentWorkspaceTabId,
+                    workspaceTabId,
                 });
 
                 // 3. CRUCIAL : On diffuse le nouveau contexte pour que la barre des totaux et la barre d'outils
@@ -1166,15 +1199,17 @@ export default class extends Controller {
                 this.broadcast('app:context.changed', {
                         // L ONGLET INTERNE concerné (principal, ou une collection contextuelle) :
                         // `workspaceTabId` ne dit que l onglet de RUBRIQUE, qui en contient plusieurs.
-                        tabId: this.activeTabId,
+                        tabId: targetTabId,
                     selection: tabState.selectionState,
                     numericAttributesAndValues: tabState.numericAttributesAndValues,
                     formCanvas: tabState.activeTabFormCanvas,
                     searchCriteria: tabState.searchCriteria,
-                    workspaceTabId: this.currentWorkspaceTabId,
+                    workspaceTabId,
+                    // L'utilisateur a changé d'onglet pendant la requête : l'écran n'est pas concerné.
+                    arrierePlan: workspaceTabId !== this.currentWorkspaceTabId,
                 });
 
-                if (data.verification) this._signalerFicheHorsFiltre(data.verification, targetTabId);
+                if (data.verification) this._signalerFicheHorsFiltre(data.verification, targetTabId, workspaceTabId);
             })
             .catch(error => {
                 // Annulée par une demande plus récente : ce n'est pas une erreur, et c'est
@@ -1233,13 +1268,13 @@ export default class extends Controller {
      * tomberait sur une autre liste.
      * @private
      */
-    _signalerFicheHorsFiltre(verification, tabId) {
+    _signalerFicheHorsFiltre(verification, tabId, workspaceTabId = this.currentWorkspaceTabId) {
         const fiche = this._ficheEnregistree;
         this._ficheEnregistree = null;
         const message = messageFicheHorsFiltre(verification, fiche?.id === verification.id ? fiche.libelle : null);
         if (!message) return;
 
-        const criteres = this._getCurrentWsTabState()[tabId]?.searchCriteria || {};
+        const criteres = this.tabsState[workspaceTabId || '__global__']?.[tabId]?.searchCriteria || {};
         this.broadcast('app:notification.show', {
             text: message.texte,
             type: 'warning',
@@ -1247,7 +1282,7 @@ export default class extends Controller {
                 label: message.action,
                 evenement: {
                     type: 'ui:fiche-hors-filtre.afficher-request',
-                    payload: { workspaceTabId: this.currentWorkspaceTabId, tabId, criteria: criteresSans(criteres, message.cles) },
+                    payload: { workspaceTabId, tabId, criteria: criteresSans(criteres, message.cles) },
                 },
             } : null,
         });
@@ -1453,23 +1488,32 @@ export default class extends Controller {
 
 
     /**
-     * NOUVEAU : Gère la logique de recherche et de réinitialisation pour éviter la répétition de code (DRY).
+     * Gère la logique de recherche et de réinitialisation pour éviter la répétition de code (DRY).
      * @param {object} [criteria={}] - Les critères de recherche. Un objet vide pour une réinitialisation.
+     * @param {string|null} [workspaceTabId=null] - L'onglet de rubrique NOMMÉ par l'émetteur.
+     *   Sans lui, la recherche visait l'onglet affiché au moment où elle arrivait — un filtre
+     *   posé en différé (restauration, ouverture par l'assistant) pouvait tomber sur un autre.
      * @private
      */
-    _handleSearchRequest(criteria = {}) {
-        const activeState = this._getActiveTabState();
-        activeState.searchCriteria = criteria;
-        activeState.currentPage = 1; // toute nouvelle recherche repart de la page 1
+    _handleSearchRequest(criteria = {}, workspaceTabId = null) {
+        const cible = cibleDeRecherche(workspaceTabId, this.currentWorkspaceTabId, this.activeTabId);
+        const etat = cible.affiche
+            ? this._getActiveTabState()
+            : this.tabsState[cible.workspaceTabId]?.[cible.listeId];
+        // Onglet nommé, mais pas encore chargé (ou déjà fermé) : rien à chercher. Il sera
+        // filtré à son `app:tab.state-ready`.
+        if (!etat) return;
+        etat.searchCriteria = criteria;
+        etat.currentPage = 1; // toute nouvelle recherche repart de la page 1
 
         // Notifie le début du chargement pour afficher le squelette et la barre de progression.
-        this.broadcast('app:loading.start', { originatorId: activeState.elementId });
+        this.broadcast('app:loading.start', { originatorId: etat.elementId });
 
         // Construit le payload complet pour la requête.
         const refreshPayload = {
-            criteria: activeState.searchCriteria,
-            // NOUVEAU : La logique complexe de recherche du contexte est maintenant dans sa propre fonction.
-            parentContext: this._getParentContextForSearch(),
+            criteria: etat.searchCriteria,
+            // Le contexte parent ne vaut que pour la liste ACTIVE de l'onglet affiché.
+            parentContext: cible.affiche ? this._getParentContextForSearch() : null,
             page: 1,
         };
 
@@ -1477,7 +1521,7 @@ export default class extends Controller {
         console.log(`[${++window.logSequence}] ${this.nomControleur} - Code: 1986 - Recherche`, { refreshPayload: refreshPayload });
 
         // Lance la requête de rafraîchissement de la liste.
-        this._requestListRefresh(this.activeTabId, refreshPayload);
+        this._requestListRefresh(cible.listeId, refreshPayload, cible.workspaceTabId);
     }
 
     /**

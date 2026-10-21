@@ -164,7 +164,7 @@ export default class extends BaseController {
         }
         this.fermerVolet();
         this.simpleSearchInputTarget.value = '';
-        this.notifyCerveau('ui:search.submitted', { criteria: {} });
+        this.notifyCerveau('ui:search.submitted', { criteria: {}, workspaceTabId: this.workspaceTabId });
     }
 
     submitSimpleSearch(event) {
@@ -200,7 +200,7 @@ export default class extends BaseController {
         } else {
             delete newCriteria[criterionName];
         }
-        this.notifyCerveau('ui:search.submitted', { criteria: newCriteria });
+        this.notifyCerveau('ui:search.submitted', { criteria: newCriteria, workspaceTabId: this.workspaceTabId });
     }
 
     removeFilter(event) {
@@ -214,7 +214,7 @@ export default class extends BaseController {
         // note qu'il faudra le replacer une fois le nouveau résumé rendu.
         this.replacerFocusApresRetrait = true;
 
-        this.notifyCerveau('ui:search.submitted', { criteria: newCriteria });
+        this.notifyCerveau('ui:search.submitted', { criteria: newCriteria, workspaceTabId: this.workspaceTabId });
     }
 
     /**

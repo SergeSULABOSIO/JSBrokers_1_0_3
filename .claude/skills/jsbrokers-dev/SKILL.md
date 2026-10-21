@@ -117,6 +117,26 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
 - **Ce qu'on relit du `localStorage` n'est pas sûr** : une icône passe par
   `icone-memorisee.js` (SVG inerte, sinon effacée), une URL d'onglet par `url-de-confiance.js`
   (même origine) avant tout `fetch` suivi d'un `innerHTML`.
+- **Le stockage du navigateur n'appartient qu'à son utilisateur** (chantier 15, 2026-10-21,
+  décisions de Serge ; règles dans `assets/stockage-de-travail-regles.js`) :
+  - clés `<famille>_<utilisateur>_<cabinet>` ; l'utilisateur se lit sur
+    `<html data-jsb-utilisateur>` (identifiant NUMÉRIQUE seul, jamais nom ni e-mail) ;
+  - **sessionStorage** = l'état complet de l'onglet du navigateur (F5 à l'identique) ;
+    **localStorage** = disposition + filtres STRUCTURÉS (chips, comparaisons, dates, booléens),
+    7 jours, jamais un texte saisi ni un nom (relations, bénéficiaires, aperçus, titres de
+    conversation ; « Mon portefeuille » sous libellé neutre) ;
+  - purge par préfixe, tous cabinets, à la connexion d'un autre utilisateur et à la
+    déconnexion (`/login?deconnexion=1`) — module `assets/stockage-de-travail.js`, importé
+    AVANT `bootstrap.js` ;
+  - **une nouvelle clé qui porte du travail** : par utilisateur + cabinet, et son préfixe dans
+    `PREFIXES_DE_TRAVAIL` ; **un nouveau chip qui porte un nom** : `PORTENT_UN_NOM_OU_UN_TEXTE`
+    ou `LIBELLES_NEUTRES`.
+- **Une réponse appartient à l'onglet qui l'a DEMANDÉE ; une recherche va à l'onglet qu'elle
+  NOMME** (`assets/controllers/routage-onglet.js`). Jamais `workspaceTabId:
+  this.currentWorkspaceTabId` dans ce qui part après un `fetch` ; un émetteur de
+  `ui:search.submitted` passe son `workspaceTabId`. Un contexte publié pour un onglet en
+  arrière-plan porte `arrierePlan: true` ; un contexte provisoire (`etatProvisoire`) ne se
+  mémorise jamais (`ongletAMemoriser`). Garde-fou : `tests/js/routage-onglet.test.mjs`.
 - **Le texte d'une erreur technique ne sort pas** (chantier 10, 2026-10-19). Un message
   d'exception va à l'écran (JSON, flash, Twig, NDJSON, rapport d'import) par
   `App\Service\Erreur\MessageDErreur::pourLEcran($e, $repli)` : relayé si l'exception porte
@@ -157,9 +177,17 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
 - **Node** : `node --test tests/js/` pour tout JS.
 - **Code JS/CSS seul** : node, puis les dossiers `Frontend` et `Workspace`.
 - **TDD** : le test d'abord, rouge sur le code actuel ; dates calculées, jamais figées.
-- **E2E navigateur** : instance Apache séparée (`httpd-e2e.conf`, port 8901, `APP_ENV`
-  explicite), puppeteer-core + Edge headless, attentes conditionnelles, cabinet temporaire semé
-  puis purgé. Processus arrêtés **par PID uniquement**.
+- **E2E navigateur** : instance Apache séparée (`httpd-e2e.conf`, port 8901,
+  **`APP_ENV=e2e`**), Edge headless piloté par CDP, attentes conditionnelles, cabinet
+  temporaire semé puis purgé. Processus arrêtés **par PID uniquement**.
+  - L'environnement **e2e** = celui de test (base `_test`, e-mails et IA neutralisés) mais avec
+    de VRAIES sessions verrouillées (`var/sessions/e2e`) : l'env `test` (`mock_file`, sans
+    verrou) perd la session dès que deux requêtes se croisent (F5).
+  - **Poste de développement seulement** : `App\Kernel::exigerUnPosteDeDeveloppement` exige
+    `.env.e2e.local` (ignoré par git, jamais déployé) et refuse toute requête non locale ou
+    relayée (`X-Forwarded-For`) — `tests/Security/EnvironnementE2eTest.php`.
+  - Un onglet du navigateur en arrière-plan ne reçoit aucune frame : `Page.bringToFront`
+    avant d'y agir.
 - Une migration se joue aussi en DEV : des tests verts ne prouvent rien sur la base dev.
 
 ## 6. Livraison

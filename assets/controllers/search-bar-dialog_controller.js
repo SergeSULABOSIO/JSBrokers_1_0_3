@@ -411,7 +411,7 @@ export default class extends BaseController {
             if (collected !== undefined) criteria[name] = collected;
         });
 
-        this.notifyCerveau('ui:search.submitted', { criteria });
+        this.notifyCerveau('ui:search.submitted', { criteria, workspaceTabId: this.workspaceTabId });
         this.modal.hide();
     }
 
@@ -469,7 +469,7 @@ export default class extends BaseController {
     }
 
     resetForm() {
-        this.notifyCerveau('ui:search.submitted', { criteria: {} });
+        this.notifyCerveau('ui:search.submitted', { criteria: {}, workspaceTabId: this.workspaceTabId });
         this.modal.hide();
     }
 

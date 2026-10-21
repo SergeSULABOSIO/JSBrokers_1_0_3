@@ -19,6 +19,7 @@ import {
     critereConservable,
     criteresARestaurer,
     memoriserCriteres,
+    ongletAMemoriser,
 } from '../../assets/controllers/criteres-persistes.js';
 
 const AGENT = { operator: '=', value: 42, label: 'Alice' };
@@ -99,4 +100,28 @@ test('les critères mémorisés ne partagent pas la référence de l’onglet d�
 
     assert.notEqual(apres[0], onglets[0]);
     assert.equal(apres[0].titre, 'Rétros agents', 'Le reste de l’entrée doit survivre.');
+});
+
+// ── Quel contexte mérite d'être mémorisé (chantier 15) ───────────────────────────────
+
+test("un contexte PROVISOIRE (onglet en chargement) n'écrase jamais ce qui est mémorisé", () => {
+    // Constaté au navigateur : au F5, le cerveau diffuse des critères vides pour remettre les
+    // barres à zéro pendant le chargement ; enregistrés, ils effaçaient le filtre restauré.
+    assert.equal(ongletAMemoriser({ workspaceTabId: 'ws-a', tabId: 'principal', searchCriteria: {}, etatProvisoire: true }), null);
+    assert.equal(ongletAMemoriser({ workspaceTabId: 'ws-a', tabId: 'principal', searchCriteria: {} }), 'ws-a');
+});
+
+test("un onglet dont le filtre restauré attend encore d'être reposé ne mémorise rien", () => {
+    // Le préréglage du serveur (« Sous 30 jours ») arrive AVANT le filtre restauré : le
+    // mémoriser, c'était perdre le filtre de l'utilisateur au F5 suivant.
+    const enAttente = { 'ws-a': { __echeance_avenant__: { operator: '=', value: 'echus' } } };
+    assert.equal(ongletAMemoriser({ workspaceTabId: 'ws-a', tabId: 'principal', searchCriteria: { __echeance_avenant__: { value: 'sous_30j' } } }, enAttente), null);
+    assert.equal(ongletAMemoriser({ workspaceTabId: 'ws-b', tabId: 'principal', searchCriteria: {} }, enAttente), 'ws-b');
+});
+
+test('seule la liste principale d’un onglet nommé est mémorisée', () => {
+    assert.equal(ongletAMemoriser({ workspaceTabId: 'ws-a', tabId: 'collection-documents-for-3' }), null);
+    assert.equal(ongletAMemoriser({ tabId: 'principal' }), null);
+    assert.equal(ongletAMemoriser({ workspaceTabId: 'ws-a' }), 'ws-a');
+    assert.equal(ongletAMemoriser(null), null);
 });

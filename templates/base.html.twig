@@ -5,8 +5,14 @@
    doctrine que `meta[app-timezone]` juste dessous : une seule source de vérité, posée
    par PHP, lue partout ailleurs. `data-terminal-fige` dit que ce mode a été CHOISI
    (bascule ou `?terminal=`) — la sonde ci-dessous se tait alors. #}
+{# `data-jsb-utilisateur` : l'identifiant NUMÉRIQUE de l'utilisateur connecté — jamais son nom
+   ni son e-mail. `data-jsb-deconnexion` : la connexion atteinte par une déconnexion. Lus par
+   assets/stockage-de-travail.js, qui efface le travail laissé dans le navigateur par un autre
+   utilisateur, ou à la déconnexion (chantier 15). #}
 <html lang="{{ app.request.locale|default('fr') }}"
-      data-terminal="{{ terminal_courant() }}"{% if terminal_fige() %} data-terminal-fige="1"{% endif %}>
+      data-terminal="{{ terminal_courant() }}"{% if terminal_fige() %} data-terminal-fige="1"{% endif %}
+      {%- if app.user and app.user.id is defined and app.user.id %} data-jsb-utilisateur="{{ app.user.id }}"
+      {%- elseif app.request.attributes.get('_route') == 'app_login' and app.request.query.has('deconnexion') %} data-jsb-deconnexion="1"{% endif %}>
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">

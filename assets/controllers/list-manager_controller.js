@@ -304,6 +304,9 @@ export default class extends BaseController {
         this.notifyCerveau('app:list.rendered', {
             itemCount,
             totalItems,
+            // La liste qui s'annonce (principale ou collection) : rendue en arrière-plan, ses
+            // compteurs vont à SON état, pas à la barre de statut de l'onglet affiché.
+            tabId: estListePrincipale(this.element.id) ? 'principal' : this.element.id,
             ...(this.workspaceTabId ? { workspaceTabId: this.workspaceTabId } : {}),
         });
     }
