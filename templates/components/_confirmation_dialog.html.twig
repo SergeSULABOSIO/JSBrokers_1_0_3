@@ -52,8 +52,23 @@
                     </div>
                 </div>
             </div>
-            {# Confirmation forte par mot de passe : affiché uniquement quand l'action confirmée l'exige (ex. suppression définitive d'une entreprise). #}
+            {# Confirmation forte par mot de passe : affiché uniquement quand l'action confirmée l'exige (ex. suppression définitive d'une entreprise).
+
+               LE CHAMP N'EXISTE QUE PENDANT CETTE CONFIRMATION (chantier 16, signalé le 2026-10-21).
+               Ce dialogue est inclus sur TOUTES les pages : un champ mot de passe vivant y attirait
+               le gestionnaire de mots de passe d'Edge/Chrome à chaque chargement, qui versait
+               l'e-mail dans le dernier champ texte précédent — la recherche des Tâches du tableau
+               de bord. `autocomplete="off"` n'y peut rien. Le champ dort donc dans un <template>
+               (inerte : aucun navigateur ne le voit), cloné dans l'emplacement par le contrôleur
+               le temps de la confirmation, avec l'identifiant qui lui revient. #}
             <div class="modal-body pt-1" data-confirmation-dialog-target="passwordContainer" style="display: none;">
+                <div data-confirmation-dialog-target="passwordSlot"></div>
+            </div>
+            <template data-confirmation-dialog-target="passwordTemplate">
+                {# L'identifiant APPARIÉ au mot de passe : sans lui, le navigateur le chercherait
+                   dans le champ texte le plus proche de la page. #}
+                <input type="text" autocomplete="username" value="{{ app.user ? app.user.userIdentifier : '' }}"
+                       hidden aria-hidden="true" tabindex="-1">
                 <label for="confirmation-dialog-password" class="form-label small fw-semibold mb-1">Saisissez votre mot de passe pour confirmer</label>
                 <div class="dialog-password-field">
                     <span class="dialog-password-icon" aria-hidden="true">
@@ -72,7 +87,7 @@
                         <twig:UX:Icon name="{{ resolve_icon_name('action:hide') }}" data-role="icon-hide" style="display: none;" />
                     </button>
                 </div>
-            </div>
+            </template>
             <div class="modal-footer">
                 {# AJOUT: Conteneur pour les messages d'erreur #}
                 <div class="feedback-container w-100 text-danger mb-2" data-confirmation-dialog-target="feedback"></div>

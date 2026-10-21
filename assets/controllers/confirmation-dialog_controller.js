@@ -35,6 +35,10 @@ export default class extends Controller {
         "itemDetailsContainer",
         "itemList",
         "passwordContainer",
+        // Le champ mot de passe dort dans un <template> et n'est cloné dans l'emplacement que
+        // pendant une confirmation qui l'exige (_poserChampMotDePasse).
+        "passwordSlot",
+        "passwordTemplate",
         "passwordField",
         "passwordToggle",
         // Icônes d'entête : destructrice (défaut) ou neutre, selon l'action.
@@ -236,14 +240,7 @@ export default class extends Controller {
 
         // Confirmation forte par mot de passe (optionnelle).
         this.requirePassword = requirePassword === true;
-        if (this.hasPasswordContainerTarget) {
-            this.passwordContainerTarget.style.display = this.requirePassword ? 'block' : 'none';
-        }
-        if (this.hasPasswordFieldTarget) {
-            this.passwordFieldTarget.value = '';
-            this.passwordFieldTarget.type = 'password';
-        }
-        this._syncPasswordToggle(false);
+        this._poserChampMotDePasse(this.requirePassword);
 
         // Couleur d'en-tête personnalisable (défaut : bg-danger text-white)
         if (this.hasHeaderTarget) {
@@ -396,6 +393,30 @@ export default class extends Controller {
     }
 
     /**
+     * POSE (ou retire) LE CHAMP MOT DE PASSE.
+     *
+     * Ce dialogue est sur TOUTES les pages : un champ mot de passe vivant y attirait le
+     * gestionnaire de mots de passe d'Edge/Chrome à chaque chargement, qui versait l'e-mail
+     * dans le dernier champ texte de la page — la recherche des Tâches du tableau de bord
+     * (signalé le 2026-10-21). Le champ n'existe donc que le temps d'une confirmation forte :
+     * cloné depuis son <template>, retiré à la fermeture — et avec lui ce qui a été saisi.
+     * @param {boolean} exige
+     * @private
+     */
+    _poserChampMotDePasse(exige) {
+        if (this.hasPasswordContainerTarget) {
+            this.passwordContainerTarget.style.display = exige ? 'block' : 'none';
+        }
+        if (!this.hasPasswordSlotTarget) return;
+        if (exige && this.hasPasswordTemplateTarget) {
+            this.passwordSlotTarget.replaceChildren(this.passwordTemplateTarget.content.cloneNode(true));
+        } else {
+            this.passwordSlotTarget.replaceChildren();
+        }
+        this._syncPasswordToggle(false);
+    }
+
+    /**
      * Bascule l'affichage du mot de passe (masqué / en clair) et met à jour
      * l'icône et les attributs d'accessibilité du bouton.
      */
@@ -520,14 +541,7 @@ export default class extends Controller {
                 this.itemDetailsContainerTarget.style.display = 'none';
                 this.itemListTarget.innerHTML = '';
             }
-            if (this.hasPasswordContainerTarget) {
-                this.passwordContainerTarget.style.display = 'none';
-            }
-            if (this.hasPasswordFieldTarget) {
-                this.passwordFieldTarget.value = '';
-                this.passwordFieldTarget.type = 'password';
-            }
-            this._syncPasswordToggle(false);
+            this._poserChampMotDePasse(false);
         }, { once: true });
 
         this.modal.hide();

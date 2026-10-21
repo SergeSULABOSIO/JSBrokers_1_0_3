@@ -80,6 +80,28 @@ class StockageDeTravailTest extends WebTestCase
         self::assertStringNotContainsString('data-jsb-deconnexion', $html);
     }
 
+    /**
+     * AUCUN CHAMP MOT DE PASSE VIVANT SUR UNE PAGE CONNECTÉE (chantier 16, signalé le 2026-10-21).
+     *
+     * La boîte de confirmation, incluse sur toutes les pages, portait un champ mot de passe
+     * caché : le gestionnaire de mots de passe d'Edge/Chrome le remplissait à CHAQUE chargement,
+     * et versait l'identifiant (l'e-mail) dans le dernier champ texte qui le précède — la
+     * recherche des Tâches du tableau de bord. `autocomplete="off"` n'y peut rien. Le champ vit
+     * désormais dans un <template>, cloné seulement quand une confirmation l'exige.
+     */
+    public function testAucunChampMotDePasseVivantSurUnePageConnectee(): void
+    {
+        $this->client->loginUser($this->utilisateur());
+        $this->client->request('GET', '/onboarding');
+        self::assertResponseIsSuccessful();
+
+        $html = (string) $this->client->getResponse()->getContent();
+        $horsGabarits = (string) preg_replace('#<template\b.*?</template>#s', '', $html);
+        self::assertDoesNotMatchRegularExpression('/<input\b[^>]*type="password"/i', $horsGabarits);
+        // Le champ existe toujours, prêt à être cloné.
+        self::assertMatchesRegularExpression('#<template\b[^>]*>(?:(?!</template>).)*type="password"#s', $html);
+    }
+
     public function testLaDeconnexionMeneAUneConnexionQuiDemandeLeVidage(): void
     {
         $this->client->loginUser($this->utilisateur());
