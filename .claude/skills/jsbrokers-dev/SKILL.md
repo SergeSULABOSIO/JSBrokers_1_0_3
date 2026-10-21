@@ -54,7 +54,13 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   écrits à la main (`getEntreprise() !== …` puis 404) au lieu d'`AppartenanceAuCabinet`. Ils
   refusent bien en 404 ; tout code touché à proximité les y ramène.
 - **« Mon portefeuille » est un confort de lecture, pas une frontière** : la frontière est le
-  scoping entreprise, toujours appliqué.
+  scoping entreprise, toujours appliqué. Confirmé par Serge le 2026-10-21 (option A) : le
+  serveur n'impose pas le portefeuille, la chip est retirable par tous.
+  - **CIBLE éventuelle** — cloisonnement entre chargés de compte : une OPTION par cabinet,
+    chantier dédié, à n'ouvrir QUE sur demande d'un client. État actuel prouvé :
+    `JSBDynamicSearchService` n'applique `__mon_portefeuille__` que s'il est reçu ;
+    `WorkspaceAccessResolver` ne connaît aucun droit par portefeuille. Écart : tout invité qui
+    lit une rubrique en lit toutes les fiches du cabinet.
 
 ## 3. Une source unique, et la parité écran ↔ Ket
 
@@ -219,7 +225,8 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
 
 - **Un commit par sujet, chacun vert avant le suivant** : suite complète (ou node + Frontend +
   Workspace pour du JS seul), revue de sécurité et de code par un sous-agent, corrections.
-- `git fetch` puis commit **sans** `tests/Console/SupervisionEcranTest.php` ; push par
+- `git fetch` puis commit ; une modification non commitée qui n'est pas la vôtre se MONTRE à
+  Serge (diff), qui décide — rien ne reste en suspens dans le dossier de travail. Push par
   `git push JSBrokers_1_0_3 master` (pas d'`origin`).
 - L'utilisateur commite aussi depuis son poste : toujours `fetch` avant de commiter.
 - Mise en production : `bin/deploy.sh` + `bin/publier.ps1` ; jamais `git clean` ni `rm -rf var/`.
