@@ -198,6 +198,29 @@ final class ListeVideExpliqueeTest extends WebTestCase
         self::assertSame(['nom'], self::clesDuBouton($lecteur['etatVide']['html'], 'Effacer les filtres'));
     }
 
+    /**
+     * ADMINISTRATEUR = le propriétaire OU le DÉLÉGUÉ « gestionnaire des invités » (décision de
+     * Serge du 2026-10-21) — pas un cumul de droits par rubrique. Seul le propriétaire garde
+     * la suppression du cabinet et l'achat des tokens.
+     */
+    public function testLeDelegueEstAdministrateurDuCabinet(): void
+    {
+        ['invite' => $invite, 'entreprise' => $e] = $this->semer();
+        $invite = $this->em()->find(Invite::class, $invite->getId());
+        $invite->setGestionnaireInvites(true);
+        $this->em()->flush();
+        $this->seConnecter(self::INVITE);
+
+        $reponse = $this->recherche($invite, $e, ['nom' => ['operator' => 'LIKE', 'value' => 'introuvable-zz']] + $this->monPortefeuille($invite));
+        self::assertSame('filtres', $reponse['etatVide']['cause'] ?? null);
+        self::assertSame([PortefeuilleScope::CRITERION_KEY, 'nom'], self::clesDuBouton($reponse['etatVide']['html'], 'Effacer les filtres'), 'Le délégué est administrateur : le portefeuille part aussi.');
+
+        $resolveur = static::getContainer()->get(\App\Service\Workspace\WorkspaceAccessResolver::class);
+        self::assertTrue($resolveur->estAdministrateurDuCabinet($invite));
+        $invite->setGestionnaireInvites(false);
+        self::assertFalse($resolveur->estAdministrateurDuCabinet($invite), 'Sans la délégation, un simple lecteur ne l’est pas.');
+    }
+
     // ── Rien à montrer ──────────────────────────────────────────────────────────
 
     public function testUnCabinetSansFicheDitAucuneDonnee(): void

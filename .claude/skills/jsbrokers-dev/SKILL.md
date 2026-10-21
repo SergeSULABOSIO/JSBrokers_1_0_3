@@ -298,8 +298,9 @@ Inscrits le 2026-10-16 (décisions de Serge), après l'inventaire fait pour la s
    « Aucune donnée » ; « Aucune fiche dans votre portefeuille » + « Afficher tout le cabinet »
    (proposé à tous) ; « Aucune fiche ne correspond à vos filtres » + « Effacer les filtres »,
    qui ne retire « Mon portefeuille » que pour un administrateur du cabinet
-   (`WorkspaceAccessResolver::estAdministrateurDuCabinet` : propriétaire, ou Lecture + Écriture +
-   Modification sur toutes les rubriques gouvernées). Les boutons portent les clés à retirer
+   (`WorkspaceAccessResolver::estAdministrateurDuCabinet` : le propriétaire ou le DÉLÉGUÉ
+   « gestionnaire des invités » — décision de Serge ; seul le propriétaire supprime le cabinet
+   et achète des tokens). Les boutons portent les clés à retirer
    (`button_2_cles`) ; le navigateur ne décide rien. Test : `ListeVideExpliqueeTest`.
 7. **Routes et code morts** : `/admin/piste/test` (`PisteController.php:65-69`) ;
    `/admin/demande_contact` répond 500 en GET (gabarit absent) — le POST, lui, passe par
