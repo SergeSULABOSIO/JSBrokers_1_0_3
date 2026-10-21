@@ -103,6 +103,25 @@ final class SupervisionEcranTest extends WebTestCase
     }
 
     /**
+     * LE BLOC « SUPERVISION » DU TABLEAU DE BORD, AVEC UN DÉFAUT OUVERT.
+     *
+     * Le 2026-10-08, ce bloc répondait 500 en production — et seulement là : il ne rend
+     * sa liste que lorsqu'un défaut est OUVERT, ce que la suite ne semait jamais pour lui.
+     * Les deux états sont donc tenus : sans défaut, et avec.
+     */
+    public function testLeBlocDuTableauDeBordSAfficheSansEtAvecUnDefautOuvert(): void
+    {
+        $this->navigateur->loginUser($this->compte(self::AGENT));
+        $this->navigateur->request('GET', '/console/dashboard/block/supervision');
+        self::assertResponseIsSuccessful('Sans défaut ouvert.');
+
+        $defaut = $this->unDefaut();
+        $this->navigateur->request('GET', '/console/dashboard/block/supervision');
+        self::assertResponseIsSuccessful('Avec un défaut ouvert, la liste se rend.');
+        self::assertStringContainsString((string) $defaut->getType(), (string) $this->navigateur->getResponse()->getContent());
+    }
+
+    /**
      * ⚠ LA RÈGLE QUI COMPTE : un client n'entre pas.
      *
      * Il est authentifié, il a un espace de travail complet, et il se voit
