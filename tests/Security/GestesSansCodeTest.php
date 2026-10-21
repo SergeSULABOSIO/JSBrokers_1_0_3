@@ -116,6 +116,22 @@ class GestesSansCodeTest extends TestCase
         }
     }
 
+    /**
+     * LE REMBOURSEMENT D'UNE VENTE EST VERROUILLÉ (décision de Serge, 2026-10-20) : irréversible
+     * (achat remboursé, tokens retirés du compte, avoir émis, client notifié), il ne part jamais
+     * sans confirmation — pas même si le JavaScript ne démarre pas. Son formulaire n'a donc AUCUN
+     * bouton d'envoi direct : seul `geste#envoyerApresConfirmation` l'envoie, après la question.
+     */
+    public function testLeRemboursementNePartJamaisSansConfirmation(): void
+    {
+        $gabarit = (string) file_get_contents(self::RACINE . '/templates/console/vente/index.html.twig');
+        self::assertSame(1, preg_match('#<form[^>]*console\.vente\.refund.*?</form>#s', $gabarit, $m), 'Formulaire de remboursement introuvable.');
+        $formulaire = $m[0];
+
+        self::assertDoesNotMatchRegularExpression('/type="submit"|<input[^>]*type="(submit|image)"/i', $formulaire, 'Un bouton d\'envoi direct laisserait partir le remboursement sans question.');
+        self::assertMatchesRegularExpression('/<button type="button"[^>]*click->geste#envoyerApresConfirmation[^>]*data-geste-message-param=/s', $formulaire);
+    }
+
     public function testChaqueActionGesteDesigneUneMethodeQuiExiste(): void
     {
         preg_match_all('/^    ([a-zA-Z]+)\(/m', (string) file_get_contents(self::RACINE . '/assets/controllers/geste_controller.js'), $m);

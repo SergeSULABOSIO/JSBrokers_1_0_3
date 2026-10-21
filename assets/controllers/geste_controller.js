@@ -51,6 +51,22 @@ export default class extends Controller {
         }
     }
 
+    /**
+     * Une action IRRÉVERSIBLE verrouillée : le bouton est `type="button"`, il n'envoie rien par
+     * lui-même ; seul ce geste envoie le formulaire, APRÈS confirmation. Sans JavaScript (panne,
+     * démarrage pas encore fini), rien ne part — là où `submit->geste#confirmer` laissait partir
+     * l'envoi sans question. Décision de Serge (2026-10-20) pour le remboursement d'une vente.
+     *   <button type="button" data-action="click->geste#envoyerApresConfirmation"
+     *           data-geste-message-param="…">
+     */
+    envoyerApresConfirmation(event) {
+        const formulaire = event.currentTarget.form;
+        if (formulaire && window.confirm(event.params.message ?? '')) {
+            // submit() et non requestSubmit() : pas d'événement `submit` qui redemanderait.
+            formulaire.submit();
+        }
+    }
+
     naviguer(event) {
         const { component, group, entity } = event.params;
         document.dispatchEvent(new CustomEvent('workspace:navigate-to', { bubbles: true, detail: { component, group, entity } }));

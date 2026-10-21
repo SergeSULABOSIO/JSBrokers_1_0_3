@@ -114,10 +114,14 @@
                                     </a>
                                 {% endif %}
                                 {% if v.isPaid %}
-                                    <form method="post" action="{{ path('console.vente.refund', {id: v.id}) }}"
-                                          data-action="submit->geste#confirmer" data-geste-message-param="{{ 'vente.refund.confirm'|trans }}" style="display:inline;">
+                                    {# Remboursement IRRÉVERSIBLE (avoir émis, tokens retirés, client notifié) :
+                                       VERROUILLÉ — le bouton n'envoie rien par lui-même ; le formulaire ne part
+                                       qu'après confirmation (geste#envoyerApresConfirmation). Sans JavaScript,
+                                       rien ne part. Décision de Serge, 2026-10-20. #}
+                                    <form method="post" action="{{ path('console.vente.refund', {id: v.id}) }}" style="display:inline;">
                                         <input type="hidden" name="_token" value="{{ csrf_token('refund-vente-' ~ v.id) }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center">
+                                        <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center"
+                                                data-action="click->geste#envoyerApresConfirmation" data-geste-message-param="{{ 'vente.refund.confirm'|trans }}">
                                             {{ ux_icon(resolve_icon_name('action:reset'), {height:'16px', width:'16px'}) }}
                                             <span class="ms-1">{{ 'vente.refund.button'|trans }}</span>
                                         </button>
