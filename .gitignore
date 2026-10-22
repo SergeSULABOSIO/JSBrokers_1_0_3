@@ -64,9 +64,6 @@
 # Sorties du gestionnaire de messages : des DONNÉES, pas du code. Le .gitkeep
 # préserve le dossier au clone — sans lui, l'écriture échoue sur un dossier
 # inexistant.
-/public/pdfs/*
-!/public/pdfs/.gitkeep
-!/public/pdfs/.htaccess
 
 # Drapeau de maintenance posé et retiré par bin/deploy.sh.
 /public/maintenance.flag

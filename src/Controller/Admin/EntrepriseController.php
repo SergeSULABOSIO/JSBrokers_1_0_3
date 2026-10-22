@@ -12,7 +12,6 @@ use App\Services\ServiceGeographie;
 use App\Services\ServiceInitialisationEntreprise;
 use App\Services\ServiceSuppressionEntreprise;
 use App\Repository\InviteRepository;
-use App\Message\EntreprisePDFMessage;
 use App\Repository\EntrepriseRepository;
 use App\Token\InsufficientTokensException;
 use App\Token\ParametresTokenService;
@@ -354,30 +353,6 @@ class EntrepriseController extends AbstractController
         ]));
 
         return $this->redirectToRoute("admin.entreprise.index");
-    }
-
-    #[Route('/pdf/{id}', name: 'pdf', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function pdf(Entreprise $entreprise, MessageBusInterface $messageBus)
-    {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-        $this->denyUnlessOwner($entreprise);
-
-        $messageBus->dispatch(new EntreprisePDFMessage($entreprise->getId()));
-
-        // La génération est asynchrone (file d'attente Messenger) : on annonce une mise en
-        // file, pas une création déjà aboutie, pour ne pas tromper l'utilisateur.
-        $this->addFlash("info", $this->translator->trans("entreprise_pdf_queued_ok", [
-            ':user' => $user->getNom(),
-            ':company' => $entreprise->getNom(),
-        ]));
-        
-        // return $this->redirectToRoute("admin.entreprise.index");
-        return $this->render('admin/entreprise/pdf/index.html.twig', [
-            'pageName' => $this->translator->trans("entreprise_page_name_pdf"),
-            'utilisateur' => $user,
-            'entreprise' => $entreprise,
-        ]);
     }
 
     #[Route('/geticon/{inaction}/{nom}/{taille}', name: 'geticon', requirements: ['inaction' => Requirement::CATCH_ALL, 'nom' => Requirement::CATCH_ALL, 'taille' => Requirement::DIGITS], methods: ['GET', 'POST'])]

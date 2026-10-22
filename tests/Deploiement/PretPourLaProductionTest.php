@@ -111,16 +111,6 @@ final class PretPourLaProductionTest extends KernelTestCase
     }
 
     /**
-     * Le dossier existe-t-il au clone ? EntreprisePDFMessageHandler y écrit ;
-     * sans .gitkeep, l'écriture échoue sur un dossier inexistant et le message
-     * part en file « failed », où personne ne le regarde.
-     */
-    public function testLeDossierDesPdfSurvitAuClone(): void
-    {
-        self::assertFileExists(self::racine() . '/public/pdfs/.gitkeep');
-    }
-
-    /**
      * .env est VERSIONNÉ sur un dépôt PUBLIC. Tout ce qu'on y écrit est lisible
      * par n'importe qui : il ne doit porter que des valeurs de développement.
      *

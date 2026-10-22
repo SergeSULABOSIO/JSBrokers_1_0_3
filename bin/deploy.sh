@@ -20,7 +20,7 @@
 #  ── DEUX INTERDITS ABSOLUS ──────────────────────────────────────────────────
 #  · JAMAIS « git clean » : public/images/entreprises mêle des fichiers de marque
 #    suivis et les logos TÉLÉVERSÉS par les cabinets ; public/uploads/documents
-#    et public/pdfs ne contiennent QUE des données. « git reset --hard » ne
+#    ne contient QUE des données. « git reset --hard » ne
 #    touche pas aux fichiers non suivis — c'est exactement pourquoi il est ici.
 #  · JAMAIS « rm -rf var/ » : var/uploads/assistant et assistant-documents
 #    contiennent les pièces jointes et les documents produits par Ket,
@@ -583,12 +583,12 @@ titre "5/11  Dossiers de donnees et permissions"
 executer "mkdir -p '$APP_DIR/var/cache' '$APP_DIR/var/log' '$APP_DIR/var/sessions' \
           '$APP_DIR/var/tmp' '$APP_DIR/var/echange' \
           '$APP_DIR/var/uploads/assistant' '$APP_DIR/var/uploads/assistant-documents' \
-          '$PUBLIC_DIR/pdfs' '$PUBLIC_DIR/uploads/documents' '$PUBLIC_DIR/images/entreprises'"
+          '$PUBLIC_DIR/uploads/documents' '$PUBLIC_DIR/images/entreprises'"
 # 755/644 et JAMAIS 777 : avec suexec ou PHP-FPM par utilisateur, Apache REFUSE
 # d'exécuter un script situé dans une arborescence ouverte en écriture au
 # groupe ou au monde. « chmod -R 777 » est le réflexe qui casse le site.
 executer "find '$APP_DIR/var' -type d -exec chmod 755 {} +"
-executer "find '$PUBLIC_DIR/uploads' '$PUBLIC_DIR/pdfs' -type d -exec chmod 755 {} +"
+executer "find '$PUBLIC_DIR/uploads' -type d -exec chmod 755 {} +"
 executer "chmod 600 '$APP_DIR/.env.local'"
 executer "chmod +x '$APP_DIR/bin/console' '$APP_DIR/bin/deploy.sh'"
 ok "Arborescence et permissions en place"

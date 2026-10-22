@@ -52,8 +52,6 @@ class ServiceSuppressionEntreprise
         private readonly string $repertoireLogos,
         #[Autowire('%kernel.project_dir%/public/uploads/documents')]
         private readonly string $repertoireDocuments,
-        #[Autowire('%kernel.project_dir%/public/pdfs')]
-        private readonly string $repertoirePdfs,
         // Les pièces comptables se conservent dix ans : pas de purge sans archive remise.
         private readonly \App\Service\Note\ConservationDesPieces $conservation,
     ) {}
@@ -111,11 +109,6 @@ class ServiceSuppressionEntreprise
             if ($nom !== '' && !$this->estProtege($nom)) {
                 $chemins[] = $this->repertoireDocuments . '/' . $nom;
             }
-        }
-
-        // PDF généré de l'entreprise (nommé par id : {id}.pdf / {id}.txt …).
-        foreach (glob($this->repertoirePdfs . '/' . $entreprise->getId() . '.*') ?: [] as $pdf) {
-            $chemins[] = $pdf;
         }
 
         return $chemins;

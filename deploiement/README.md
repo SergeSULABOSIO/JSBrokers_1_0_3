@@ -536,6 +536,6 @@ var/log                            journaux (utiles à un diagnostic après coup
 
 **`git clean` est interdit dans tout script de déploiement.**
 `public/images/entreprises/` mêle des fichiers de marque suivis et les logos
-téléversés par les cabinets ; `public/uploads/documents/` et `public/pdfs/` ne
-contiennent que des données. C'est exactement pourquoi `bin/deploy.sh` utilise
+téléversés par les cabinets ; `public/uploads/documents/` ne contient que des
+données. C'est exactement pourquoi `bin/deploy.sh` utilise
 `git reset --hard`, qui ne touche pas aux fichiers non suivis.
