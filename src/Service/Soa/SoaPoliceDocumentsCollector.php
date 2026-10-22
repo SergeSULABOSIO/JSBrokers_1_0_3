@@ -141,6 +141,27 @@ class SoaPoliceDocumentsCollector
         return $this->collectFor($avenant);
     }
 
+    /**
+     * CE QUE LE CLIENT VOIT d'une police, par son relevé public (/soa/{token}) : les pièces du
+     * dossier cochées « Partagée avec le client » — et elles seules (option (c) de Serge,
+     * 2026-10-22). Le courtier, lui, voit tout (collectFor).
+     *
+     * @return array<int, array{document: Document, niveau: string, extension: string, famille: string}>
+     */
+    public function piecesPartagees(Avenant $avenant): array
+    {
+        return array_values(array_filter(
+            $this->collect($avenant),
+            static fn (array $item): bool => $item['document']->isPartageeAvecLeClient(),
+        ));
+    }
+
+    /** Une pièce peut-elle être servie au client par son relevé : de son dossier ET partagée. */
+    public function pieceServieAuClient(Document $document, Client $client): bool
+    {
+        return $document->isPartageeAvecLeClient() && $this->documentAppartientAuClient($document, $client);
+    }
+
     /** Le client (assuré) auquel appartient la police — null si le pipe est incomplet. */
     public function clientDeLaPolice(Avenant $avenant): ?Client
     {

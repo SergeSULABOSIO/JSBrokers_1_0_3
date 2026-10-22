@@ -298,6 +298,9 @@ class SoaAccesClientTest extends WebTestCase
             $doc->setEntreprise($entreprise);
             if ($niveau === 'avenant') {
                 $doc->setClasseur($classeur);
+                // Seule la pièce de la POLICE est partagée avec le client (option (c)) : les
+                // autres niveaux restent internes — le relevé public ne les montre pas.
+                $doc->setPartageeAvecLeClient(true);
             }
             $em->persist($doc);
             $docs[$niveau] = $doc;
@@ -867,6 +870,38 @@ class SoaAccesClientTest extends WebTestCase
         $this->em()->clear();
         $this->client->request('GET', sprintf('/soa/%s/document/%d/telecharger', $tokenValue, $docAvenantId));
         $this->assertResponseStatusCodeSame(404, 'Un jeton révoqué ne télécharge plus rien.');
+    }
+
+    /**
+     * OPTION (c) DE SERGE : seule une pièce cochée « Partagée avec le client » sort par le relevé
+     * public — absente de la liste, refusée au téléchargement sinon (même réponse qu'un lien
+     * invalide). Le courtier, lui, voit toujours tout.
+     */
+    public function testLeRelevePublicNeSortQueLesPiecesPartagees(): void
+    {
+        $ctx = $this->seedPolice($this->seed());
+        $clientA = $ctx['avenant']->getCotation()->getPiste()->getClient();
+        $tokenValue = $this->createToken($clientA, $clientA->getEntreprise())->getToken();
+        $avenantId = $ctx['avenant']->getId();
+        $internes = ['piste' => $ctx['docs']['piste'], 'cotation' => $ctx['docs']['cotation']];
+        $this->em()->clear();
+
+        $this->client->request('GET', sprintf('/soa/%s/police/%d/documents', $tokenValue, $avenantId));
+        $this->assertResponseIsSuccessful();
+        $html = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('Police signee', $html, 'la pièce partagée est listée');
+        foreach ($internes as $niveau => $document) {
+            $this->assertStringNotContainsString((string) $document->getNom(), $html, "pièce interne ($niveau) absente de la liste publique");
+            $this->client->request('GET', sprintf('/soa/%s/document/%d/telecharger', $tokenValue, $document->getId()));
+            $this->assertResponseStatusCodeSame(404, "pièce interne ($niveau) refusée au téléchargement");
+            $this->assertStringContainsString("Ce lien n'est plus valide", (string) $this->client->getResponse()->getContent());
+        }
+    }
+
+    /** Une pièce naît NON partagée — rien ne sort sans une décision explicite. */
+    public function testUnePieceNaitNonPartagee(): void
+    {
+        $this->assertFalse((new Document())->isPartageeAvecLeClient());
     }
 
     public function testPublicSoaPolicesTableExposeDocsButton(): void

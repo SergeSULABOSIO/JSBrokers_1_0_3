@@ -82,14 +82,15 @@ class PublicSoaController extends AbstractController
         return $this->render('components/soa/_documents_picker.html.twig', [
             'titre'              => 'Documents de la police « ' . ($avenant->getReferencePolice() ?: '—') . ' »',
             'contexteNom'        => $client->getNom(),
-            'items'              => $this->documentsCollector->collect($avenant),
+            'items'              => $this->documentsCollector->piecesPartagees($avenant),
             'downloadUrlPattern' => '/soa/' . $token . '/document/%did%/telecharger',
         ]);
     }
 
     /**
-     * Téléchargement public d'un document, gardé par le jeton : seul un document
-     * attaché au pipe du client du jeton (client, piste, cotation, police) est servi.
+     * Téléchargement public d'un document, gardé par le jeton : seul un document attaché au
+     * pipe du client du jeton (client, piste, cotation, police) ET coché « Partagée avec le
+     * client » est servi (chantier 18, option (c)). Sinon : la même réponse qu'un lien invalide.
      */
     #[Route('/soa/{token}/document/{documentId}/telecharger', name: 'public.soa.document_download', methods: ['GET'], requirements: ['token' => '[a-f0-9]{64}', 'documentId' => '\d+'])]
     public function documentDownload(string $token, int $documentId, DocumentRepository $documentRepository, \App\Service\Document\ReponseDePiece $reponseDePiece, \App\Service\Document\DocumentFichier $documentFichier): Response
@@ -100,7 +101,7 @@ class PublicSoaController extends AbstractController
         }
 
         $document = $documentRepository->find($documentId);
-        if ($document === null || !$this->documentsCollector->documentAppartientAuClient($document, $acces->getClient())) {
+        if ($document === null || !$this->documentsCollector->pieceServieAuClient($document, $acces->getClient())) {
             return $this->invalidResponse();
         }
 

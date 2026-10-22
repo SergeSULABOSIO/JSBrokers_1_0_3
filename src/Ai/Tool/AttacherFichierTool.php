@@ -218,6 +218,10 @@ final class AttacherFichierTool implements AiToolProduisantUnPlan, AiToolConditi
             'rattachement' => [
                 'cible'       => $libelleCible,
                 'explication' => $descripteur['explication'],
+                // Option (c) de Serge : une pièce naît NON partagée — le client ne la voit pas
+                // dans son relevé en ligne tant que la case n'est pas cochée (même règle qu'à
+                // l'écran ; Ket la coche par une modification du document, sur demande).
+                'partage'     => 'Interne au cabinet : non partagée avec le client (relevé en ligne).',
             ],
             // Le classement d'une pièce est irréversible du point de vue de l'utilisateur
             // (le fichier quitte la conversation pour entrer au dossier) : il doit lire
@@ -226,7 +230,8 @@ final class AttacherFichierTool implements AiToolProduisantUnPlan, AiToolConditi
                 . 'recevoir, en reprenant « explication » — c’est le serveur qui sait où va la pièce, '
                 . 'pas toi. « Le document SERA rattaché à… », jamais « a été rattaché » ni « est '
                 . 'désormais lié » : rien n’est écrit tant que l’utilisateur n’a pas cliqué sur '
-                . '« Valider et exécuter ». Termine en l’invitant à valider.',
+                . '« Valider et exécuter ». Ajoute qu’elle restera INTERNE (le client ne la verra pas '
+                . 'dans son relevé en ligne) sauf s’il demande de la partager. Termine en l’invitant à valider.',
         ], $resultat->uiAction);
     }
 

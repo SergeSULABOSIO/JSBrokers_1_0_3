@@ -77,6 +77,8 @@ final class ServiceDesPiecesTest extends WebTestCase
         file_put_contents($this->fichier, '<!doctype html><html><body><script>alert(document.cookie)</script></body></html>');
         $document = (new Document())->setNom("Piège\"\r\nX-Injecte: 1")->setClient($client);
         $document->setNomFichierStocke($nomStocke);
+        // Partagée : sinon le relevé public la refuserait avant même de la servir (option (c)).
+        $document->setPartageeAvecLeClient(true);
         $document->setEntreprise($e)->setInvite($invite);
         $em->persist($document);
 

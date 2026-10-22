@@ -35,6 +35,8 @@ class DocumentListCanvasProvider implements ListCanvasProviderInterface
                     // Classeur de rangement (« Classé dans : … » / « Non classé »),
                     // calculé par DocumentIndicatorStrategy.
                     ["attribut_code" => "classeur_string", "icone" => "classeur"],
+                    // Vide (donc masquée) tant que la pièce reste interne au cabinet.
+                    ["attribut_code" => "partage_string", "icone" => "client", "pastille" => true],
                 ],
             ],
         ];

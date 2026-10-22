@@ -204,6 +204,7 @@ class DocumentsAttachesDepuisLaListeTest extends WebTestCase
         foreach ($documents as $document) {
             $this->assertNotSame('', (string) $document->getNomFichierStocke(), 'Le binaire doit avoir suivi.');
             $this->assertSame($ent->getId(), $document->getEntreprise()?->getId(), 'Le scoping entreprise s’applique.');
+            $this->assertFalse($document->isPartageeAvecLeClient(), 'Le dépôt rapide crée une pièce INTERNE (option (c)).');
         }
     }
 

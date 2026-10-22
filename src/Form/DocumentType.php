@@ -39,6 +39,15 @@ class DocumentType extends AbstractType
                 'label' => "Classeur",
                 'required' => false,
             ])
+            // PARTAGÉE AVEC LE CLIENT (chantier 18, option (c) de Serge) : décochée par défaut.
+            // false_values explicite : le moteur de Ket normalise les booléens en '1'/'0', et
+            // CheckboxType tient par défaut toute valeur non nulle pour vraie — '0' PARTAGERAIT.
+            ->add('partageeAvecLeClient', \Symfony\Component\Form\Extension\Core\Type\CheckboxType::class, [
+                'label' => "Partagée avec le client",
+                'help' => "Le client pourra la consulter et la télécharger depuis son relevé de compte en ligne. Décochée : la pièce reste interne au cabinet.",
+                'required' => false,
+                'false_values' => [null, '0', 'false', ''],
+            ])
             ->add('fichier', VichFileType::class, [
                 'label' => 'Fichier à uploader',
                 // MODIFICATION 1 : Le champ n'est plus obligatoire si un fichier existe déjà.

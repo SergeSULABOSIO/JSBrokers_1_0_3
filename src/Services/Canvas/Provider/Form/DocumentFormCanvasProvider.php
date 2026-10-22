@@ -33,6 +33,7 @@ class DocumentFormCanvasProvider implements FormCanvasProviderInterface
                 "Un document est une pièce du dossier : contrat signé, courrier, justificatif. C'est ce qu'on cherchera le jour où quelque chose sera contesté.",
                 "Le classement est automatique : une pièce rattachée à un client rejoint le classeur de ce client. Le champ « classeur » ne sert qu'à la ranger ailleurs.",
                 "Une pièce se dépose sur presque toutes les fiches du cabinet. Mieux vaut la joindre là où elle a un sens que dans un dossier général où plus personne ne la retrouve.",
+                "Elle reste interne au cabinet tant que « Partagée avec le client » n'est pas cochée : seules les pièces cochées apparaissent dans le relevé de compte en ligne du client.",
             ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
@@ -49,6 +50,7 @@ class DocumentFormCanvasProvider implements FormCanvasProviderInterface
                 "nom"      => "action:edit",
                 "classeur" => "classeur",
                 "fichier"  => "action:upload",
+                "partageeAvecLeClient" => "client",
             ],
         ];
         $layout = $this->buildDocumentLayout($documentId, $isParentNew);
@@ -66,6 +68,7 @@ class DocumentFormCanvasProvider implements FormCanvasProviderInterface
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["classeur"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["fichier"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["partageeAvecLeClient"]]]],
         ];
 
         return $layout;

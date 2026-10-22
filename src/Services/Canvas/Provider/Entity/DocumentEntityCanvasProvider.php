@@ -41,6 +41,7 @@ class DocumentEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                 ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                 ["code" => "nomFichierStocke", "intitule" => "Nom Fichier", "type" => "Texte"],
+                ["code" => "partageeAvecLeClient", "intitule" => "Partagée avec le client", "type" => "Booleen"],
                 ["code" => "createdAt", "intitule" => "Créé le", "type" => "Date"],
                 ["code" => "updatedAt", "intitule" => "Modifié le", "type" => "Date"],
             ], $this->getRattachements(), $this->getSpecificIndicators())
@@ -88,6 +89,7 @@ class DocumentEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             ["group" => "Contexte", "code" => "parent_string", "intitule" => "Contexte", "type" => "Calcul", "format" => "Texte", "fonction" => "Document_getParentAsString", "description" => "Entité parente à laquelle le document est rattaché."],
             ["group" => "Contexte", "code" => "classeur_string", "intitule" => "Classement", "type" => "Calcul", "format" => "Texte", "fonction" => "Document_getClasseurAsString", "description" => "Classeur dans lequel le document est archivé."],
+            ["group" => "Contexte", "code" => "partage_string", "intitule" => "Partage", "type" => "Calcul", "format" => "Texte", "description" => "« Partagée avec le client » : la pièce sort par le relevé de compte en ligne du client."],
             ["group" => "Fichier", "code" => "ageDocument", "intitule" => "Âge du document", "type" => "Calcul", "format" => "Texte", "fonction" => "calculateDocumentAge", "description" => "Âge du document depuis sa création."],
             ["group" => "Fichier", "code" => "typeFichier", "intitule" => "Type de fichier", "type" => "Calcul", "format" => "Texte", "fonction" => "getDocumentTypeFichier", "description" => "Extension du fichier."],
             ["group" => "Fichier", "code" => "tailleFichier", "intitule" => "Taille du fichier", "type" => "Calcul", "format" => "Texte", "fonction" => "getDocumentTaille", "description" => "Poids du fichier sur le serveur."],

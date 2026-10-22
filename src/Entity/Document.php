@@ -33,6 +33,28 @@ class Document
     #[Groups(['list:read'])]
     private ?string $nomFichierStocke = null;
 
+    /**
+     * PARTAGÉE AVEC LE CLIENT (décision de Serge du 2026-10-22, option c) : seule une pièce
+     * COCHÉE sort par le relevé de compte public (/soa/{token}) — liste et téléchargement.
+     * Décochée par défaut, partout (écran, dépôt rapide, Ket, reprise) : rien ne sort sans
+     * une décision explicite.
+     */
+    #[ORM\Column(options: ['default' => false])]
+    #[Groups(['list:read'])]
+    private bool $partageeAvecLeClient = false;
+
+    public function isPartageeAvecLeClient(): bool
+    {
+        return $this->partageeAvecLeClient;
+    }
+
+    public function setPartageeAvecLeClient(?bool $partagee): static
+    {
+        $this->partageeAvecLeClient = (bool) $partagee;
+
+        return $this;
+    }
+
     #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?Classeur $classeur = null;
 

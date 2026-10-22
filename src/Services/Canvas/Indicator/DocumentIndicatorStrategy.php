@@ -36,6 +36,9 @@ class DocumentIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'tailleFichier' => DocumentFichier::tailleLisible($this->documentFichier->taille($entity)),
             'parent_string' => $this->Document_getParentAsString($entity),
             'classeur_string' => $this->Document_getClasseurAsString($entity),
+            // Ce que le client voit, d'un coup d'œil : la mention n'apparaît QUE sur une pièce
+            // partagée (vide sinon — la liste masque une valeur vide).
+            'partage_string' => $entity->isPartageeAvecLeClient() ? 'Partagée avec le client' : '',
         ];
     }
 
