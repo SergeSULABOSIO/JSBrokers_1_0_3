@@ -1797,7 +1797,7 @@ class AssistantIaController extends AbstractController
 
         // Le libellé (« nom ») du Document n'a pas d'extension → le fichier téléchargé
         // serait inouvrable. On restitue l'extension RÉELLE (depuis le nom de stockage
-        // Vich, qui préserve l'extension d'origine via SmartUniqueNamer). La règle vit
+        // Vich, qui préserve l'extension d'origine via NomAleatoire). La règle vit
         // dans DocumentFichier, partagée avec la rubrique Documents du workspace : les
         // deux surfaces servent le même fichier sous le même nom.
         $nomTelechargement = $this->documentFichier->nomDeTelechargement($document);

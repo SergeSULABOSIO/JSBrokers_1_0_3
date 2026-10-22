@@ -101,6 +101,30 @@ final class ReponseDePieceTest extends TestCase
         self::assertMatchesRegularExpression('/filename="[\x20-\x7E]+"/', $disposition, 'repli ASCII pour les navigateurs anciens');
     }
 
+    /** Un .js téléchargé n'est jamais servi sous un type de script (CSP : script-src 'self'). */
+    public function testHorsAffichageLeTypeEstToujoursNeutre(): void
+    {
+        $reponse = $this->service()->servir($this->fichier('outil.js', 'alert(document.cookie);'), 'outil.js');
+
+        self::assertSame('application/octet-stream', $reponse->headers->get('Content-Type'));
+    }
+
+    public function testLesCaracteresUnicodeDeControleSontRetires(): void
+    {
+        // U+202E (inversion bidi) : « Facture‮fdp.exe » s'afficherait « Factureexe.pdf ».
+        $nom = ReponseDePiece::nomPropre("Facture\u{202E}fdp.exe\u{200B}\u{0085}\u{2028}");
+
+        self::assertDoesNotMatchRegularExpression('/[\x{202A}-\x{202E}\x{2066}-\x{2069}\x{200B}-\x{200F}\x{0080}-\x{009F}\x{2028}\x{2029}]/u', $nom);
+    }
+
+    public function testUnNomTropLongEstBorneEnGardantSonExtension(): void
+    {
+        $nom = ReponseDePiece::nomPropre(str_repeat('é', 400) . '.pdf');
+
+        self::assertLessThanOrEqual(ReponseDePiece::LONGUEUR_MAX, mb_strlen($nom));
+        self::assertStringEndsWith('.pdf', $nom);
+    }
+
     public function testUnNomVideDevientDocument(): void
     {
         self::assertSame('document', ReponseDePiece::nomPropre("\r\n\" "));

@@ -13,7 +13,7 @@ use Symfony\Component\Filesystem\Filesystem;
  * Détruit INTÉGRALEMENT et INCONDITIONNELLEMENT une entreprise : toutes ses
  * données opérationnelles (toutes les entités scopées par `entreprise_id`), ses
  * lignes de paramétrage, l'entreprise elle-même, ET ses fichiers uploadés sur le
- * serveur (logo, documents, PDF généré).
+ * serveur (logo, pièces déposées).
  *
  * Stratégie « table rase » assumée : on neutralise les contraintes d'intégrité
  * le temps de la purge (SET FOREIGN_KEY_CHECKS = 0 sous MariaDB/MySQL) et on

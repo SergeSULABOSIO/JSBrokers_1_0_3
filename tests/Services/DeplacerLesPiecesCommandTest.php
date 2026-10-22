@@ -147,6 +147,20 @@ final class DeplacerLesPiecesCommandTest extends KernelTestCase
         self::assertSame('marque', file_get_contents($this->racine . '/logos/logofav.png'));
     }
 
+    /** Un fichier que la base ne désigne pas reste en place, mais le rapport le compte et le nomme. */
+    public function testLesFichiersNonReferencesSontComptesEtLaissesEnPlace(): void
+    {
+        $this->referencer([], null);
+        $orphelin = $this->deposer('anciennes', 'phpunit-orphelin.txt', 'rien ne me désigne');
+
+        $testeur = $this->lancer(true);
+
+        self::assertSame(Command::SUCCESS, $testeur->getStatusCode());
+        self::assertFileExists($orphelin, 'laissé en place : son sort est une décision');
+        self::assertStringContainsString('non référencés par la base, laissés en place : 1', $testeur->getDisplay());
+        self::assertStringContainsString('phpunit-orphelin.txt', $testeur->getDisplay());
+    }
+
     public function testUnSeulEchecEtAucunOriginalNEstSupprime(): void
     {
         $bon = 'phpunit-c-' . bin2hex(random_bytes(4)) . '.pdf';

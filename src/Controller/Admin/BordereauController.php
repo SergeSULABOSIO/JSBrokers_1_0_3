@@ -1358,7 +1358,8 @@ class BordereauController extends AbstractController
 
         return new Response($pdfString, 200, [
             'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            // La référence est saisie librement : nom nettoyé et encodé (RFC 5987), jamais brut.
+            'Content-Disposition' => \App\Service\Document\ReponseDePiece::disposition('attachment', $filename),
         ]);
     }
 

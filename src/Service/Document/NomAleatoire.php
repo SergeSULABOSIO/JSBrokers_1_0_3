@@ -20,9 +20,15 @@ use Vich\UploaderBundle\Naming\NamerInterface;
  */
 final class NomAleatoire implements NamerInterface
 {
+    /** Les seules extensions d'un logo PUBLIC — tirées du CONTENU, jamais du nom annoncé. */
+    public const EXTENSIONS_DES_LOGOS = ['png', 'jpg', 'gif', 'webp'];
+
     public function name(object $object, PropertyMapping $mapping): string
     {
         $fichier = $mapping->getFile($object);
+        if ($mapping->getMappingName() === 'entreprises') {
+            return self::pourUnLogo($fichier);
+        }
         $extension = '';
         if ($fichier instanceof UploadedFile) {
             $extension = $fichier->getClientOriginalExtension() !== '' ? $fichier->getClientOriginalExtension() : (string) $fichier->guessExtension();
@@ -31,6 +37,18 @@ final class NomAleatoire implements NamerInterface
         }
 
         return self::nouveau($extension);
+    }
+
+    /**
+     * Le logo est servi par Apache : une image valide nommée « x.php » ne doit pas devenir
+     * « <hex>.php ». L'extension vient du CONTENU, dans une liste fermée — sinon aucune.
+     */
+    public static function pourUnLogo(mixed $fichier): string
+    {
+        $devinee = $fichier instanceof \Symfony\Component\HttpFoundation\File\File ? (string) $fichier->guessExtension() : '';
+        $devinee = $devinee === 'jpeg' ? 'jpg' : $devinee;
+
+        return self::nouveau(\in_array($devinee, self::EXTENSIONS_DES_LOGOS, true) ? $devinee : '');
     }
 
     public static function nouveau(string $extension = ''): string

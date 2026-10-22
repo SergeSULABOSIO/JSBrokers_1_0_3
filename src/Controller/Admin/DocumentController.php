@@ -10,7 +10,7 @@
  *    - `submitApi()`: Traiter la soumission du formulaire, en gérant l'association à diverses entités parentes
  *      (PieceSinistre, Tache, etc.) grâce au `HandleChildAssociationTrait`.
  *    - `deleteApi()`: Supprimer un document.
- *    - `downloadApi()`: Gérer le téléchargement du fichier associé à un document, en utilisant le `DownloadHandler` de VichUploader.
+ *    - `downloadApi()`: Servir le fichier d'un document, par ReponseDePiece (chantier 18 : jamais par URL directe).
  *
  * Ce contrôleur est un bon exemple de gestion d'une entité "enfant" qui peut être liée à de nombreux
  * types d'entités "parentes" de manière dynamique.

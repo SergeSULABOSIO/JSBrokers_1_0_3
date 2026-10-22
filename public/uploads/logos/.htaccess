@@ -14,13 +14,13 @@
 #   3. le navigateur ne devine pas le type (nosniff).
 # =============================================================================
 
-<FilesMatch "\.(php|phar|phtml|php[0-9]|phps|cgi|pl|py|rb|shtml|htaccess)$">
+<FilesMatch "\.(php|phar|phtml?|pht|php[0-9]|phps|cgi|pl|py|rb|shtml|htaccess)$">
     Require all denied
 </FilesMatch>
 
-RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
-RemoveType .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
-AddType text/plain .php .phtml .phar
+RemoveHandler .php .phtml .pht .php3 .php4 .php5 .php7 .php8 .phar
+RemoveType .php .phtml .pht .php3 .php4 .php5 .php7 .php8 .phar
+AddType text/plain .php .phtml .pht .phar
 
 Options -Indexes -ExecCGI
 
@@ -28,7 +28,7 @@ Options -Indexes -ExecCGI
 # « tout refuser puis accorder les images » : la levée d'un refus par <FilesMatch> n'est
 # pas éprouvée sous LiteSpeed, et un échec y couperait tous les logos. Le verrou de fond
 # reste l'en-tête ci-dessous, qui rend inerte même un type oublié ici.
-<FilesMatch "\.(svgz?|x?html?|shtml|xml|xsl|xslt|js|mjs|json|swf|pdf|txt|htm)$">
+<FilesMatch "\.(svgz?|x?html?|xht|shtml|xml|xsl|xslt|js|mjs|json|swf|pdf|txt|htm)$">
     Require all denied
 </FilesMatch>
 

@@ -20,8 +20,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  *     (`app.dossier_des_logos`), séparé des images de marque suivies par git.
  *
  * Les noms ne changent pas : ce sont ceux que la base référence. Seuls les fichiers
- * RÉFÉRENCÉS sont déplacés ; un fichier que rien ne désigne reste où il est (le rapport le
- * compte).
+ * RÉFÉRENCÉS sont déplacés ; un fichier que rien ne désigne reste où il est — le rapport
+ * les COMPTE et en nomme les premiers (« non référencés »), leur sort est une décision.
  *
  * EN DEUX TEMPS, ET SANS RIEN PERDRE :
  *   1. copier chaque fichier, puis VÉRIFIER la copie par SHA-256 ;
@@ -86,13 +86,21 @@ final class DeplacerLesPiecesCommand extends Command
             )],
         ];
 
-        $rapport = ['deplaces' => 0, 'deja' => 0, 'introuvables' => 0, 'echecs' => []];
+        $rapport = ['deplaces' => 0, 'deja' => 0, 'introuvables' => 0, 'echecs' => [], 'orphelins' => []];
         $aSupprimer = [];
 
         foreach ($lots as $libelle => [$source, $destination, $noms]) {
             if ($executer && !is_dir($destination) && !mkdir($destination, 0755, true) && !is_dir($destination)) {
                 $rapport['echecs'][] = sprintf('%s : dossier de destination impossible à créer (%s).', $libelle, $destination);
                 continue;
+            }
+            $references = array_flip(array_map('strval', $noms));
+            foreach (is_dir($source) ? (scandir($source) ?: []) : [] as $present) {
+                if (is_file($source . '/' . $present) && !isset($references[$present])
+                    && !\in_array($present, ['.htaccess', '.gitkeep'], true)
+                    && !($libelle === 'Logos' && \in_array($present, self::FICHIERS_DU_DEPOT, true))) {
+                    $rapport['orphelins'][] = $libelle . ' : ' . $present;
+                }
             }
             foreach ($noms as $nom) {
                 $nom = (string) $nom;
@@ -111,6 +119,10 @@ final class DeplacerLesPiecesCommand extends Command
                     continue;
                 }
                 $empreinte = hash_file('sha256', $de);
+                if (!\is_string($empreinte)) {
+                    $rapport['echecs'][] = sprintf('%s : « %s » illisible (empreinte impossible).', $libelle, $nom);
+                    continue;
+                }
                 if ($existeDestination) {
                     if (hash_file('sha256', $vers) !== $empreinte) {
                         $rapport['echecs'][] = sprintf('%s : « %s » existe déjà à destination avec un autre contenu.', $libelle, $nom);
@@ -119,7 +131,10 @@ final class DeplacerLesPiecesCommand extends Command
                     $rapport['deja']++;
                 } elseif ($executer) {
                     if (!@copy($de, $vers) || hash_file('sha256', $vers) !== $empreinte) {
-                        $rapport['echecs'][] = sprintf('%s : copie de « %s » non conforme (SHA-256).', $libelle, $nom);
+                        // La copie fautive ne reste pas : relancée, la commande la referait
+                        // au lieu de la prendre pour « un autre contenu » à destination.
+                        @unlink($vers);
+                        $rapport['echecs'][] = sprintf('%s : copie de « %s » non conforme (SHA-256), retirée.', $libelle, $nom);
                         continue;
                     }
                     $rapport['deplaces']++;
@@ -139,7 +154,15 @@ final class DeplacerLesPiecesCommand extends Command
             sprintf('déjà présents : %d', $rapport['deja']),
             sprintf('introuvables (référencés, absents partout) : %d', $rapport['introuvables']),
             sprintf('en échec : %d', \count($rapport['echecs'])),
+            sprintf('non référencés par la base, laissés en place : %d', \count($rapport['orphelins'])),
         ]);
+        if ($rapport['orphelins'] !== []) {
+            $io->note(array_merge(
+                ['Fichiers que la base ne désigne pas (laissés où ils sont — leur sort est une décision) :'],
+                \array_slice($rapport['orphelins'], 0, 20),
+                \count($rapport['orphelins']) > 20 ? [sprintf('… et %d autre(s).', \count($rapport['orphelins']) - 20)] : [],
+            ));
+        }
 
         if ($rapport['echecs'] !== []) {
             $io->error(array_merge(['AUCUN original n\'a été supprimé :'], $rapport['echecs']));
@@ -148,10 +171,21 @@ final class DeplacerLesPiecesCommand extends Command
         }
 
         if ($executer) {
+            $supprimes = 0;
+            $restes = [];
             foreach ($aSupprimer as $original) {
-                @unlink($original);
+                if (@unlink($original) || !is_file($original)) {
+                    ++$supprimes;
+                } else {
+                    $restes[] = $original;
+                }
             }
-            $io->success(sprintf('%d original(aux) supprimé(s) après vérification.', \count($aSupprimer)));
+            if ($restes !== []) {
+                // Les copies sont vérifiées et servies : l'application fonctionne. Mais ces
+                // originaux restent dans l'ancien dossier — à retirer à la main.
+                $io->warning(array_merge([sprintf('%d original(aux) NON supprimé(s) (droits ?) :', \count($restes))], $restes));
+            }
+            $io->success(sprintf('%d original(aux) supprimé(s) après vérification.', $supprimes));
         }
 
         return Command::SUCCESS;

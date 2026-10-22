@@ -61,9 +61,13 @@ class EntrepriseController extends AbstractConsoleController
         }
         $remise = $archive->remettre($entreprise);
 
-        return (new \Symfony\Component\HttpFoundation\BinaryFileResponse($remise['chemin']))
+        $reponse = (new \Symfony\Component\HttpFoundation\BinaryFileResponse($remise['chemin']))
             ->setContentDisposition(\Symfony\Component\HttpFoundation\ResponseHeaderBag::DISPOSITION_ATTACHMENT, $remise['nom'])
             ->deleteFileAfterSend();
+        // L'archive contient des pièces déposées : mêmes en-têtes que toute pièce (chantier 18).
+        \App\Service\Document\ReponseDePiece::durcir($reponse);
+
+        return $reponse;
     }
 
     #[Route('/{id}', name: 'delete', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]

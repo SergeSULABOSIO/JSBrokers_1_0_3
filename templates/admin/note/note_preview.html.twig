@@ -158,7 +158,7 @@
                     {% if logo_path_for_pdf is defined and logo_path_for_pdf %}
                         <img src="{{ logo_path_for_pdf }}" alt="{{ entreprise.nom|default('Logo Joseara') }}" style="max-height: 80px;">
                     {% elseif entreprise and entreprise.thumbnail %}
-                        <img src="{{ asset('images/entreprises/' ~ entreprise.thumbnail) }}" alt="{{ entreprise.nom|default('Logo Joseara') }}" style="max-height: 80px;">
+                        <img src="{{ vich_uploader_asset(entreprise, 'thumbnailFile') }}" alt="{{ entreprise.nom|default('Logo Joseara') }}" style="max-height: 80px;">
                     {% else %}
                         <img src="{{ asset('images/entreprises/logofav.png') }}" alt="Logo Joseara" style="max-height: 80px;">
                     {% endif %}

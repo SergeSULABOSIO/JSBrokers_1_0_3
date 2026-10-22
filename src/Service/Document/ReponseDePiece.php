@@ -58,7 +58,9 @@ final class ReponseDePiece
         $affiche = $afficher && \in_array($type, self::AFFICHABLES, true);
 
         $reponse = new BinaryFileResponse($chemin);
-        $reponse->headers->set('Content-Type', $affiche ? $type : self::typeTelechargement($type));
+        // Hors affichage, le type ne dit RIEN au navigateur : un .js servi sous son type
+        // pourrait être chargé par <script src> depuis joseara.com (script-src 'self').
+        $reponse->headers->set('Content-Type', $affiche ? $type : 'application/octet-stream');
         $reponse->headers->set('Content-Disposition', self::disposition(
             $affiche ? ResponseHeaderBag::DISPOSITION_INLINE : ResponseHeaderBag::DISPOSITION_ATTACHMENT,
             $nom,
@@ -84,14 +86,23 @@ final class ReponseDePiece
         return HeaderUtils::makeDisposition($disposition, $propre, $repli);
     }
 
-    /** Sans contrôle, retour à la ligne, guillemet, antislash, barre ni `%` ; jamais vide. */
+    /** Longueur maximale d'un nom de téléchargement (extension comprise). */
+    public const LONGUEUR_MAX = 150;
+
+    /**
+     * Sans contrôle (C0, C1), format (bidi U+202E…, largeur nulle), séparateur de ligne,
+     * guillemet, antislash, barre ni `%` ; borné à LONGUEUR_MAX en gardant l'extension ;
+     * jamais vide. Un UTF-8 invalide devient « document ».
+     */
     public static function nomPropre(string $nom): string
     {
-        $nom = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $nom) ?? '';
+        $nom = preg_replace('/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+/u', ' ', $nom) ?? '';
         $nom = str_replace(['"', '\\', '/', '%'], ['', '-', '-', ''], $nom);
         $nom = trim(preg_replace('/\s+/u', ' ', $nom) ?? '', " .\t");
-        if (!mb_check_encoding($nom, 'UTF-8')) {
-            $nom = mb_convert_encoding($nom, 'UTF-8', 'UTF-8');
+        if (mb_strlen($nom) > self::LONGUEUR_MAX) {
+            $extension = pathinfo($nom, PATHINFO_EXTENSION);
+            $extension = ($extension !== '' && mb_strlen($extension) <= 10) ? '.' . $extension : '';
+            $nom = rtrim(mb_substr($nom, 0, self::LONGUEUR_MAX - mb_strlen($extension)), ' .') . $extension;
         }
 
         return $nom === '' ? 'document' : $nom;
@@ -104,13 +115,5 @@ final class ReponseDePiece
         $ascii = str_replace(['"', '\\', '/', '%'], '', $ascii);
 
         return trim($ascii) === '' ? 'document' : $ascii;
-    }
-
-    /** Hors liste blanche, le type ne sert qu'à nommer le téléchargement : jamais du HTML. */
-    private static function typeTelechargement(string $type): string
-    {
-        return str_starts_with($type, 'text/html') || str_contains($type, 'svg') || str_contains($type, 'xml')
-            ? 'application/octet-stream'
-            : $type;
     }
 }

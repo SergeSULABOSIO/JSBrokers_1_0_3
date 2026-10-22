@@ -414,6 +414,14 @@ deux cas ci-dessus.
 Ce qu'un retour arrière **ne défait pas** : les fichiers téléversés depuis la
 sauvegarde, et les migrations dépourvues de `down()`.
 
+⚠ **Revenir AVANT le chantier 18 (commit `07320285`)** : l'ancien code cherche les
+pièces dans `public/uploads/documents` et les logos dans `public/images/entreprises`
+— ils n'y sont plus (déplacés vers `var/uploads/documents` et `public/uploads/logos`).
+Toutes les pièces deviendraient introuvables. Il n'existe pas de commande inverse : un
+tel retour arrière suppose de recopier ces fichiers à la main vers leurs anciens
+dossiers (et de les y laisser sous le `.htaccess` qui les verrouille). À n'envisager
+qu'en dernier recours ; préférer corriger en avant.
+
 ---
 
 ## Les crons cPanel

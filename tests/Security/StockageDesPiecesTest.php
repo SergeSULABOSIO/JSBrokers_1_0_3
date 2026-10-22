@@ -63,6 +63,39 @@ final class StockageDesPiecesTest extends KernelTestCase
         self::assertMatchesRegularExpression('/^[0-9a-f]{32}$/', NomAleatoire::nouveau(''));
     }
 
+    /**
+     * Un LOGO (public) prend l'extension de son CONTENU, dans une liste fermée : une image
+     * valide annoncée « x.php » (ou .pht, .xht) n'est jamais stockée sous cette extension.
+     */
+    public function testUnLogoPrendLExtensionDeSonContenu(): void
+    {
+        $png = sys_get_temp_dir() . '/logo-' . bin2hex(random_bytes(4)) . '.php';
+        file_put_contents($png, (string) base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='));
+        try {
+            $fichier = new \Symfony\Component\HttpFoundation\File\UploadedFile($png, 'logo.php', null, null, true);
+
+            self::assertMatchesRegularExpression('/^[0-9a-f]{32}\.png$/', NomAleatoire::pourUnLogo($fichier));
+            // Un contenu qui n'est pas une image de la liste : aucune extension.
+            file_put_contents($png, '<?php echo 1;');
+            self::assertMatchesRegularExpression('/^[0-9a-f]{32}$/', NomAleatoire::pourUnLogo(new \Symfony\Component\HttpFoundation\File\UploadedFile($png, 'logo.png', null, null, true)));
+        } finally {
+            @unlink($png);
+        }
+    }
+
+    /** Aucun gabarit n'écrit l'adresse d'un logo : Vich la donne (vich_uploader_asset). */
+    public function testAucuneAdresseDeLogoEcriteEnDurDansLesGabarits(): void
+    {
+        $fautifs = [];
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(self::RACINE . '/templates', \FilesystemIterator::SKIP_DOTS)) as $f) {
+            if (preg_match('#images/entreprises/[\'"]\s*~#', (string) file_get_contents($f->getPathname()))) {
+                $fautifs[] = $f->getFilename();
+            }
+        }
+
+        self::assertSame([], $fautifs, "Utiliser vich_uploader_asset(entreprise, 'thumbnailFile').");
+    }
+
     /** La commande ne supprime jamais un fichier du dépôt : la liste suit git. */
     public function testLesFichiersDuDepotSontCeuxQueGitSuit(): void
     {

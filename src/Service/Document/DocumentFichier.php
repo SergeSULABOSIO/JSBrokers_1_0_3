@@ -37,7 +37,7 @@ final class DocumentFichier
 {
     /**
      * Le champ Vich de l'entité Document. Nommer la propriété PHP et non la colonne :
-     * c'est ce que réclament StorageInterface et DownloadHandler.
+     * c'est ce que réclament StorageInterface et ReponseDePiece.
      */
     public const CHAMP_VICH = 'fichier';
 
@@ -150,7 +150,7 @@ final class DocumentFichier
      * Le libellé d'un Document (« Contrat KIN AVIA ») n'a pas d'extension : servi tel
      * quel, le fichier reçu est inouvrable — le système d'exploitation ne sait pas quoi
      * en faire. On restitue donc l'extension RÉELLE, celle que le nom de stockage
-     * conserve (SmartUniqueNamer préserve l'extension d'origine).
+     * conserve (NomAleatoire préserve l'extension d'origine).
      *
      * Les caractères interdits dans un nom de fichier Windows sont neutralisés : un
      * libellé de document est saisi librement, et « Avenant 12/2026 » y créerait un

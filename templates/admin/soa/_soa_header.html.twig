@@ -6,7 +6,7 @@
     <div class="row align-items-start">
         <div class="col-7">
             {% if entreprise and entreprise.thumbnail %}
-                <img src="{{ asset('images/entreprises/' ~ entreprise.thumbnail) }}"
+                <img src="{{ vich_uploader_asset(entreprise, 'thumbnailFile') }}"
                      alt="{{ entreprise.nom|default('Joseara') }}"
                      style="max-height: 52px; margin-bottom: .5rem;">
             {% else %}

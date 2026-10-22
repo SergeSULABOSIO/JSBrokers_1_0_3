@@ -17,7 +17,9 @@ class DocumentType extends AbstractType
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
         private TranslatorInterface $translatorInterface,
-        private UrlGeneratorInterface $urlGenerator
+        private UrlGeneratorInterface $urlGenerator,
+        // Le nom LISIBLE du fichier (le nom stocké est aléatoire, chantier 18).
+        private \App\Service\Document\DocumentFichier $documentFichier,
     ) {}
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -44,7 +46,7 @@ class DocumentType extends AbstractType
                 'allow_delete' => false,
                 // MODIFICATION 2 : On configure l'affichage du fichier existant.
                 // Affiche le nom du fichier stocké comme libellé du lien.
-                'download_label' => $hasFile ? $document->getNomFichierStocke() : false,
+                'download_label' => $hasFile ? $this->documentFichier->nomDeTelechargement($document) : false,
                 // Génère l'URL pour que l'utilisateur puisse cliquer et télécharger le fichier.
                 'download_uri' => $hasFile ? $this->urlGenerator->generate('admin.document.api.download', ['id' => $document->getId()]) : false,
             ])

@@ -21,7 +21,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Translation\LocaleSwitcher;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -295,9 +294,13 @@ class EntrepriseController extends AbstractController
         $this->denyUnlessOwner($entreprise);
         $remise = $archive->remettre($entreprise);
 
-        return (new \Symfony\Component\HttpFoundation\BinaryFileResponse($remise['chemin']))
+        $reponse = (new \Symfony\Component\HttpFoundation\BinaryFileResponse($remise['chemin']))
             ->setContentDisposition(\Symfony\Component\HttpFoundation\ResponseHeaderBag::DISPOSITION_ATTACHMENT, $remise['nom'])
             ->deleteFileAfterSend();
+        // L'archive contient des pièces déposées : mêmes en-têtes que toute pièce (chantier 18).
+        \App\Service\Document\ReponseDePiece::durcir($reponse);
+
+        return $reponse;
     }
 
     #[Route('/{id}', name: 'remove', requirements: ['id' => Requirement::DIGITS], methods: ['DELETE'])]

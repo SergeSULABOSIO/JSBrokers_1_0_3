@@ -18,14 +18,18 @@
 #  code face à un schéma déjà migré, ni un cache à moitié reconstruit.
 #
 #  ── DEUX INTERDITS ABSOLUS ──────────────────────────────────────────────────
-#  · JAMAIS « git clean » : public/images/entreprises mêle des fichiers de marque
-#    suivis et les logos TÉLÉVERSÉS par les cabinets ; public/uploads/documents
-#    ne contient QUE des données. « git reset --hard » ne
-#    touche pas aux fichiers non suivis — c'est exactement pourquoi il est ici.
-#  · JAMAIS « rm -rf var/ » : var/uploads/assistant et assistant-documents
-#    contiennent les pièces jointes et les documents produits par Ket,
-#    référencés en base. Seul var/cache est jetable, et « cache:clear » s'en
+#  · JAMAIS « git clean » : public/uploads/logos (logos TÉLÉVERSÉS par les
+#    cabinets) et public/images/entreprises (anciens logos, mêlés aux fichiers de
+#    marque suivis) ne contiennent que des données non suivies. « git reset
+#    --hard » ne touche pas aux fichiers non suivis — c'est exactement pourquoi il
+#    est ici.
+#  · JAMAIS « rm -rf var/ » : var/uploads/documents (TOUTES les pièces déposées,
+#    chantier 18), var/uploads/assistant et assistant-documents (fichiers de Ket)
+#    sont référencés en base. Seul var/cache est jetable, et « cache:clear » s'en
 #    charge proprement.
+#  · RETOUR ARRIÈRE au-delà du chantier 18 (commit 07320285) : l'ancien code lit
+#    les pièces dans public/uploads/documents — elles n'y sont plus. Voir
+#    deploiement/README.md, « Revenir en arrière ».
 # =============================================================================
 set -Eeuo pipefail
 
@@ -835,6 +839,9 @@ fi
 # Hors « executer » pour que son rapport S'AFFICHE ; en répétition à blanc, l'essai à blanc
 # de la commande elle-même (sans --executer).
 if [ "$DRY_RUN" -eq 1 ]; then
+  # À blanc, le code n'a pas été posé : c'est l'ANCIEN qui répond — au premier passage, il
+  # ne connaît pas encore la commande (le message « inconnue » est alors attendu).
+  printf '\033[0;33m   [A BLANC] essai du deplacement des fichiers deposes (code actuel du serveur)\033[0m\n' | tee -a "$JOURNAL"
   APP_ENV=prod "$PHP" bin/console app:documents:deplacer --no-interaction 2>&1 | tee -a "$JOURNAL" || true
 else
   if ! APP_ENV=prod "$PHP" bin/console app:documents:deplacer --executer --no-interaction 2>&1 | tee -a "$JOURNAL"; then
