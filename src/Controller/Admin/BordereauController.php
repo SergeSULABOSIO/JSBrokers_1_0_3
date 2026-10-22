@@ -75,6 +75,8 @@ class BordereauController extends AbstractController
         private AvenantActionService $avenantActionService, // NOUVEAU : Service pour traiter les actions
         private BordereauAnalysisPdfService $bordereauPdfService,
         private MessageDErreur $messageDErreur,
+        // L'emplacement d'une pièce a UNE source : DocumentFichier::chemin() (chantier 18).
+        private \App\Service\Document\DocumentFichier $documentFichier,
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait
         $this->canvasBuilder = $canvasBuilder;
@@ -279,7 +281,7 @@ class BordereauController extends AbstractController
         if (!$excelDocument) {
             $error = "Aucun fichier Excel (.xlsx, .xls, .ods) n'est attaché à ce bordereau. Veuillez retourner à l'édition pour y attacher un fichier valide.";
         } else {
-            $filePath = $params->get('kernel.project_dir') . '/public/uploads/documents/' . $excelDocument->getNomFichierStocke();
+            $filePath = (string) $this->documentFichier->chemin($excelDocument);
 
             try {
                 $spreadsheet = IOFactory::load($filePath);
@@ -983,7 +985,7 @@ class BordereauController extends AbstractController
 
         if (!$excelDocument) return $this->json(['error' => "Aucun fichier Excel valide n'est attaché."], 400);
 
-        $filePath = $params->get('kernel.project_dir') . '/public/uploads/documents/' . $excelDocument->getNomFichierStocke();
+        $filePath = (string) $this->documentFichier->chemin($excelDocument);
 
         try {
             $spreadsheet = IOFactory::load($filePath);

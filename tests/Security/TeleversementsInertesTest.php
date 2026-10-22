@@ -116,4 +116,22 @@ class TeleversementsInertesTest extends KernelTestCase
         self::assertMatchesRegularExpression('/Header always set Content-Security-Policy "[^"]*default-src \'none\'[^"]*sandbox/', $htaccess, 'Politique sandbox sur chaque réponse.');
         self::assertStringContainsString('X-Content-Type-Options "nosniff"', $htaccess);
     }
+
+    /**
+     * L'EMPLACEMENT D'UNE PIÈCE A UNE SOURCE (chantier 18) : le paramètre
+     * `app.dossier_des_pieces`, lu par Vich et la purge d'un cabinet ; le code passe par
+     * DocumentFichier::chemin(). Un chemin écrit en dur casserait au déplacement du dossier.
+     */
+    public function testAucunCheminDePieceEcritEnDurDansLeCode(): void
+    {
+        $fautifs = [];
+        $fichiers = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(self::RACINE . '/src', \FilesystemIterator::SKIP_DOTS));
+        foreach ($fichiers as $fichier) {
+            if ($fichier->getExtension() === 'php' && preg_match('#uploads/documents#', (string) file_get_contents($fichier->getPathname()))) {
+                $fautifs[] = substr($fichier->getPathname(), \strlen(self::RACINE) + 1);
+            }
+        }
+
+        self::assertSame([], $fautifs, 'Passer par DocumentFichier::chemin() (ou le paramètre app.dossier_des_pieces).');
+    }
 }

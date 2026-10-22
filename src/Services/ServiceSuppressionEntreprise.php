@@ -50,7 +50,7 @@ class ServiceSuppressionEntreprise
         private readonly LoggerInterface $logger,
         #[Autowire('%kernel.project_dir%/public/images/entreprises')]
         private readonly string $repertoireLogos,
-        #[Autowire('%kernel.project_dir%/public/uploads/documents')]
+        #[Autowire('%app.dossier_des_pieces%')]
         private readonly string $repertoireDocuments,
         // Les pièces comptables se conservent dix ans : pas de purge sans archive remise.
         private readonly \App\Service\Note\ConservationDesPieces $conservation,

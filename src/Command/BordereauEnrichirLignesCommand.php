@@ -40,6 +40,7 @@ final class BordereauEnrichirLignesCommand extends Command
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly ParameterBagInterface $params,
+        private readonly \App\Service\Document\DocumentFichier $documentFichier,
     ) {
         parent::__construct();
     }
@@ -188,7 +189,7 @@ final class BordereauEnrichirLignesCommand extends Command
             return null;
         }
 
-        $chemin = $this->params->get('kernel.project_dir') . '/public/uploads/documents/' . $document->getNomFichierStocke();
+        $chemin = (string) $this->documentFichier->chemin($document);
         if (!is_file($chemin)) {
             $io->warning(sprintf('Bordereau #%d : fichier introuvable (%s), ignoré.', $bordereau->getId(), $chemin));
 

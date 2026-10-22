@@ -18,6 +18,8 @@ class BordereauAnalysisPdfService
         private ParameterBagInterface $params,
         private ChargementRepository $chargementRepository,
         private Environment $twig,
+        // L'emplacement d'une pièce a UNE source : DocumentFichier::chemin() (chantier 18).
+        private \App\Service\Document\DocumentFichier $documentFichier,
     ) {}
 
     /**
@@ -130,7 +132,7 @@ class BordereauAnalysisPdfService
             return [];
         }
 
-        $filePath = $this->params->get('kernel.project_dir') . '/public/uploads/documents/' . $excelDocument->getNomFichierStocke();
+        $filePath = (string) $this->documentFichier->chemin($excelDocument);
 
         try {
             $spreadsheet = IOFactory::load($filePath);

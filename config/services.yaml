@@ -12,6 +12,10 @@ parameters:
     # variable manque : l'appelant retombe alors sur le fuseau courant.
     env(APP_TIMEZONE): ''
     app.timezone: '%env(APP_TIMEZONE)%'
+    # LE DOSSIER DES PIÈCES DÉPOSÉES (Document), écrit UNE fois : le mapping Vich et la
+    # purge d'un cabinet le lisent ; le code n'y accède que par DocumentFichier::chemin()
+    # (chantier 18).
+    app.dossier_des_pieces: '%kernel.project_dir%/public/uploads/documents'
 
 services:
     # default configuration for services in *this* file
