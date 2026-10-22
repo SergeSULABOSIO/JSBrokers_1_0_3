@@ -86,7 +86,6 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
-use Vich\UploaderBundle\Handler\DownloadHandler;
 use App\Ai\Mutation\FinDePlan;
 
 /**
@@ -1248,7 +1247,7 @@ class AssistantIaController extends AbstractController
      * acheté. C'est la même règle que downloadFichier(), qui n'en a pas non plus.
      */
     #[Route('/api/documents-ket/{idEntreprise}/{idConversation}/{idDocument}/download', name: 'api.documentket.download', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS, 'idDocument' => Requirement::DIGITS], methods: ['GET'])]
-    public function downloadDocumentKet(int $idEntreprise, int $idConversation, int $idDocument, DownloadHandler $downloadHandler): Response
+    public function downloadDocumentKet(int $idEntreprise, int $idConversation, int $idDocument, \App\Service\Document\ReponseDePiece $reponseDePiece): Response
     {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
         if (!$this->moduleAutorise($invite)) {
@@ -1263,7 +1262,7 @@ class AssistantIaController extends AbstractController
 
         // Le nom a été assaini et FIGÉ à la production : ce que l'utilisateur a vu
         // sur le bouton est ce qu'il obtient.
-        return $downloadHandler->downloadObject($document, 'fichier', null, $document->getNomFichier());
+        return $reponseDePiece->pour($document, 'fichier', (string) $document->getNomFichier());
     }
 
     /** URL de téléchargement d'un document produit — une seule façon de la fabriquer. */
@@ -1759,7 +1758,7 @@ class AssistantIaController extends AbstractController
      * Vich ne s'occupe que du streaming, jamais du contrôle d'accès).
      */
     #[Route('/api/fichiers/{idEntreprise}/{idConversation}/{idFichier}/download', name: 'api.fichier.download', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS, 'idFichier' => Requirement::DIGITS], methods: ['GET'])]
-    public function downloadFichier(int $idEntreprise, int $idConversation, int $idFichier, DownloadHandler $downloadHandler): Response
+    public function downloadFichier(int $idEntreprise, int $idConversation, int $idFichier, \App\Service\Document\ReponseDePiece $reponseDePiece): Response
     {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
         if (!$this->moduleAutorise($invite)) {
@@ -1772,7 +1771,7 @@ class AssistantIaController extends AbstractController
             throw $this->createNotFoundException('Fichier introuvable.');
         }
 
-        return $downloadHandler->downloadObject($fichier, 'fichier', null, $fichier->getNomOriginal());
+        return $reponseDePiece->pour($fichier, 'fichier', (string) $fichier->getNomOriginal());
     }
 
     /**
@@ -1783,7 +1782,7 @@ class AssistantIaController extends AbstractController
      * de la base (pas seulement des pièces jointes de la conversation).
      */
     #[Route('/api/documents/{idEntreprise}/{idDocument}/download', name: 'api.document.download', requirements: ['idEntreprise' => Requirement::DIGITS, 'idDocument' => Requirement::DIGITS], methods: ['GET'])]
-    public function downloadDocument(int $idEntreprise, int $idDocument, DownloadHandler $downloadHandler): Response
+    public function downloadDocument(int $idEntreprise, int $idDocument, \App\Service\Document\ReponseDePiece $reponseDePiece): Response
     {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
         if (!$this->moduleAutorise($invite) || !$this->accessResolver->canRead($invite, 'Document')) {
@@ -1803,7 +1802,7 @@ class AssistantIaController extends AbstractController
         // deux surfaces servent le même fichier sous le même nom.
         $nomTelechargement = $this->documentFichier->nomDeTelechargement($document);
 
-        return $downloadHandler->downloadObject($document, DocumentFichier::CHAMP_VICH, null, $nomTelechargement);
+        return $reponseDePiece->pour($document, DocumentFichier::CHAMP_VICH, $nomTelechargement);
     }
 
     /**

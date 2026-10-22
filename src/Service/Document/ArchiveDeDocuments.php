@@ -152,6 +152,7 @@ final class ArchiveDeDocuments
         $reponse->deleteFileAfterSend(true);
         $reponse->setContentDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT, self::nomDeFichier($nomArchive));
         $reponse->headers->set('Content-Type', 'application/zip');
+        ReponseDePiece::durcir($reponse);
 
         return $reponse;
     }

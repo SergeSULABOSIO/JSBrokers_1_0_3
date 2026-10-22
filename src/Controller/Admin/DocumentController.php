@@ -56,7 +56,6 @@ use App\Entity\Partenaire;
 use App\Entity\Piste;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Vich\UploaderBundle\Handler\DownloadHandler;
 use App\Entity\Traits\HandleChildAssociationTrait;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
@@ -172,7 +171,7 @@ class DocumentController extends AbstractController
     #[Route('/api/{id}/download', name: 'api.download', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
     public function downloadApi(
         int $id,
-        DownloadHandler $downloadHandler,
+        \App\Service\Document\ReponseDePiece $reponseDePiece,
         WorkspaceAccessResolver $accessResolver,
         DocumentFichier $documentFichier,
     ): Response {
@@ -190,10 +189,9 @@ class DocumentController extends AbstractController
             throw $this->createNotFoundException('Document introuvable ou sans fichier.');
         }
 
-        return $downloadHandler->downloadObject(
+        return $reponseDePiece->pour(
             $document,
             DocumentFichier::CHAMP_VICH,
-            null,
             $documentFichier->nomDeTelechargement($document),
         );
     }
@@ -224,7 +222,7 @@ class DocumentController extends AbstractController
     #[Route('/api/telecharger', name: 'api.telecharger', methods: ['GET'])]
     public function telechargerApi(
         Request $request,
-        DownloadHandler $downloadHandler,
+        \App\Service\Document\ReponseDePiece $reponseDePiece,
         WorkspaceAccessResolver $accessResolver,
         DocumentFichier $documentFichier,
         ArchiveDeDocuments $archives,
@@ -253,10 +251,9 @@ class DocumentController extends AbstractController
         }
 
         if (\count($documents) === 1) {
-            return $downloadHandler->downloadObject(
+            return $reponseDePiece->pour(
                 $documents[0],
                 DocumentFichier::CHAMP_VICH,
-                null,
                 $documentFichier->nomDeTelechargement($documents[0]),
             );
         }

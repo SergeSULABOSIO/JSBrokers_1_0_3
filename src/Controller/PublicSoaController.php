@@ -23,7 +23,6 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Vich\UploaderBundle\Handler\DownloadHandler;
 
 class PublicSoaController extends AbstractController
 {
@@ -93,7 +92,7 @@ class PublicSoaController extends AbstractController
      * attaché au pipe du client du jeton (client, piste, cotation, police) est servi.
      */
     #[Route('/soa/{token}/document/{documentId}/telecharger', name: 'public.soa.document_download', methods: ['GET'], requirements: ['token' => '[a-f0-9]{64}', 'documentId' => '\d+'])]
-    public function documentDownload(string $token, int $documentId, DocumentRepository $documentRepository, DownloadHandler $downloadHandler): Response
+    public function documentDownload(string $token, int $documentId, DocumentRepository $documentRepository, \App\Service\Document\ReponseDePiece $reponseDePiece, \App\Service\Document\DocumentFichier $documentFichier): Response
     {
         $acces = $this->resolveToken($token);
         if ($acces === null) {
@@ -105,7 +104,7 @@ class PublicSoaController extends AbstractController
             return $this->invalidResponse();
         }
 
-        return $downloadHandler->downloadObject($document, 'fichier');
+        return $reponseDePiece->pour($document, \App\Service\Document\DocumentFichier::CHAMP_VICH, $documentFichier->nomDeTelechargement($document));
     }
 
     /** Jeton actif, ou null pour TOUT cas d'échec (inconnu, expiré, révoqué). */
