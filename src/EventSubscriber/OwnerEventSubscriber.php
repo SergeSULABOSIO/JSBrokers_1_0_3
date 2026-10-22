@@ -28,16 +28,24 @@ class OwnerEventSubscriber implements EventSubscriberInterface
     {
         $entity = $args->getObject();
         $user = $this->security->getUser();
-        if (!$user) {
+        if (!$user || !method_exists($entity, 'setInvite')) {
             return;
         }
-        $invite = $this->inviteRepository->findOneByEmail($user->getUserIdentifier());
-        if ($invite) {
-            // CORRECTION : On ne vérifie et n'assigne QUE la propriété 'invite'
-            if (method_exists($entity, 'setInvite')) {
-                $entity->setInvite($invite);
-            }
-            // On ne touche plus à 'setExecutor'
+        // L'AUTEUR DÉJÀ POSÉ (formulaire, Ket : le demandeur) NE SE RÉÉCRIT JAMAIS — la
+        // frontière des tâches le lit. Avant, une invitation en attente au même e-mail, dans
+        // n'importe quel cabinet, l'écrasait ; deux invitations levaient une exception.
+        if (method_exists($entity, 'getInvite') && $entity->getInvite() !== null) {
+            return;
         }
+        $cabinet = method_exists($entity, 'getEntreprise') ? $entity->getEntreprise() : null;
+        foreach ($this->inviteRepository->findBy(['email' => $user->getUserIdentifier()]) as $invite) {
+            // Le cabinet de la fiche, et lui seul : jamais un auteur venu d'ailleurs.
+            if ($cabinet !== null && $invite->getEntreprise() === $cabinet) {
+                $entity->setInvite($invite);
+
+                return;
+            }
+        }
+        // On ne touche pas à 'setExecutor'.
     }
 }

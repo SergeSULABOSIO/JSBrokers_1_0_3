@@ -432,7 +432,7 @@ class DocumentController extends AbstractController
             'titre'              => sprintf('Documents de « %s »', $libelle),
             'contexteNom'        => $libelle,
             'items'              => $collector->decrire(
-                $this->documentRepository->findBy([$champ => $cible], ['id' => 'DESC']),
+                $this->frontiereDesTaches()->filtrer($this->documentRepository->findBy([$champ => $cible], ['id' => 'DESC'])),
                 $rubrique,
             ),
             'downloadUrlPattern' => '/admin/document/api/%did%/download',
@@ -470,6 +470,9 @@ class DocumentController extends AbstractController
         // gardien commun refuse au contraire tout ce qu'il ne sait pas rattacher, résout
         // Operation par son bordereau, et n'accepte une Entreprise que si c'est la sienne.
         $this->appartenance()->exigerLeCabinetOuvert($cible, 'Enregistrement');
+        // Et la frontière des tâches : une tâche (un retour) qui ne concerne pas le lecteur
+        // n'a ni pièces à lister, ni pièces à recevoir — ni libellé à montrer.
+        $this->exigerUneFicheVisible($cible);
 
         return $cible;
     }

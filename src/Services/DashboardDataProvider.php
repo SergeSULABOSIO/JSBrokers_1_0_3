@@ -30,7 +30,16 @@ class DashboardDataProvider
         // « Aujourd'hui » du portefeuille en vigueur : l'horloge de l'application, que les
         // tests figent (ClockSensitiveTrait) — une date en dur s'y périmerait.
         private ClockInterface $horloge,
+        // LA FRONTIÈRE DES TÂCHES (TacheVisibiliteScope) : le bloc Tâches et les derniers
+        // retours ne montrent que ce qui concerne le lecteur.
+        private \App\Services\Search\TacheVisibiliteScope $tacheVisibilite,
     ) {}
+
+    /** Les identifiants du cercle du lecteur, ou null s'il voit tout (administrateur, système). @return list<int>|null */
+    private function cercleDuLecteur(Entreprise $entreprise): ?array
+    {
+        return $this->tacheVisibilite->cercleDuLecteur($entreprise);
+    }
 
     /** Minuit du jour, dans le fuseau de l'application (APP_TIMEZONE, posé par le Kernel). */
     private function aujourdhui(): \DateTimeImmutable
@@ -917,6 +926,10 @@ class DashboardDataProvider
         $perimetre = $portefeuilleDe !== null
             ? " AND ($parLaPiste OR $parLaCotation OR pg3.id = :pfInvite OR pg4.id = :pfInvite)"
             : '';
+        $cercle = $this->cercleDuLecteur($entreprise);
+        if ($cercle !== null) {
+            $perimetre .= ' AND ' . \App\Services\Search\TacheVisibiliteScope::conditionSurLaTache('t', 'cercleTaches', $cercle);
+        }
 
         $query = $this->em->createQuery(
             'SELECT t FROM App\Entity\Tache t
@@ -939,21 +952,30 @@ class DashboardDataProvider
         if ($portefeuilleDe !== null) {
             $query->setParameter('pfInvite', $portefeuilleDe->getId());
         }
+        if ($cercle !== null && $cercle !== []) {
+            $query->setParameter('cercleTaches', $cercle);
+        }
 
         return $query->getResult();
     }
 
     public function getDerniersFeedbacks(Entreprise $entreprise, int $limit = 20): array
     {
-        return $this->em->createQuery(
+        $cercle = $this->cercleDuLecteur($entreprise);
+        $query = $this->em->createQuery(
             'SELECT f, t FROM App\Entity\Feedback f
              LEFT JOIN f.tache t
-             WHERE f.entreprise = :e
+             WHERE f.entreprise = :e'
+             . ($cercle !== null ? ' AND (f.tache IS NULL OR ' . \App\Services\Search\TacheVisibiliteScope::conditionSurLaTache('t', 'cercleTaches', $cercle) . ')' : '') . '
              ORDER BY f.createdAt DESC'
         )
         ->setParameter('e', $entreprise)
-        ->setMaxResults($limit)
-        ->getResult();
+        ->setMaxResults($limit);
+        if ($cercle !== null && $cercle !== []) {
+            $query->setParameter('cercleTaches', $cercle);
+        }
+
+        return $query->getResult();
     }
 
     public function getPistesEnCours(Entreprise $entreprise, int $limit = 60, ?Invite $portefeuilleDe = null): array

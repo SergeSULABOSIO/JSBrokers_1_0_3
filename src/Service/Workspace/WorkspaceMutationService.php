@@ -618,6 +618,7 @@ class WorkspaceMutationService
                     throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelle), $this->erreurs($form));
                 }
                 $this->refuserLesIncoherences($entity, $op->entityShortName, $libelle, $origine);
+                $this->exigerQueLaTacheResteVisible($entity);
                 $this->commitWrite($entity, $scope->entreprise, $acteur, $metrer);
             }
         }
@@ -755,6 +756,9 @@ class WorkspaceMutationService
                         throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelleEnfant), $this->erreurs($form));
                     }
                     $this->refuserLesIncoherences($entiteEnfant, $enfantOp->entityShortName, $libelleEnfant, $origine);
+                    if (!$enfantOp->isCreate()) {
+                        $this->exigerQueLaTacheResteVisible($entiteEnfant);
+                    }
                     $this->commitWrite($entiteEnfant, $scope->entreprise, $acteur, $metrer);
                 }
                 if ($enfantOp->isCreate()) {
@@ -1124,11 +1128,28 @@ class WorkspaceMutationService
         }
         foreach ($parent->{$ce->getter}() as $element) {
             if (method_exists($element, 'getId') && (int) $element->getId() === $id) {
+                // LA FRONTIÈRE DES TÂCHES : la collection d'une piste visible rend aussi les
+                // tâches d'autrui. Une tâche hors frontière est introuvable ici — ni modifiée,
+                // ni supprimée, ni nommée. Échec fermé si la frontière n'est pas injectée.
+                if (\App\Services\Search\TacheVisibiliteScope::estSoumise($element)
+                    && ($this->tacheVisibilite === null || !$this->tacheVisibilite->visiblePourLeLecteur($element))) {
+                    return null;
+                }
+
                 return $element;
             }
         }
 
         return null;
+    }
+
+    private ?\App\Services\Search\TacheVisibiliteScope $tacheVisibilite = null;
+
+    // Par setter : ce service est construit à la main, par arguments positionnels, dans des tests.
+    #[\Symfony\Contracts\Service\Attribute\Required]
+    public function setTacheVisibilite(\App\Services\Search\TacheVisibiliteScope $scope): void
+    {
+        $this->tacheVisibilite = $scope;
     }
 
     /** Résout l'enregistrement cible d'une op edit/delete dans l'entreprise du scope, ou null. */
@@ -1169,6 +1190,19 @@ class WorkspaceMutationService
      *
      * @throws MutationException si l'entité est incohérente (motif en langage métier)
      */
+    /**
+     * Après la modification, la tâche reste visible pour celui qui modifie — sinon il la
+     * confierait hors de son cercle (décision de Serge du 2026-10-21, parité avec l'écran).
+     * L'administrateur voit tout : il n'est jamais refusé. Échec fermé sans la frontière.
+     */
+    private function exigerQueLaTacheResteVisible(object $entity): void
+    {
+        if ($entity instanceof \App\Entity\Tache
+            && ($this->tacheVisibilite === null || !$this->tacheVisibilite->visiblePourLeLecteur($entity))) {
+            throw MutationException::bloque(\App\Services\Search\TacheVisibiliteScope::REFUS_REASSIGNATION);
+        }
+    }
+
     private function refuserLesIncoherences(object $entity, string $shortName, string $libelle, ?OrigineEcriture $origine = null): void
     {
         $incoherences = $this->champsInspector->incoherencesMetier($entity, $shortName, null, $origine);
@@ -1733,7 +1767,13 @@ class WorkspaceMutationService
                     // en citaient le nom. La relation reste vide et l'écriture est refusée,
                     // par le mot d'une ligne absente : un refus nommé confirmerait
                     // l'existence de ce qu'on protège.
-                    if ($parent !== null && $this->appartenance->estDUnAutreCabinet($parent, $scope->entreprise)) {
+                    // De même, une tâche (un retour) hors de la frontière du demandeur : on ne
+                    // rattache pas à ce qu'il ne voit pas.
+                    if ($parent !== null && (
+                        $this->appartenance->estDUnAutreCabinet($parent, $scope->entreprise)
+                        || (\App\Services\Search\TacheVisibiliteScope::estSoumise($parent)
+                            && ($this->tacheVisibilite === null || !$this->tacheVisibilite->ficheVisible($parent, $scope->invite)))
+                    )) {
                         $parent = null;
                         $piecesRefusees[$field] = sprintf('« %s » : introuvable dans votre cabinet.', $field);
                     }

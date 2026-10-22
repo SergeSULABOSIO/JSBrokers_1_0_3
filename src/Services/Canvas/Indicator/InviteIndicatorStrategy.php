@@ -5,6 +5,7 @@ namespace App\Services\Canvas\Indicator;
 use App\Entity\Invite;
 use App\Entity\Tache;
 use App\Repository\UtilisateurRepository;
+use App\Services\Search\TacheVisibiliteScope;
 use App\Services\ServiceDates;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use DateTimeImmutable;
@@ -16,6 +17,7 @@ class InviteIndicatorStrategy implements IndicatorCalculationStrategyInterface
         private TranslatorInterface $translator,
         private UtilisateurRepository $utilisateurRepository,
         private IndicatorCalculationHelper $calculationHelper,
+        private TacheVisibiliteScope $tacheVisibilite,
     ) {
     }
 
@@ -117,7 +119,11 @@ class InviteIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function countInviteTachesEnCours(Invite $invite): int
     {
-        return $invite->getTaches()->filter(fn(Tache $tache) => !$tache->isClosed())->count();
+        // LA FRONTIÈRE DES TÂCHES : la fiche d'un collègue ne compte que les tâches que le
+        // LECTEUR a le droit de voir — sinon le nombre trahirait les autres.
+        return \count($this->tacheVisibilite->filtrer(
+            $invite->getTaches()->filter(fn (Tache $tache) => !$tache->isClosed()),
+        ));
     }
 
     private function getInviteRolePrincipal(Invite $invite): string

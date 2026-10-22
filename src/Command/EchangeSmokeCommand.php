@@ -39,6 +39,7 @@ final class EchangeSmokeCommand extends Command
         private readonly ExportateurJsbx $exportateur,
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly EntityManagerInterface $em,
+        private readonly \App\Service\Workspace\InviteCourant $inviteCourant,
     ) {
         parent::__construct();
     }
@@ -49,6 +50,17 @@ final class EchangeSmokeCommand extends Command
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        // UN CONTRÔLE D'EXPORT LIT TOUT LE CABINET, TÂCHES COMPRISES : contexte système
+        // EXPLICITE et nommé (InviteCourant) — sans lui, la frontière des tâches n'en
+        // laisserait sortir aucune. Il ne s'ouvre jamais pendant une requête HTTP.
+        return $this->inviteCourant->enContexteSysteme(
+            'Contrôle de l\'export (app:echange:smoke)',
+            fn (): int => $this->controler($input, $output),
+        );
+    }
+
+    private function controler(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
 

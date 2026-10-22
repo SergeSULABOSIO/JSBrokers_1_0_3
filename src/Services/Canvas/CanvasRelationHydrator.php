@@ -36,6 +36,9 @@ final class CanvasRelationHydrator
     public function __construct(
         private readonly NormalizerInterface $normalizer,
         private readonly PropertyAccessorInterface $accessor,
+        // LA FRONTIÈRE DES TÂCHES : la fiche d'une piste visible ne nomme pas les tâches
+        // (retours, pièces) d'autrui qu'elle porte.
+        private readonly \App\Services\Search\TacheVisibiliteScope $tacheVisibilite,
     ) {
     }
 
@@ -69,7 +72,7 @@ final class CanvasRelationHydrator
             $champ = (string) ($attribut['displayField'] ?? 'nom');
 
             if ($type === 'Collection') {
-                $items = $valeur instanceof Collection ? $valeur->toArray() : (is_iterable($valeur) ? iterator_to_array($valeur) : []);
+                $items = $this->tacheVisibilite->filtrer($valeur instanceof Collection ? $valeur->toArray() : (is_iterable($valeur) ? iterator_to_array($valeur) : []));
                 $resumes = [];
                 foreach ($items as $item) {
                     $resume = is_object($item) ? $this->resume($item, $champ) : null;
@@ -83,7 +86,7 @@ final class CanvasRelationHydrator
                 continue;
             }
 
-            $resume = is_object($valeur) ? $this->resume($valeur, $champ) : null;
+            $resume = is_object($valeur) && $this->tacheVisibilite->visiblePourLeLecteur($valeur) ? $this->resume($valeur, $champ) : null;
             if ($resume !== null) {
                 $payload[$code] = $resume;
             }

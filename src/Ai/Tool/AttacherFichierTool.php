@@ -51,6 +51,7 @@ final class AttacherFichierTool implements AiToolProduisantUnPlan, AiToolConditi
         private readonly ResolveurDeReferences $resolveur,
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly EntityManagerInterface $em,
+        private readonly \App\Services\Search\TacheVisibiliteScope $tacheVisibilite,
     ) {
     }
 
@@ -366,7 +367,11 @@ final class AttacherFichierTool implements AiToolProduisantUnPlan, AiToolConditi
             return true;
         }
         $entreprise = $entite->getEntreprise();
+        if ($entreprise !== null && $entreprise->getId() !== $scope->entreprise->getId()) {
+            return false;
+        }
 
-        return $entreprise === null || $entreprise->getId() === $scope->entreprise->getId();
+        // Une tâche (un retour) hors de la frontière du demandeur n'existe pas pour lui.
+        return $this->tacheVisibilite->ficheVisible($entite, $scope->invite);
     }
 }

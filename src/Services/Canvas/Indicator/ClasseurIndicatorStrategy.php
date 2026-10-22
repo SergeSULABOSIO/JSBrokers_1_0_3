@@ -10,8 +10,16 @@ class ClasseurIndicatorStrategy implements IndicatorCalculationStrategyInterface
 {
     public function __construct(
         private ServiceDates $serviceDates,
-        private IndicatorCalculationHelper $calculationHelper
+        private IndicatorCalculationHelper $calculationHelper,
+        // LA FRONTIÈRE DES TÂCHES : un classeur ne compte que les pièces que le lecteur voit.
+        private \App\Services\Search\TacheVisibiliteScope $tacheVisibilite,
     ) {
+    }
+
+    /** @return list<\App\Entity\Document> */
+    private function pieces(Classeur $classeur): array
+    {
+        return $this->tacheVisibilite->filtrer($classeur->getDocuments());
     }
 
     public function supports(string $entityClassName): bool
@@ -23,11 +31,11 @@ class ClasseurIndicatorStrategy implements IndicatorCalculationStrategyInterface
     {
         /** @var Classeur $entity */
         return [
-            'nombreDocuments' => $entity->getDocuments()->count(),
+            'nombreDocuments' => \count($this->pieces($entity)),
             'ageClasseur' => $this->calculateClasseurAge($entity),
             'dateDernierAjout' => $this->getClasseurDateDernierAjout($entity),
             'apercuTypesFichiers' => $this->getClasseurApercuTypesFichiers($entity),
-            'estVide' => $entity->getDocuments()->isEmpty() ? 'Oui' : 'Non',
+            'estVide' => $this->pieces($entity) === [] ? 'Oui' : 'Non',
         ];
     }
 
@@ -41,7 +49,7 @@ class ClasseurIndicatorStrategy implements IndicatorCalculationStrategyInterface
     private function getClasseurDateDernierAjout(Classeur $classeur): ?\DateTimeInterface
     {
         $dateDernierAjout = null;
-        foreach ($classeur->getDocuments() as $document) {
+        foreach ($this->pieces($classeur) as $document) {
             if ($document->getCreatedAt() && (!$dateDernierAjout || $document->getCreatedAt() > $dateDernierAjout)) {
                 $dateDernierAjout = $document->getCreatedAt();
             }
@@ -51,12 +59,13 @@ class ClasseurIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function getClasseurApercuTypesFichiers(Classeur $classeur): array
     {
-        if ($classeur->getDocuments()->isEmpty()) {
+        $pieces = $this->pieces($classeur);
+        if ($pieces === []) {
             return ['Info' => 'Ce classeur est vide'];
         }
 
         $typesCount = [];
-        foreach ($classeur->getDocuments() as $document) {
+        foreach ($pieces as $document) {
             $type = strtoupper($this->calculationHelper->getDocumentTypeFichier($document));
             if ($type === 'INCONNU' || $type === '') {
                 $type = 'Autre';

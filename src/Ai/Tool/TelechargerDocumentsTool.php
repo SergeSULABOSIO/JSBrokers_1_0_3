@@ -223,7 +223,7 @@ final class TelechargerDocumentsTool implements AiToolInterface
             $trouves = $this->parIdentifiants(\array_slice($ids, 0, $limite), $scope);
             $total = count($trouves);
         } elseif ($resolution->lien !== null && ($racine = $this->racineDuDossier($resolution->lien, $scope)) !== null) {
-            $descente = $this->descente->depuis($racine, $this->accessResolver->libellesEntites());
+            $descente = $this->descente->depuis($racine, $scope->invite, $this->accessResolver->libellesEntites());
             $total = count($descente['documents']);
             $trouves = array_map(
                 static fn (array $t) => $t['document'],
@@ -455,6 +455,10 @@ final class TelechargerDocumentsTool implements AiToolInterface
         if (method_exists($racine, 'getEntreprise')
             && $racine->getEntreprise() !== null
             && $racine->getEntreprise()->getId() !== $scope->entreprise->getId()) {
+            return null;
+        }
+        // Une tâche (un retour) hors de la frontière du demandeur n'est pas un dossier pour lui.
+        if (!$this->descente->racineVisible($racine, $scope->invite)) {
             return null;
         }
 

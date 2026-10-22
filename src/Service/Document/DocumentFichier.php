@@ -65,6 +65,9 @@ final class DocumentFichier
     public function __construct(
         private readonly StorageInterface $storage,
         private readonly EntityManagerInterface $em,
+        // LA FRONTIÈRE DES TÂCHES : l'origine affichée d'une pièce n'est jamais une tâche
+        // (un retour) que le lecteur ne voit pas — son libellé fuirait par la pièce.
+        private readonly \App\Services\Search\TacheVisibiliteScope $tacheVisibilite,
     ) {
     }
 
@@ -184,7 +187,8 @@ final class DocumentFichier
                 continue;
             }
             $parent = $document->{$getter}();
-            if (\is_object($parent)) {
+            // Une tâche invisible n'est pas une origine : on passe au rattachement suivant.
+            if (\is_object($parent) && $this->tacheVisibilite->visiblePourLeLecteur($parent)) {
                 return $parent;
             }
         }

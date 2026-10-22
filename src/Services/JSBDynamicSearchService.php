@@ -13,6 +13,8 @@ use App\Services\Search\ReversementScope;
 use App\Services\Search\PisteTransformationScope;
 use App\Services\Search\ResponsableDePiste;
 use App\Services\Search\PortefeuilleScope;
+use App\Services\Search\TacheVisibiliteScope;
+use Symfony\Contracts\Service\Attribute\Required;
 use App\Services\Note\NoteReglementService;
 use App\Services\Search\NoteReglementScope;
 use App\Services\Search\TranchePaiementScope;
@@ -212,6 +214,15 @@ class JSBDynamicSearchService
     ) {
         $this->em = $em;
         $this->logger = $logger ?? new NullLogger();
+    }
+
+    private ?TacheVisibiliteScope $tacheVisibilite = null;
+
+    /** La frontière des tâches (TacheVisibiliteScope). */
+    #[Required]
+    public function setFrontiereDesTaches(TacheVisibiliteScope $tacheVisibilite): void
+    {
+        $this->tacheVisibilite = $tacheVisibilite;
     }
 
     /**
@@ -662,6 +673,24 @@ class JSBDynamicSearchService
             $qb->join("{$rootAlias}.invite", $inviteAlias);
             $qb->andWhere("{$inviteAlias}.entreprise = :entrepriseId{$suffix}")
                ->setParameter("entrepriseId{$suffix}", $entreprise->getId());
+        }
+
+        // ── LA FRONTIÈRE DES TÂCHES, AU MÊME RANG QUE LE CABINET ─────────────────────
+        //
+        // Une tâche ne se montre qu'à qui elle concerne (TacheVisibiliteScope, décisions de
+        // Serge du 2026-10-21) ; ses retours et documents en héritent. Posée ICI, sans critère
+        // venu du navigateur : la liste, son comptage, les onglets contextuels et Ket passent
+        // tous par cette méthode, et rien ne peut la retirer. Seul un contexte système
+        // déclaré (commande) en est exempt — cf. InviteCourant.
+        $court = $metadata->getReflectionClass()->getShortName();
+        if (TacheVisibiliteScope::estSoumise($court)) {
+            if ($this->tacheVisibilite === null) {
+                throw new \LogicException('JSBDynamicSearchService : frontière des tâches non injectée.');
+            }
+            $condition = $this->tacheVisibilite->conditionPourLeLecteur($qb, $court, $rootAlias, $entreprise, $suffix);
+            if ($condition !== null) {
+                $qb->andWhere($condition);
+            }
         }
 
         // ── UNE LIGNE = UN VIREMENT ──────────────────────────────────────────────────
@@ -1165,7 +1194,29 @@ class JSBDynamicSearchService
                         $pathKey .= '.' . $segment;
                         if (!isset($joinedEntities[$pathKey])) {
                             $newAlias = 'search_' . str_replace('.', '_', $actualField) . '_' . $segment . $suffix;
-                            $qb->leftJoin("{$joinAlias}.{$segment}", $newAlias);
+                            // UN CRITÈRE NE TRAVERSE PAS LA FRONTIÈRE DES TÂCHES : « les pistes
+                            // dont une tâche contient tel mot » ne doit lire que les tâches du
+                            // lecteur. Retours et documents (aucun écran ne les vise par un
+                            // chemin) : critère écarté, échec fermé.
+                            $cible = $currentMeta->getAssociationTargetClass($segment);
+                            if (TacheVisibiliteScope::estSoumise($cible) && $this->tacheVisibilite === null) {
+                                throw new \LogicException('JSBDynamicSearchService : frontière des tâches non injectée.');
+                            }
+                            $condition = TacheVisibiliteScope::estSoumise($cible)
+                                ? $this->tacheVisibilite->cercleDuLecteur($entreprise)
+                                : null;
+                            if ($condition !== null) {
+                                if (!str_ends_with($cible, '\\Tache')) {
+                                    $pathIsValid = false;
+                                    break;
+                                }
+                                $qb->leftJoin("{$joinAlias}.{$segment}", $newAlias, 'WITH', TacheVisibiliteScope::conditionSurLaTache($newAlias, 'cercle_' . $newAlias, $condition));
+                                if ($condition !== []) {
+                                    $qb->setParameter('cercle_' . $newAlias, $condition);
+                                }
+                            } else {
+                                $qb->leftJoin("{$joinAlias}.{$segment}", $newAlias);
+                            }
                             $joinedEntities[$pathKey] = $newAlias;
                         }
                         $joinAlias = $joinedEntities[$pathKey];

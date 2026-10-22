@@ -46,6 +46,22 @@ class RechercherEntitesLieATest extends KernelTestCase
         return static::getContainer()->get(EntityManagerInterface::class);
     }
 
+    /**
+     * Comme en production : le worker de Ket IMPOSE l'invité de la conversation
+     * (IdentiteDuTraitement::endosser). Sans lui, la frontière des tâches ne laisserait
+     * rien voir — et le contexte système n'est pas le chemin de Ket.
+     */
+    private function rechercher(array $args, AiScope $scope): \App\Ai\Tool\AiToolResult
+    {
+        $courant = static::getContainer()->get(\App\Service\Workspace\InviteCourant::class);
+        $courant->imposer($scope->invite);
+        try {
+            return $this->tool()->execute($args, $scope);
+        } finally {
+            $courant->relacher();
+        }
+    }
+
     private function tool(): RechercherEntitesTool
     {
         return static::getContainer()->get(RechercherEntitesTool::class);
@@ -249,7 +265,7 @@ class RechercherEntitesLieATest extends KernelTestCase
         $scope = new AiScope($e, $owner);
 
         foreach (['2 784,61', '2 784,61 $', '1358.22', '2784,61$'] as $montant) {
-            $result = $this->tool()->execute(['entite' => 'Avenant', 'filtre' => $montant], $scope);
+            $result = $this->rechercher(['entite' => 'Avenant', 'filtre' => $montant], $scope);
 
             self::assertArrayHasKey('refus', $result->data, sprintf('« %s » est un montant', $montant));
             self::assertStringContainsString('MONTANT', $result->data['refus']);
@@ -265,7 +281,7 @@ class RechercherEntitesLieATest extends KernelTestCase
         $scope = new AiScope($e, $owner);
 
         foreach (['12005-31002-0014-13001-00013061-2024', 'AGL-2025', '42'] as $reference) {
-            $result = $this->tool()->execute(['entite' => 'Avenant', 'filtre' => $reference], $scope);
+            $result = $this->rechercher(['entite' => 'Avenant', 'filtre' => $reference], $scope);
 
             self::assertArrayNotHasKey('refus', $result->data, sprintf('« %s » doit rester cherchable', $reference));
         }
@@ -276,7 +292,7 @@ class RechercherEntitesLieATest extends KernelTestCase
         ['owner' => $owner, 'entreprise' => $e, 'piste' => $piste, 'tachesPiste' => $ids] = $this->seed();
         $scope = new AiScope($e, $owner);
 
-        $result = $this->tool()->execute([
+        $result = $this->rechercher([
             'entite' => 'Tache',
             'lieA'   => ['entite' => 'Piste', 'id' => $piste->getId()],
         ], $scope);
@@ -299,7 +315,7 @@ class RechercherEntitesLieATest extends KernelTestCase
         ['owner' => $owner, 'entreprise' => $e, 'client' => $client, 'tachesPiste' => $ids] = $this->seed();
         $scope = new AiScope($e, $owner);
 
-        $result = $this->tool()->execute([
+        $result = $this->rechercher([
             'entite' => 'Tache',
             'lieA'   => ['entite' => 'Client', 'id' => $client->getId()],
         ], $scope);
@@ -317,7 +333,7 @@ class RechercherEntitesLieATest extends KernelTestCase
 
         // La piste d'une AUTRE entreprise ne rend rien : le scoping entreprise
         // du service de recherche s'applique toujours.
-        $result = $this->tool()->execute([
+        $result = $this->rechercher([
             'entite' => 'Tache',
             'lieA'   => ['entite' => 'Piste', 'id' => $pisteB->getId()],
         ], $scope);
@@ -333,7 +349,7 @@ class RechercherEntitesLieATest extends KernelTestCase
 
         // Client n'a aucune relation *-vers-un ciblant Piste : le lien est
         // ignoré (signalé au modèle), la liste reste servie sans crash.
-        $result = $this->tool()->execute([
+        $result = $this->rechercher([
             'entite' => 'Client',
             'lieA'   => ['entite' => 'Piste', 'id' => $piste->getId()],
         ], $scope);
@@ -350,7 +366,7 @@ class RechercherEntitesLieATest extends KernelTestCase
 
         // L'invité lit les Tâches mais pas les Pistes : référencer une piste
         // en lieA = la lire → refus fail-closed.
-        $result = $this->tool()->execute([
+        $result = $this->rechercher([
             'entite' => 'Tache',
             'lieA'   => ['entite' => 'Piste', 'id' => $piste->getId()],
         ], $scope);
@@ -368,7 +384,7 @@ class RechercherEntitesLieATest extends KernelTestCase
         ['owner' => $owner, 'entreprise' => $e] = $this->seed();
         $scope = new AiScope($e, $owner);
 
-        $result = $this->tool()->execute(['entite' => 'Tache'], $scope);
+        $result = $this->rechercher(['entite' => 'Tache'], $scope);
 
         $this->assertSame(AiToolResult::STATUS_OK, $result->status);
         $this->assertSame(2, $result->data['totalItems'], 'Les tâches relevant du portefeuille de l\'invité.');
@@ -376,7 +392,7 @@ class RechercherEntitesLieATest extends KernelTestCase
         $this->assertArrayNotHasKey('lien', $result->data);
         $this->assertArrayNotHasKey('lienIgnore', $result->data);
 
-        $global = $this->tool()->execute([
+        $global = $this->rechercher([
             'entite' => 'Tache',
             'perimetre' => \App\Services\Search\PortefeuilleScope::PERIMETRE_ENTREPRISE,
         ], $scope);
@@ -397,7 +413,7 @@ class RechercherEntitesLieATest extends KernelTestCase
         ['owner' => $owner, 'entreprise' => $e, 'tachesPiste' => $ids] = $this->seed();
         $scope = new AiScope($e, $owner);
 
-        $result = $this->tool()->execute([
+        $result = $this->rechercher([
             'entite' => 'Tache',
             'lieA'   => ['entite' => 'Client', 'nom' => 'Grand-Père'],
         ], $scope);
@@ -418,7 +434,7 @@ class RechercherEntitesLieATest extends KernelTestCase
         ['owner' => $owner, 'entreprise' => $e] = $this->seed();
         $scope = new AiScope($e, $owner);
 
-        $result = $this->tool()->execute([
+        $result = $this->rechercher([
             'entite' => 'Tache',
             'lieA'   => ['entite' => 'Client', 'nom' => 'Client Qui N Existe Pas'],
         ], $scope);
@@ -446,7 +462,7 @@ class RechercherEntitesLieATest extends KernelTestCase
         $scope = new AiScope($e, $owner);
 
         // « Grand-Père » n'est le libellé d'AUCUNE tâche : c'est un nom de client.
-        $result = $this->tool()->execute([
+        $result = $this->rechercher([
             'entite' => 'Tache',
             'filtre' => 'Grand-Père',
         ], $scope);
@@ -472,7 +488,7 @@ class RechercherEntitesLieATest extends KernelTestCase
         $scope = new AiScope($e, $owner);
         $cible = (int) $ids[0];
 
-        $result = $this->tool()->execute([
+        $result = $this->rechercher([
             'entite' => 'Tache',
             'filtre' => (string) $cible,
         ], $scope);
@@ -492,7 +508,7 @@ class RechercherEntitesLieATest extends KernelTestCase
         ['owner' => $owner, 'entreprise' => $e] = $this->seed();
         $scope = new AiScope($e, $owner);
 
-        $result = $this->tool()->execute([
+        $result = $this->rechercher([
             'entite' => 'Tache',
             'filtre' => '999999999',
         ], $scope);
@@ -508,7 +524,7 @@ class RechercherEntitesLieATest extends KernelTestCase
         ['owner' => $owner, 'entreprise' => $e] = $this->seed();
         $scope = new AiScope($e, $owner);
 
-        $result = $this->tool()->execute([
+        $result = $this->rechercher([
             'entite' => 'Tache',
             'filtre' => 'Zzzz Introuvable Nulle Part',
         ], $scope);

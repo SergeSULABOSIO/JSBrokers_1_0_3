@@ -64,7 +64,12 @@ class EspaceDeTravailComponentController extends AbstractController
         private AssistantConversationRepository $conversationRepository,
         private AssistantParametresRepository $parametresRepository,
         private BasculeDeCabinet $bascule,
-    ) {}
+        // La propriété du trait, posée comme dans les autres contrôleurs : sans elle, la
+        // fiche ouverte par un lien (get-entity-details → openRelatedEntity) répondait 500.
+        \App\Services\CanvasBuilder $canvasBuilder,
+    ) {
+        $this->canvasBuilder = $canvasBuilder;
+    }
 
     protected function getCollectionMap(): array
     {

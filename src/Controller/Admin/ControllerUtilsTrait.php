@@ -158,6 +158,46 @@ trait ControllerUtilsTrait
     }
 
     /**
+     * La frontière des TÂCHES (TacheVisibiliteScope, décisions de Serge du 2026-10-21) : une
+     * tâche — et ses retours et documents — ne se montre qu'à qui elle concerne. Les listes la
+     * reçoivent du moteur de recherche ; les portes ci-dessous (fiche, enregistrement,
+     * suppression, collection, pastille) la posent elles-mêmes.
+     */
+    private ?\App\Services\Search\TacheVisibiliteScope $tacheVisibilite = null;
+
+    #[Required]
+    public function setTacheVisibilite(\App\Services\Search\TacheVisibiliteScope $scope): void
+    {
+        $this->tacheVisibilite = $scope;
+    }
+
+    /**
+     * Une fiche hors de la frontière des tâches est INTROUVABLE : 404, jamais un refus nommé,
+     * qui confirmerait qu'elle existe (son existence même est confidentielle).
+     */
+    private function exigerUneFicheVisible(object $entite): void
+    {
+        if (!$this->frontiereDesTaches()->visiblePourLeLecteur($entite)) {
+            throw $this->createNotFoundException('Fiche introuvable.');
+        }
+    }
+
+    /** Échec FERMÉ : une porte qui ne connaît pas la frontière ne s'ouvre pas. */
+    private function frontiereDesTaches(): \App\Services\Search\TacheVisibiliteScope
+    {
+        return $this->tacheVisibilite ?? throw new \LogicException('Frontière des tâches non injectée.');
+    }
+
+    /**
+     * Les éléments d'une collection, réduits à ce que le lecteur peut voir : le getter du
+     * parent rend TOUTES ses tâches (et leurs retours, documents).
+     */
+    private function collectionDansLaFrontiere(?iterable $elements): \Doctrine\Common\Collections\ArrayCollection
+    {
+        return new \Doctrine\Common\Collections\ArrayCollection($this->frontiereDesTaches()->filtrer($elements ?? []));
+    }
+
+    /**
      * Cœur de mutation partagé (métrage + persistance / suppression). Injecté par
      * setter autowiré (#[Required]) comme les autres services du trait. Point de
      * passage UNIQUE réutilisé aussi par l'assistant IA (DRY) : le CRUD HTTP et
@@ -874,9 +914,11 @@ trait ControllerUtilsTrait
         ?float $totalValue = null,
         string $totalUnit = ''
     ): Response {
+        // LA FRONTIÈRE DES TÂCHES dans un onglet, en mode dialogue comme en liste : on ne garde
+        // que ce qui concerne le lecteur (les appelants l'ont déjà fait ; c'est le filet).
+        $data = $this->collectionDansLaFrontiere($data);
         // Pagination pour les onglets génériques (non dialog).
-        $dataArray = ($data instanceof \Doctrine\Common\Collections\Collection) ? $data->toArray() : (array)$data;
-        $dataArray = array_reverse($dataArray); // derniers éléments (ID le plus élevé) en premier
+        $dataArray = array_reverse($data->toArray()); // derniers éléments (ID le plus élevé) en premier
 
         // UN ONGLET CONTEXTUEL MONTRE CE QUE LA FICHE CONTIENT — TOUT ce qu'elle contient.
         //
@@ -1567,10 +1609,15 @@ trait ControllerUtilsTrait
             }
 
             try {
-                $formCanvas['form_layout'][$index]['onglet_compte'] = (int) $this->em
-                    ->createQuery(sprintf('SELECT COUNT(c) FROM %s p JOIN p.%s c WHERE p = :parent', $parentClass, $fieldName))
-                    ->setParameter('parent', $parentEntity)
-                    ->getSingleScalarResult();
+                // La pastille compte ce que l'onglet MONTRERA : pour les tâches (et ce qui en
+                // hérite), seulement ce qui concerne le lecteur — sinon elle trahirait le reste.
+                $qbCompte = $this->em->createQueryBuilder()->select('COUNT(c)')->from($parentClass, 'p')
+                    ->join('p.' . $fieldName, 'c')->where('p = :parent')->setParameter('parent', $parentEntity);
+                $condition = $this->frontiereDesTaches()->conditionPourLeLecteur($qbCompte, $classeEnfant, 'c', $this->getEntreprise(), '_onglet');
+                if ($condition !== null) {
+                    $qbCompte->andWhere($condition);
+                }
+                $formCanvas['form_layout'][$index]['onglet_compte'] = (int) $qbCompte->getQuery()->getSingleScalarResult();
             } catch (\Throwable) {
                 // Un compte est un confort d'affichage, jamais une condition : s'il
                 // echoue, l'onglet existe quand meme et sa liste dira la verite.
@@ -1606,6 +1653,9 @@ trait ControllerUtilsTrait
             : ($consultation ? Invite::ACCESS_LECTURE : Invite::ACCESS_MODIFICATION);
         if (!$this->mayAccessEntity($entity ?? $entityClass, $requiredLevel)) {
             return $this->accessDeniedComponent($entityClass);
+        }
+        if ($entity !== null) {
+            $this->exigerUneFicheVisible($entity);
         }
 
         // EN EDITION, L'ENTITE DOIT ETRE LA NOTRE.
@@ -1831,6 +1881,7 @@ trait ControllerUtilsTrait
         // postant simplement son numero, et le serveur repondait 200.
         if (!$isCreationMode) {
             $this->appartenance()->exigerLeCabinetOuvert($entity, $this->getEntityName($entity));
+            $this->exigerUneFicheVisible($entity);
         }
 
         // LE CABINET VIENT DU GARDIEN, JAMAIS DES IDENTIFIANTS SOUMIS.
@@ -1997,6 +2048,17 @@ trait ControllerUtilsTrait
             // Elle est appelée après la validation du formulaire mais avant la persistance,
             // ce qui est le moment idéal pour établir la liaison parente.
             $this->poserLesParentsSoumis($entity, $entityClass, $data);
+            // Et la fiche telle qu'elle SERA ÉCRITE reste dans la frontière des tâches : un
+            // retour visible ne se déplace pas sous une tâche invisible, et une tâche ne se
+            // confie pas hors du cercle de celui qui la modifie (l'administrateur voit tout).
+            if (!$this->frontiereDesTaches()->visiblePourLeLecteur($entity)) {
+                if ($entity instanceof \App\Entity\Tache && !$isCreationMode) {
+                    $message = \App\Services\Search\TacheVisibiliteScope::REFUS_REASSIGNATION;
+
+                    return $this->json(['message' => $message, 'errors' => ['' => [$message]]], Response::HTTP_UNPROCESSABLE_ENTITY);
+                }
+                $this->exigerUneFicheVisible($entity);
+            }
 
             // ET APRÈS LA POSE DES PARENTS : une ligne existante qu'on RATTACHE à une note
             // validée change cette note autant qu'une ligne ajoutée (règle OHADA).
@@ -2117,6 +2179,7 @@ trait ControllerUtilsTrait
         // passait meme pas par validateWorkspaceAccess() -- un identifiant suffisait a
         // supprimer la ligne d'un autre cabinet.
         $this->appartenance()->exigerLeCabinetOuvert($entity, $this->getEntityName($entity));
+        $this->exigerUneFicheVisible($entity);
 
         // CONTRÔLE D'ACCÈS (suppression) : exige le droit de Suppression sur l'entité
         // (ou la gestion des invités pour Invite / RolesEn*).
@@ -2395,6 +2458,9 @@ trait ControllerUtilsTrait
         // différé), il n'a pas de cabinet à comparer.
         if ($id !== 0) {
             $this->appartenance()->exigerLeCabinetOuvert($parentEntity, $this->getEntityName($parentEntity));
+            // Et un parent hors de la frontière des tâches est introuvable : une liste vide
+            // en 200 confirmerait qu'il existe.
+            $this->exigerUneFicheVisible($parentEntity);
         }
 
         // Preload batch des relations avant le calcul des indicateurs (évite N lazy-loads).
@@ -2431,7 +2497,7 @@ trait ControllerUtilsTrait
         if ($usage === 'dialog') {
             $totalValue = null;
             $totalUnit = '';
-            $data = $parentEntity->{'get' . ucfirst($collectionName)}();
+            $data = $this->collectionDansLaFrontiere($parentEntity->{'get' . ucfirst($collectionName)}());
             $entityClass = $collectionMap[$collectionName];
 
             // PARENT PAS ENCORE EN BASE, MAIS SÉLECTION DÉJÀ FAITE.
@@ -2445,7 +2511,7 @@ trait ControllerUtilsTrait
             // divergerait du premier dès que le gabarit changerait.
             $idsChoisis = array_filter(array_map('intval', explode(',', (string) $request?->query->get('ids', ''))));
             if ($id === 0 && $idsChoisis !== []) {
-                $data = new \Doctrine\Common\Collections\ArrayCollection(
+                $data = $this->collectionDansLaFrontiere(
                     $this->em->getRepository($entityClass)->findBy([
                         'id' => $idsChoisis,
                         // Scoping d'entreprise : on ne rend visible que ce qui appartient à
@@ -2519,7 +2585,7 @@ trait ControllerUtilsTrait
         if (!method_exists($parentEntity, $getter)) {
             throw new \BadMethodCallException(sprintf('La méthode "%s" n\'existe pas sur l\'entité "%s".', $getter, get_class($parentEntity)));
         }
-        $data = $parentEntity->$getter();
+        $data = $this->collectionDansLaFrontiere($parentEntity->$getter());
         $entityClass = $collectionMap[$collectionName];
         $data = $this->ajusterCollectionContextuelle($collectionName, $parentEntity, $data);
         // Preload des relations avant renderCollectionOrList (évite N×M lazy-loads).
@@ -2611,6 +2677,9 @@ trait ControllerUtilsTrait
                 continue;
             }
             $this->appartenance()->exigerLeCabinetOuvert($parentEntity, $this->getEntityName($parentClass));
+            // Ni une tâche (ou un retour) hors de la frontière : on ne rattache pas à ce qu'on
+            // ne voit pas, et la réponse ne doit pas en confirmer l'existence.
+            $this->exigerUneFicheVisible($parentEntity);
             $entity->$setter($parentEntity);
         }
     }
@@ -3033,7 +3102,8 @@ trait ControllerUtilsTrait
             return [];
         }
 
-        return $this->em->getRepository($entityClass)->findBy(['entreprise' => $entreprise]);
+        // Et la frontière des tâches : ni les tâches, ni les retours, ni les pièces d'autrui.
+        return $this->frontiereDesTaches()->filtrer($this->em->getRepository($entityClass)->findBy(['entreprise' => $entreprise]));
     }
 
     /**
@@ -3073,6 +3143,8 @@ trait ControllerUtilsTrait
         if (!$entity) {
             throw new NotFoundHttpException("L'entité '$entityType' avec l'ID '$id' n'a pas été trouvée.");
         }
+        // La fiche ouverte par son identifiant (clic sur un lien) : la frontière des tâches.
+        $this->exigerUneFicheVisible($entity);
 
         // Hydratation avant la génération du canevas pour les calculs de solde.
         $this->loadCalculatedValues(null, $entity);

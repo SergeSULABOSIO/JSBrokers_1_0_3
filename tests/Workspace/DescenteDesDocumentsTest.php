@@ -157,7 +157,7 @@ class DescenteDesDocumentsTest extends KernelTestCase
     {
         $noms = array_map(
             static fn (array $t) => $t['document']->getNom(),
-            $this->descente->depuis($racine)['documents'],
+            $this->descente->depuis($racine, null)['documents'],
         );
         sort($noms);
 
@@ -215,7 +215,7 @@ class DescenteDesDocumentsTest extends KernelTestCase
         $libelles = static::getContainer()->get(\App\Service\Workspace\WorkspaceAccessResolver::class)->libellesEntites();
 
         $parNom = [];
-        foreach ($this->descente->depuis($d['client'], $libelles)['documents'] as $trouve) {
+        foreach ($this->descente->depuis($d['client'], null, $libelles)['documents'] as $trouve) {
             $parNom[$trouve['document']->getNom()] = $trouve;
         }
 
@@ -238,7 +238,7 @@ class DescenteDesDocumentsTest extends KernelTestCase
     {
         $d = $this->seed();
 
-        $resultat = $this->descente->depuis($d['client']);
+        $resultat = $this->descente->depuis($d['client'], null);
 
         $this->assertFalse($resultat['tronque'], 'Un dossier de quatre étages ne tronque rien.');
         $this->assertLessThanOrEqual(DescenteDesDocuments::NOEUDS_MAX, $resultat['noeuds']);
@@ -248,7 +248,7 @@ class DescenteDesDocumentsTest extends KernelTestCase
             ['Pièce du client'],
             array_map(
                 static fn (array $t) => $t['document']->getNom(),
-                $this->descente->depuis($d['client'], [], 0)['documents'],
+                $this->descente->depuis($d['client'], null, [], 0)['documents'],
             ),
         );
     }

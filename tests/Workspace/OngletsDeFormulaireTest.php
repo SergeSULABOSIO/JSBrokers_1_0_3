@@ -349,7 +349,9 @@ class OngletsDeFormulaireTest extends TestCase
     {
         $trait = $this->lire(self::TRAIT_CONTROLEUR);
 
-        self::assertStringContainsString('SELECT COUNT(c) FROM %s p JOIN p.%s c WHERE p = :parent', $trait);
+        // Un COUNT en base, jamais la collection hydratée (et la frontière des tâches s'y ajoute).
+        self::assertStringContainsString("->select('COUNT(c)')->from(\$parentClass, 'p')", $trait);
+        self::assertStringContainsString("->join('p.' . \$fieldName, 'c')->where('p = :parent')", $trait);
         // On examine le CORPS de la méthode, et non son explication : le docbloc cite
         // justement `count()` pour dire pourquoi on ne s'en sert pas.
         $corps = substr($trait, (int) strpos($trait, 'private function renseignerLesComptesDOnglets'), 2500);

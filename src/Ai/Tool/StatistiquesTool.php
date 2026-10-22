@@ -5,6 +5,7 @@ namespace App\Ai\Tool;
 use App\Ai\Scope\AiScope;
 use App\Entity\Entreprise;
 use App\Service\Workspace\WorkspaceAccessResolver;
+use App\Services\Search\TacheVisibiliteScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 
@@ -34,6 +35,7 @@ final class StatistiquesTool implements AiToolInterface
         private readonly EntityManagerInterface $em,
         private readonly EntiteLexique $lexique,
         private readonly EntiteLibelle $libelleur,
+        private readonly TacheVisibiliteScope $tacheVisibilite,
     ) {
     }
 
@@ -138,6 +140,12 @@ final class StatistiquesTool implements AiToolInterface
         if (!$this->scoperEntreprise($qb, $metadata, $scope->entreprise)) {
             return AiToolResult::introuvable(sprintf('%s (non agrégeable)', $labels[$shortName]));
         }
+        // LA FRONTIÈRE DES TÂCHES : on n'agrège (ni ne regroupe par description) que les
+        // tâches, retours et documents qui concernent le demandeur.
+        if (TacheVisibiliteScope::estSoumise($shortName)
+            && ($frontiere = $this->tacheVisibilite->conditionDql($qb, $shortName, 'e', $scope->invite, '_stat')) !== null) {
+            $qb->andWhere($frontiere);
+        }
 
         // Période optionnelle sur un champ date validé.
         $champDate = trim((string) ($args['champDate'] ?? ''));
@@ -176,7 +184,20 @@ final class StatistiquesTool implements AiToolInterface
             } elseif ($metadata->hasAssociation($groupePar) && $metadata->isSingleValuedAssociation($groupePar)) {
                 $cibleFqcn = $metadata->getAssociationTargetClass($groupePar);
                 $displayField = $this->libelleur->displayField($cibleFqcn) ?? 'id';
-                $qb->leftJoin("e.{$groupePar}", 'g');
+                // Regrouper par une tâche (ou un retour, un document) affiche son libellé : seules
+                // les visibles ont un groupe, les autres tombent dans « (sans valeur) ».
+                $cercle = TacheVisibiliteScope::estSoumise($cibleFqcn) ? $this->tacheVisibilite->identifiantsDuCercle($scope->invite) : null;
+                if ($cercle !== null) {
+                    if (!str_ends_with($cibleFqcn, '\Tache')) {
+                        return AiToolResult::introuvable(sprintf('regroupement « %s » non disponible', $groupePar));
+                    }
+                    $qb->leftJoin("e.{$groupePar}", 'g', 'WITH', TacheVisibiliteScope::conditionSurLaTache('g', 'cercleGroupe', $cercle));
+                    if ($cercle !== []) {
+                        $qb->setParameter('cercleGroupe', $cercle);
+                    }
+                } else {
+                    $qb->leftJoin("e.{$groupePar}", 'g');
+                }
                 $groupeExpr = "g.{$displayField}";
             } else {
                 return AiToolResult::introuvable(sprintf(

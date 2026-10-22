@@ -207,6 +207,8 @@ class PortefeuilleDescendantsDePisteTest extends WebTestCase
         $em = $this->em();
         $entreprise = $em->find(Entreprise::class, $ids['entreprise']);
         $moi = $em->find(Invite::class, $ids['moi']);
+        // Le lecteur, comme sa session en production : la frontière des tâches le lit.
+        static::getContainer()->get(\App\Service\Workspace\InviteCourant::class)->imposer($moi);
         $criteres = static::getContainer()->get(PortefeuilleCritereFactory::class);
         $moteur = static::getContainer()->get(JSBDynamicSearchService::class);
         $ket = static::getContainer()->get(RechercherEntitesTool::class);
@@ -241,6 +243,8 @@ class PortefeuilleDescendantsDePisteTest extends WebTestCase
         $em = $this->em();
         $entreprise = $em->find(Entreprise::class, $ids['entreprise']);
         $moi = $em->find(Invite::class, $ids['moi']);
+        // Le lecteur, comme sa session en production : la frontière des tâches le lit.
+        static::getContainer()->get(\App\Service\Workspace\InviteCourant::class)->imposer($moi);
         $tableau = static::getContainer()->get(DashboardDataProvider::class);
 
         $polices = $tableau->getAvenantsNonRenouvelables($entreprise, $moi);

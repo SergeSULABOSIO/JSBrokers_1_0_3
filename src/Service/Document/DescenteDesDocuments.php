@@ -2,6 +2,8 @@
 
 namespace App\Service\Document;
 
+use App\Entity\Invite;
+use App\Services\Search\TacheVisibiliteScope;
 use App\Entity\Document;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -64,6 +66,7 @@ final class DescenteDesDocuments
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly DocumentFichier $fichier,
+        private readonly TacheVisibiliteScope $tacheVisibilite,
     ) {
     }
 
@@ -74,6 +77,11 @@ final class DescenteDesDocuments
      * parce que c'est ce que l'utilisateur cherche à savoir quand il retrouve un fichier
      * dans une liste : d'où il sort.
      *
+     * LA FRONTIÈRE DES TÂCHES : la descente ne traverse pas une tâche (un retour) qui ne
+     * concerne pas `$lecteur`, et ne récolte aucune pièce qu'il ne verrait pas — une pièce
+     * rattachée AUSSI à une autre fiche se retrouve par cette fiche.
+     *
+     * @param Invite|null $lecteur le demandeur (null : le commun seulement)
      * @param array<string, string> $libelles nom court d'entité => intitulé d'écran
      *
      * @return array{
@@ -82,7 +90,7 @@ final class DescenteDesDocuments
      *     noeuds: int
      * }
      */
-    public function depuis(object $racine, array $libelles = [], int $profondeurMax = self::PROFONDEUR_MAX): array
+    public function depuis(object $racine, ?Invite $lecteur, array $libelles = [], int $profondeurMax = self::PROFONDEUR_MAX): array
     {
         $vus = [];              // entités déjà visitées, par classe#id
         $documentsVus = [];     // documents déjà récoltés, par id
@@ -106,7 +114,7 @@ final class DescenteDesDocuments
 
             foreach ($this->documentsDe($entite) as $document) {
                 $id = $document->getId();
-                if ($id === null || isset($documentsVus[$id])) {
+                if ($id === null || isset($documentsVus[$id]) || !$this->tacheVisibilite->ficheVisible($document, $lecteur)) {
                     continue;
                 }
                 $documentsVus[$id] = true;
@@ -125,7 +133,7 @@ final class DescenteDesDocuments
 
             foreach ($this->enfantsDe($entite) as $enfant) {
                 $cle = $this->cle($enfant);
-                if (isset($vus[$cle])) {
+                if (isset($vus[$cle]) || !$this->tacheVisibilite->ficheVisible($enfant, $lecteur)) {
                     continue;
                 }
                 $vus[$cle] = true;
@@ -224,6 +232,12 @@ final class DescenteDesDocuments
         }
 
         return $enfants;
+    }
+
+    /** La fiche nommée peut-elle servir de racine pour ce lecteur (frontière des tâches) ? */
+    public function racineVisible(object $racine, ?Invite $lecteur): bool
+    {
+        return $this->tacheVisibilite->ficheVisible($racine, $lecteur);
     }
 
     /** Identité stable d'une entité pour la détection de cycle. */

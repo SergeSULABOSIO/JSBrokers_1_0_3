@@ -134,12 +134,15 @@ class TacheController extends AbstractController
     #[Route('/api/close/{id}', name: 'api.close', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     public function closeApi(Tache $tache, Request $request): Response
     {
+        // D'ABORD : est-elle du cabinet, et concerne-t-elle le lecteur ? Sinon introuvable —
+        // avant même le jeton, qui ne doit pas faire répondre autre chose qu'un 404.
+        $this->appartenance()->exigerLeCabinetOuvert($tache, 'Cette tâche');
+        $this->exigerUneFicheVisible($tache);
         if (!$this->isCsrfTokenValid('db-task-close', $request->headers->get('X-CSRF-Token'))) {
             return $this->json(['error' => 'Token invalide'], 403);
         }
         // Le jeton CSRF prouve d'où vient la requête, pas à qui est la tâche ; et clôturer
         // est une MODIFICATION, qui obéit au même droit que le formulaire.
-        $this->appartenance()->exigerLeCabinetOuvert($tache, 'Cette tâche');
         if (!$this->mayAccessEntity($tache, Invite::ACCESS_MODIFICATION)) {
             return $this->accessDeniedJson();
         }
@@ -153,9 +156,10 @@ class TacheController extends AbstractController
     #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
     public function query(Request $request)
     {
-        // L'exécutant est l'invité de la SESSION, jamais celui de la route : un `{idInvite}`
-        // d'un autre cabinet ne doit rien désigner ici.
-        return $this->renderViewOrListComponent(Tache::class, $request, true, ['executor' => ['IS_NULL_OR_EQ' => $this->getInvite()]]);
+        // LA FRONTIÈRE DES TÂCHES est posée par le moteur de recherche lui-même
+        // (TacheVisibiliteScope) — au premier affichage comme ici, et pour Ket. L'ancienne
+        // règle « sans exécutant ou moi », posée seulement ici, n'existe plus.
+        return $this->renderViewOrListComponent(Tache::class, $request, true);
     }
 
 

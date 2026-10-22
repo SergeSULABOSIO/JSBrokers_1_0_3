@@ -49,6 +49,9 @@ final class IdentiteDuTraitement
     public function __construct(
         private readonly TokenStorageInterface $tokenStorage,
         private readonly LoggerInterface $logger,
+        // LA FRONTIÈRE DES TÂCHES lit « qui lit ? » : l'invité est IMPOSÉ, même sans compte
+        // utilisateur (aucun jeton alors) — sans quoi Ket lirait sans frontière.
+        private readonly \App\Service\Workspace\InviteCourant $inviteCourant,
     ) {
     }
 
@@ -69,6 +72,9 @@ final class IdentiteDuTraitement
 
         $utilisateur = $invite->getUtilisateur();
         if ($utilisateur === null) {
+            // Aucun jeton possible : l'imposition seule dit qui lit.
+            $this->inviteCourant->imposer($invite);
+
             return;
         }
 
@@ -84,6 +90,8 @@ final class IdentiteDuTraitement
         $this->tokenStorage->setToken(
             new UsernamePasswordToken($utilisateur, 'main', $utilisateur->getRoles())
         );
+        // EN DERNIER : si ce qui précède échoue, rien n'est resté imposé dans le worker.
+        $this->inviteCourant->imposer($invite);
     }
 
     /**
@@ -98,5 +106,6 @@ final class IdentiteDuTraitement
     {
         $this->tokenStorage->setToken($this->jetonPrecedent);
         $this->jetonPrecedent = null;
+        $this->inviteCourant->relacher();
     }
 }

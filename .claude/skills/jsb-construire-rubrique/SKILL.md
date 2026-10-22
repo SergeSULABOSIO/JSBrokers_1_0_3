@@ -91,6 +91,7 @@ ici ou dans une skill sœur, la skill est corrigée **dans le même chantier**.
 | Source unique du métier | Étapes du pipe | `PisteTransformationScope.php` : seuil :55, `ETAPES` :85, `etapeDe` :122 | `JSBDynamicSearchServicePisteEtapesTest`, `AgregatPistesParEtapeTest` |
 | Outils Ket | Même règle, autre surface | `SaisirPropositionTool`, `SouscrireCotationTool`, `PreparerOperationsTool` ; manifeste `CouvertureDesEcrans.php:111-117` | `PariteEcranKetTest`, `KetPeripherePariteTest` |
 | Cloisonnement | Tout id venu de la requête | `AppartenanceAuCabinet.php:64`, :88, :132 | `CloisonnementDesIdentifiantsTest` + `SemisDeDeuxCabinetsTrait` |
+| Visibilité propre (exception à la frontière du cabinet) | Seulement Congés et Tâches ; posée par le serveur à CHAQUE porte (moteur, fiche en 404, collection, pastille, tableau de bord, Ket), jamais par un critère d'écran | `CongeVisibiliteScope`, `TacheVisibiliteScope` + bloc du moteur `JSBDynamicSearchService` (après le cloisonnement par cabinet), `ControllerUtilsTrait::exigerUneFicheVisible` | `TacheVisibiliteScopeTest`, `TacheVisibiliteFrontiereTest` |
 | Gestes sans code dans le HTML | Politique de sécurité du navigateur : aucun `on…=`, aucun `<script>` sans nonce | `geste_controller.js` (imprimer, fermer, arreter, soumettre, confirmer, naviguer, rechargerOnglet) ; `tableau-de-bord_controller.js` (liste fermée) ; `assets/gestes-autonomes.js` (pages sans Stimulus) | `GestesSansCodeTest`, `PolitiqueCspTest` |
 
 **Gestes et scripts d'un écran neuf** (chantier 9, politique dans `App\Security\Csp\PolitiqueCsp`) :

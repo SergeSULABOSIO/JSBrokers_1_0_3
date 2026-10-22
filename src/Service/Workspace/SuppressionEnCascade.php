@@ -3,8 +3,13 @@
 namespace App\Service\Workspace;
 
 use App\Echange\Service\Progression;
+use App\Entity\Document;
+use App\Entity\Entreprise;
+use App\Entity\Feedback;
 use App\Entity\Note;
 use App\Entity\Paiement;
+use App\Entity\Tache;
+use App\Services\Search\TacheVisibiliteScope;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -55,6 +60,9 @@ class SuppressionEnCascade
         private readonly CompositionDuGraphe $graphe,
         private readonly WorkspaceAccessResolver $acces,
         private readonly \App\Service\Monnaie\MonnaieDeTravail $monnaieDeTravail,
+        // LA FRONTIÈRE DES TÂCHES (décision de Serge du 2026-10-21) : on ne détruit ni ne
+        // détache ce qu'on ne voit pas — voir horsDeLaFrontiere().
+        private readonly TacheVisibiliteScope $tacheVisibilite,
     ) {
     }
 
@@ -106,6 +114,7 @@ class SuppressionEnCascade
             return PlanDeSuppression::refuse($classe, $id, $refusMonnaie, $libelles);
         }
 
+        $cabinet = method_exists($racine, 'getEntreprise') ? $racine->getEntreprise() : null;
         $aDetruire = [$classe => [$id => $id]];
         $aDetacher = [];
         $conservations = [];
@@ -137,6 +146,24 @@ class SuppressionEnCascade
                 }
             }
             $file = $nouvelles;
+        }
+
+        // LA FRONTIÈRE DES TÂCHES, SUR LE PLAN COMPLET — AVANT les exclusions : demander à
+        // « conserver » une pièce invisible ne doit rien apprendre de son existence. Si le plan
+        // touche l'invisible, il est refusé par ce SEUL motif générique : aucun autre refus,
+        // aucune exclusion, aucun détachement ni provenance qui en nommerait une trace.
+        if (($refusFrontiere = $this->horsDeLaFrontiere($cabinet, $classe, $aDetruire, $aDetacher, $provenance, $racine)) !== null) {
+            return new PlanDeSuppression(
+                racineClasse: $classe,
+                racineId: $id,
+                aDetruire: array_map('array_values', $aDetruire),
+                aDetacher: $aDetacher,
+                conservations: [],
+                refus: [$refusFrontiere],
+                libelles: $libelles,
+                provenance: $provenance,
+                verrous: [],
+            );
         }
 
         if ($exclusions !== null && !$exclusions->estVide()) {
@@ -171,6 +198,113 @@ class SuppressionEnCascade
             provenance: $provenance,
             verrous: $verrous,
         );
+    }
+
+    /**
+     * ON NE DÉTRUIT NI NE MODIFIE CE QU'ON NE VOIT PAS (décision de Serge du 2026-10-21).
+     *
+     * Si le plan détruit ou détache une tâche (ou un retour, une pièce qui n'existe que par
+     * elle) hors du cercle du lecteur, la suppression est REFUSÉE à tout non-administrateur.
+     * Le refus est GÉNÉRIQUE : ni nombre, ni type, ni niveau — il ne nomme que la fiche que
+     * l'utilisateur a lui-même désignée. Et l'aperçu ne compte que ce qu'il voit : les lignes
+     * invisibles sortent du plan (destructions ET détachements), et une provenance qui
+     * passait par elles est rattachée à la racine — le plan est refusé de toute façon.
+     *
+     * Contexte système (commande) et administrateur : la cascade complète.
+     *
+     * @param array<class-string, array<int, int>> $aDetruire
+     * @param array<int, array{classe: class-string, champ: string, ids: int[]}> $aDetacher
+     * @param array<class-string, array<int, string>> $provenance
+     */
+    private function horsDeLaFrontiere(?Entreprise $cabinet, string $classe, array &$aDetruire, array &$aDetacher, array &$provenance, string $racine): ?string
+    {
+        if ($cabinet === null) {
+            return null;
+        }
+        $lecteur = $this->tacheVisibilite->lecteur($cabinet);
+        if ($lecteur === false || ($lecteur !== null && $this->tacheVisibilite->voitTout($lecteur))) {
+            return null;
+        }
+
+        $invisible = false;
+        $retires = []; // « Court#id » des lignes invisibles
+        foreach ([Tache::class, Feedback::class, Document::class] as $fqcn) {
+            $touches = array_map('intval', array_values($aDetruire[$fqcn] ?? []));
+            foreach ($aDetacher as $detachement) {
+                if ($detachement['classe'] === $fqcn) {
+                    array_push($touches, ...array_map('intval', $detachement['ids']));
+                }
+            }
+            $touches = array_values(array_unique($touches));
+            if ($touches === []) {
+                continue;
+            }
+            $visibles = $this->idsVisibles($fqcn, $touches, $lecteur);
+            if (\count($visibles) === \count($touches)) {
+                continue;
+            }
+            $invisible = true;
+            $garder = static fn ($id): bool => \in_array((int) $id, $visibles, true);
+            foreach (array_diff($touches, $visibles) as $idInvisible) {
+                $retires[sprintf('%s#%d', $this->court($fqcn), $idInvisible)] = true;
+                unset($provenance[$fqcn][$idInvisible]);
+            }
+            if (isset($aDetruire[$fqcn])) {
+                $aDetruire[$fqcn] = array_filter($aDetruire[$fqcn], $garder);
+            }
+            foreach ($aDetacher as $i => $detachement) {
+                if ($detachement['classe'] === $fqcn) {
+                    $aDetacher[$i]['ids'] = array_values(array_filter($detachement['ids'], $garder));
+                }
+            }
+        }
+        if (!$invisible) {
+            return null;
+        }
+        $aDetacher = array_values(array_filter($aDetacher, static fn (array $d): bool => $d['ids'] !== []));
+        foreach ($provenance as $c => $parents) {
+            foreach ($parents as $idLigne => $parent) {
+                if (isset($retires[$parent])) {
+                    $provenance[$c][$idLigne] = $racine;
+                }
+            }
+        }
+
+        [$cette, $la] = self::DESIGNATIONS[$this->court($classe)] ?? ['Cette fiche', 'la'];
+
+        return sprintf(
+            '%s contient des éléments que vous ne pouvez pas gérer. Seul un administrateur peut %s supprimer.',
+            $cette,
+            $la,
+        );
+    }
+
+    /** La fiche DÉSIGNÉE par l'utilisateur, jamais ce qu'elle cache. */
+    private const DESIGNATIONS = [
+        'Piste' => ['Cette piste', 'la'],
+        'Cotation' => ['Cette cotation', 'la'],
+        'Client' => ['Ce client', 'le'],
+        'NotificationSinistre' => ['Ce sinistre', 'le'],
+        'OffreIndemnisationSinistre' => ['Cette offre', 'la'],
+        'Avenant' => ['Cette police', 'la'],
+        'Invite' => ['Ce collaborateur', 'le'],
+    ];
+
+    /**
+     * @param class-string $fqcn
+     * @param list<int>    $ids
+     * @return list<int>
+     */
+    private function idsVisibles(string $fqcn, array $ids, ?\App\Entity\Invite $lecteur): array
+    {
+        $qb = $this->em->createQueryBuilder()->select('e.id')->from($fqcn, 'e')
+            ->where('e.id IN (:idsFrontiere)')->setParameter('idsFrontiere', $ids);
+        $condition = $this->tacheVisibilite->conditionDql($qb, $this->court($fqcn), 'e', $lecteur, '_sup');
+        if ($condition !== null) {
+            $qb->andWhere($condition);
+        }
+
+        return array_map('intval', array_column($qb->getQuery()->getScalarResult(), 'id'));
     }
 
     /**

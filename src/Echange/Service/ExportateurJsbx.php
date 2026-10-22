@@ -10,9 +10,11 @@ use App\Entity\EchangeOccurrence;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Utilisateur;
+use App\Services\Search\TacheVisibiliteScope;
 use App\Services\VersionService;
 use App\Token\InsufficientTokensException;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\QueryBuilder;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Response;
@@ -50,6 +52,9 @@ final class ExportateurJsbx
         private readonly CompteurDOccurrences $compteur,
         private readonly VersionService $version,
         private readonly EntityManagerInterface $em,
+        // LA FRONTIÈRE DES TÂCHES s'applique aussi à l'export : hors d'un contexte système
+        // explicite (commande), aucune tâche — ni retour, ni pièce qui n'en dépend — ne sort.
+        private readonly TacheVisibiliteScope $tacheVisibilite,
     ) {
     }
 
@@ -224,11 +229,15 @@ final class ExportateurJsbx
         $offset = 0;
 
         while (true) {
-            $lot = $this->em->createQueryBuilder()
-                ->select('e')
-                ->from($ressource->fqcn, 'e')
-                ->andWhere('e.entreprise = :entreprise')
-                ->setParameter('entreprise', $entreprise)
+            $lot = $this->dansLaFrontiere(
+                $this->em->createQueryBuilder()
+                    ->select('e')
+                    ->from($ressource->fqcn, 'e')
+                    ->andWhere('e.entreprise = :entreprise')
+                    ->setParameter('entreprise', $entreprise),
+                $ressource,
+                $entreprise,
+            )
                 ->orderBy('e.id', 'ASC')
                 ->setFirstResult($offset)
                 ->setMaxResults(self::LOT)
@@ -254,11 +263,27 @@ final class ExportateurJsbx
     }
 
     /**
+     * La frontière des tâches sur une lecture de ressource. Ce service ne connaît que deux
+     * lecteurs : un contexte système déclaré (commande), qui lit tout ; et la règle de
+     * l'invité — y compris le jour où un export serait proposé à l'écran, qui n'ouvrira
+     * jamais le contexte système.
+     */
+    private function dansLaFrontiere(QueryBuilder $qb, RessourceDEchange $ressource, Entreprise $entreprise): QueryBuilder
+    {
+        $condition = $this->tacheVisibilite->conditionPourLeLecteur($qb, $ressource->fqcn, 'e', $entreprise, '_echange');
+        if ($condition !== null) {
+            $qb->andWhere($condition);
+        }
+
+        return $qb;
+    }
+
+    /**
      * Nombre total de lignes à écrire, tous périmètres confondus.
      *
-     * Des COUNT scopés au cabinet : c'est le dénominateur du pourcentage. Une ressource
-     * dont le comptage échoue est comptée pour zéro plutôt que de faire échouer
-     * l'export — un dénominateur imparfait vaut mieux qu'un export refusé.
+     * Des COUNT scopés au cabinet (et à la frontière des tâches) : c'est le dénominateur du
+     * pourcentage. Une ressource dont le comptage échoue est comptée pour zéro plutôt que de
+     * faire échouer l'export — un dénominateur imparfait vaut mieux qu'un export refusé.
      *
      * @param array<string, RessourceDEchange> $ressources
      */
@@ -267,11 +292,15 @@ final class ExportateurJsbx
         $total = 0;
         foreach ($ressources as $ressource) {
             try {
-                $total += (int) $this->em->createQueryBuilder()
-                    ->select('COUNT(e.id)')
-                    ->from($ressource->fqcn, 'e')
-                    ->andWhere('e.entreprise = :entreprise')
-                    ->setParameter('entreprise', $entreprise)
+                $total += (int) $this->dansLaFrontiere(
+                    $this->em->createQueryBuilder()
+                        ->select('COUNT(e.id)')
+                        ->from($ressource->fqcn, 'e')
+                        ->andWhere('e.entreprise = :entreprise')
+                        ->setParameter('entreprise', $entreprise),
+                    $ressource,
+                    $entreprise,
+                )
                     ->getQuery()
                     ->getSingleScalarResult();
             } catch (\Throwable) {

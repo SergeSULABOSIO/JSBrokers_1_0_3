@@ -61,6 +61,7 @@ class SoaContextBuilder
         private ServiceMonnaies $serviceMonnaies,
         private SaturationService $saturationService,
         private UrlGeneratorInterface $urlGenerator,
+        private \App\Services\Search\TacheVisibiliteScope $tacheVisibilite,
     ) {
     }
 
@@ -144,6 +145,9 @@ class SoaContextBuilder
             }
         }
 
+        // LA FRONTIÈRE DES TÂCHES : la section « Tâches » ne montre que celles qui concernent le
+        // lecteur (TacheVisibiliteScope) — le relevé ramasse celles de tout le dossier client.
+        $taches = $this->tacheVisibilite->filtrer($taches);
         foreach ($taches as $tache) {
             $this->canvasBuilder->loadAllCalculatedValues($tache);
         }

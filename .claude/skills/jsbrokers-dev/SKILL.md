@@ -53,6 +53,42 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
 - **ÉCART CONNU** (relevé au chantier 1, C5) : environ 36 contrôles d'appartenance sont encore
   écrits à la main (`getEntreprise() !== …` puis 404) au lieu d'`AppartenanceAuCabinet`. Ils
   refusent bien en 404 ; tout code touché à proximité les y ramène.
+- **La frontière est le cabinet ; exceptions à scope dédié : Congés (`CongeVisibiliteScope`) et
+  Tâches (`TacheVisibiliteScope`). Mon portefeuille reste un confort de lecture.** (Serge,
+  2026-10-21.)
+  - **Tâches** (avec leurs retours et documents) : un invité voit celles qui lui sont assignées
+    ou dont il est l'auteur, celles de son responsable (`Invite::manager`) et de ses assistants
+    directs (un seul niveau, assignées ou créées par eux), et celles sans exécutant ;
+    l'administrateur du cabinet (propriétaire ou délégué) voit tout. Posée par le SERVEUR à
+    chaque porte : moteur de recherche (listes, comptage, onglets, Ket, plan du jour) juste
+    après le cloisonnement par cabinet — critère qui traverse `taches` compris —,
+    fiche/enregistrement/suppression/clôture (404, `exigerUneFicheVisible`), rattachement d'un
+    retour ou d'une pièce (création ET déplacement), collections en mode `dialog` comme
+    `generic` et leurs pastilles, tableau de bord, relevé de compte, et chez Ket `lire_fiche`,
+    `statistiques`, `telecharger_documents` (`DescenteDesDocuments`), `attacher_fichier`,
+    enfants de collection ; compteur `tachesEnCours` ; origine affichée d'un document
+    (`DocumentFichier::parentDe`). Recalculée à chaque requête, aucun cache. Un document
+    rattaché AUSSI à une autre fiche reste visible par elle
+    (`TacheVisibiliteScope::AUTRES_RATTACHEMENTS_DU_DOCUMENT`, comparée aux métadonnées par
+    test). API unique : `visiblePourLeLecteur`, `filtrer`, `conditionPourLeLecteur`,
+    `cercleDuLecteur` — la conversion « lecteur → règle » n'est écrite que là.
+  - **Le lecteur : `InviteCourant`, ÉCHEC FERMÉ.** Sans utilisateur, ou connecté sans
+    invitation dans le cabinet : AUCUNE tâche (pas même celles sans exécutant). Le propriétaire
+    sans fiche d'invitation reste administrateur. Ket dans son worker : l'invité est IMPOSÉ
+    (`IdentiteDuTraitement::endosser`). Lire SANS frontière exige un **contexte système
+    explicite et nommé** (`InviteCourant::enContexteSysteme`), réservé à la ligne de commande et
+    au worker ; il REFUSE de s'ouvrir pendant une requête HTTP (ex. `app:echange:smoke`).
+  - **Export** : `ExportateurJsbx` applique la frontière. Un export proposé un jour À L'ÉCRAN
+    passera par la règle de l'invité, JAMAIS par le contexte système.
+  - **Suppression** (`SuppressionEnCascade::planifier`, plan final — écran, aperçu, dossier
+    lot par lot, Ket) : si le plan détruit ou DÉTACHE une tâche (retour, pièce) hors du
+    cercle, un non-administrateur est refusé — message GÉNÉRIQUE, sans nombre, type ni
+    niveau (« Cette piste contient des éléments que vous ne pouvez pas gérer. Seul un
+    administrateur peut la supprimer. ») ; l'aperçu ne compte que le visible.
+    L'administrateur garde la cascade complète. NB : supprimer un client DÉTACHE ses pistes
+    (il ne les détruit pas) ; le ricochet réel est piste → cotation → tâche.
+  - **L'auteur (`invite`) ne se réécrit jamais** : `OwnerEventSubscriber` ne le pose que s'il
+    est vide, et seulement avec un invité du cabinet de la fiche.
 - **« Mon portefeuille » est un confort de lecture, pas une frontière** : la frontière est le
   scoping entreprise, toujours appliqué. Confirmé par Serge le 2026-10-21 (option A) : le
   serveur n'impose pas le portefeuille, la chip est retirable par tous.
@@ -393,7 +429,7 @@ Inscrits le 2026-10-20 (décisions de Serge) :
     (`ux:icons:import`), garde-fou `IconesEcritesDansLeCodeVendoriseesTest` (src/ + assets/ ;
     `IconInvocationsVendoriseesTest` couvre les gabarits). **Règle** : une icône nouvelle s'importe
     et se versionne dans `assets/icons/` ; le test donne la commande exacte.
-15. **Restauration des onglets à l'identique** (règle de Serge : « après plantage, au moment de
+15. ✅ **FAIT (2026-10-21, `2ddfc46e`) — Restauration des onglets à l'identique** (règle de Serge : « après plantage, au moment de
     la restauration, tout doit être restauré à l'identique »). Chaque onglet restauré retrouve SES
     critères, chips, page et tri. Constat : `ui:search.submitted` ne porte que `{criteria}`, et le
     cerveau l'applique à l'onglet ACTIF (`_handleSearchRequest` → `_getActiveTabState()`) ; le chip

@@ -42,6 +42,19 @@ final class LireFicheTool implements AiToolInterface, AiToolDeComprehension
     ) {
     }
 
+    /**
+     * LA FRONTIÈRE DES TÂCHES (TacheVisibiliteScope) : les membres de collection qu'on montre
+     * au modèle obéissent à la même règle qu'à l'écran — une tâche (ou ses retours, documents)
+     * qui ne concerne pas le demandeur n'apparaît pas sous la piste qui la porte.
+     */
+    private ?\App\Services\Search\TacheVisibiliteScope $tacheVisibilite = null;
+
+    #[\Symfony\Contracts\Service\Attribute\Required]
+    public function setTacheVisibilite(\App\Services\Search\TacheVisibiliteScope $scope): void
+    {
+        $this->tacheVisibilite = $scope;
+    }
+
     public function name(): string
     {
         return 'lire_fiche';
@@ -315,6 +328,11 @@ final class LireFicheTool implements AiToolInterface, AiToolDeComprehension
             $membres = [];
             foreach ($entity->{$ce->getter}() as $membre) {
                 if (!is_object($membre) || !method_exists($membre, 'getId')) {
+                    continue;
+                }
+                // Échec fermé : sans la frontière injectée, une tâche (retour, document) ne sort pas.
+                if (\App\Services\Search\TacheVisibiliteScope::estSoumise($membre)
+                    && ($this->tacheVisibilite === null || !$this->tacheVisibilite->ficheVisible($membre, $scope->invite))) {
                     continue;
                 }
                 $membres[] = [
