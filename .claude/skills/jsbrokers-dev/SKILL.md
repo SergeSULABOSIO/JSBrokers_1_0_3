@@ -445,3 +445,19 @@ Inscrits le 2026-10-20 (décisions de Serge) :
       ou champ lu en direct dans un <form> (le détacher change l'envoi implicite par Entrée) ;
     - filet `assets/champs-de-recherche.js` : vide UNIQUEMENT ce que le navigateur a rempli
       (`:autofill`), jamais une valeur posée par l'application (contrainte du chantier 15).
+
+Inscrits le 2026-10-22 (décisions de Serge) :
+
+17. ✅ **FAIT (2026-10-22, `7f4f94c8`) — Tâches : frontière de visibilité.** Règles au §2.
+18. **Fichiers déposés HORS de `public/` — AVANT l'ouverture aux clients.** État prouvé : les
+    pièces (`Document`, mapping Vich `piece_sinistre_documents`) vivent dans
+    `public/uploads/documents` (3 976 fichiers en dev) ; seul un `.htaccess` (`Require all
+    denied`, chantier 13) les protège — vérifié en HTTP (403) sur une instance Apache qui lit
+    les `.htaccess` (`AllowOverride All`), mais la protection dépend de la configuration de
+    l'hébergeur. Noms `SmartUniqueNamer` : nom d'origine + `uniqid` (horloge) → en partie
+    devinables, et le nom d'origine fuit. Aussi sous `public/` : logos des cabinets
+    (`images/entreprises`, servis directement — voulu ?) et `pdfs` (écrit par un gestionnaire
+    de démonstration). Hors `public/` déjà : fichiers de Ket (`var/uploads/assistant*`), ZIP et
+    temporaires (`var/tmp`, `sys_get_temp_dir`). CIBLE : stockage hors de `public/`, fichiers
+    existants déplacés, téléchargement UNIQUEMENT par la route contrôlée (cabinet + scopes
+    Tâches et Congés). Plan soumis à Serge avant tout code.
