@@ -331,6 +331,33 @@ types d'absence…) est semé automatiquement. **Aucune fixture ne doit jamais
 6. Un export Excel, un message à Ket, la page `/nouveautes`.
 7. **Un second déploiement** : vérifier qu'on **reste connecté** après.
 
+### Fichiers déposés hors de la racine web *(chantier 18 — à passer après le déploiement qui l'apporte)*
+
+Les pièces vivent désormais dans `/home/josearac/joseara/var/uploads/documents` (jamais
+servies par URL) ; les logos dans `public/uploads/logos`. Lecture seule, sauf le point 6.
+
+1. **Rapport du déplacement** — dans le journal du déploiement, le bloc
+   `app:documents:deplacer` : `en échec : 0`. Le site ne rouvre pas autrement.
+2. **Sur le disque** (Terminal cPanel) :
+   ```bash
+   ls -la ~/joseara/var/uploads/documents      # les pièces y sont
+   ls -la ~/joseara/public/uploads/documents   # seulement .htaccess (et .gitkeep)
+   ```
+3. **Aucune URL ne sert une pièce** — avec le `nom_fichier_stocke` d'une pièce
+   (`SELECT nom_fichier_stocke FROM document WHERE nom_fichier_stocke IS NOT NULL LIMIT 1;`) :
+   `https://www.joseara.com/uploads/documents/<nom>` et
+   `https://www.joseara.com/_prive/pieces/<nom>` → **403 ou 404**, jamais le fichier.
+4. **La route contrôlée la sert** — depuis l'écran (onglet Documents d'une fiche), la pièce se
+   télécharge, sous son nom lisible.
+5. **Rien d'autre ne fuit** : `/.env`, `/composer.json`, `/var/` → **403 ou 404**.
+6. **Logo** — sur un cabinet d'essai, téléverser un PNG : il s'affiche, et son adresse est
+   `/uploads/logos/<32 caractères>.png`. Un SVG est **refusé** par le formulaire.
+7. **Sauvegarde** — cPanel → « Sauvegarde » (ou JetBackup) → restauration de fichiers : la
+   dernière copie doit contenir `/home/josearac/joseara/var/uploads/` **avec ses fichiers**.
+   ⚠ La sauvegarde de `bin/deploy.sh` ne couvre QUE la base (`db-*.sql.gz`) : les pièces ne
+   sont protégées que par celle de l'hébergeur.
+8. Supprimer la pièce d'essai.
+
 ---
 
 ## Publier depuis le poste Windows *(voie alternative)*

@@ -213,6 +213,20 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   `\RuntimeException`/`\Exception` nue, que le tri masquerait. Garde-fou :
   `tests/Security/MessagesDErreurTest.php` (inventaire motivé des `getMessage()` de `src/`).
 - Les cookies s'écrivent et se lisent par `assets/controllers/cookies.js`, et nulle part ailleurs.
+- **Fichiers déposés** (chantier 18) — on les sert, on ne les publie jamais :
+  - les PIÈCES vivent dans `app.dossier_des_pieces` (`var/uploads/documents`), HORS de la
+    racine web ; le code n'y accède que par `DocumentFichier::chemin()` (aucun chemin écrit
+    en dur — `TeleversementsInertesTest`). Les LOGOS seuls sont publics, dans
+    `public/uploads/logos` (`.htaccess` : images seulement, `sandbox`, `nosniff`).
+  - Tout fichier déposé est servi par `ReponseDePiece` : téléchargé, sauf affichage demandé
+    ET type RÉEL (lu dans le contenu) PDF/PNG/JPEG/GIF/WebP ; `nosniff` + `sandbox` sur
+    chaque réponse ; nom d'origine nettoyé et encodé RFC 5987. Jamais `DownloadHandler`.
+  - Nouveau mapping Vich : hors de `public/` (`StockageDesPiecesTest` refuse le contraire,
+    logos exceptés), nommeur `App\Service\Document\NomAleatoire` — qui doit rester PUBLIC
+    dans `services.yaml`, sinon tout dépôt échoue.
+  - Un test qui dépose un fichier lit le vrai dossier : `tests/Support/DossierDesPieces`.
+  - E2E sur les fichiers : une instance Apache qui LIT les `.htaccess` (`AllowOverride All`,
+    `mod_rewrite`/`mod_headers`) — l'instance E2E habituelle les ignore et répondrait 200.
 - Asset Mapper : aucune compilation. En dev, rien à builder ; en E2E, ne pas laisser `public/assets`.
 - **CSP** (chantier 9, politique dans `App\Security\Csp\PolitiqueCsp`, nulle part ailleurs) :
   - tout `<script>` inline porte `nonce="{{ csp_nonce() }}"`, et `importmap()` reçoit
@@ -449,15 +463,11 @@ Inscrits le 2026-10-20 (décisions de Serge) :
 Inscrits le 2026-10-22 (décisions de Serge) :
 
 17. ✅ **FAIT (2026-10-22, `7f4f94c8`) — Tâches : frontière de visibilité.** Règles au §2.
-18. **Fichiers déposés HORS de `public/` — AVANT l'ouverture aux clients.** État prouvé : les
-    pièces (`Document`, mapping Vich `piece_sinistre_documents`) vivent dans
-    `public/uploads/documents` (3 976 fichiers en dev) ; seul un `.htaccess` (`Require all
-    denied`, chantier 13) les protège — vérifié en HTTP (403) sur une instance Apache qui lit
-    les `.htaccess` (`AllowOverride All`), mais la protection dépend de la configuration de
-    l'hébergeur. Noms `SmartUniqueNamer` : nom d'origine + `uniqid` (horloge) → en partie
-    devinables, et le nom d'origine fuit. Aussi sous `public/` : logos des cabinets
-    (`images/entreprises`, servis directement — voulu ?) et `pdfs` (écrit par un gestionnaire
-    de démonstration). Hors `public/` déjà : fichiers de Ket (`var/uploads/assistant*`), ZIP et
-    temporaires (`var/tmp`, `sys_get_temp_dir`). CIBLE : stockage hors de `public/`, fichiers
-    existants déplacés, téléchargement UNIQUEMENT par la route contrôlée (cabinet + scopes
-    Tâches et Congés). Plan soumis à Serge avant tout code.
+18. 🔶 **EN COURS — Fichiers déposés HORS de `public/` (avant l'ouverture aux clients).** Fait :
+    `ca92cf77` (code mort `public/pdfs` retiré), `37c056d9` (emplacement à source unique),
+    `2a6fb035` (réponse durcie), `07320285` (pièces dans `var/uploads/documents`, logos dans
+    `public/uploads/logos`, noms aléatoires, `app:documents:deplacer` lancée par le déploiement
+    sous maintenance). Reste : commit 6 — case « Partagée avec le client » sur la pièce
+    (option (c) de Serge, décochée par défaut) : le relevé public `/soa/{token}` ne liste et ne
+    sert QUE les pièces partagées. Production : application dans `/home/josearac/joseara`
+    (compte `josearac`) ; `public/pdfs` n'y a jamais existé.
