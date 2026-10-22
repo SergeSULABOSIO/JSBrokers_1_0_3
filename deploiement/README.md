@@ -414,7 +414,7 @@ deux cas ci-dessus.
 Ce qu'un retour arrière **ne défait pas** : les fichiers téléversés depuis la
 sauvegarde, et les migrations dépourvues de `down()`.
 
-⚠ **Revenir AVANT le chantier 18 (commit `07320285`)** : l'ancien code cherche les
+⚠ **Revenir AVANT le chantier 18 (commit `fd0d2aa9`)** : l'ancien code cherche les
 pièces dans `public/uploads/documents` et les logos dans `public/images/entreprises`
 — ils n'y sont plus (déplacés vers `var/uploads/documents` et `public/uploads/logos`).
 Toutes les pièces deviendraient introuvables. Il n'existe pas de commande inverse : un

@@ -101,8 +101,8 @@ supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
 
 0. ~~Assiette et source unique de la commission~~ — **fait** (décisions du 2026-10-15 ; §4,
    invariant acquis ; détail des trois écarts dans `reglementation-rdc-arca` §6). Une taxe ne
-   sert jamais d'assiette (`310a724f`) ; une seule règle de tarif, `TarifDuRevenu`, dans
-   l'ordre facturé (`63a9d85d`) ; l'assiette est la **somme** des lignes du chargement cible.
+   sert jamais d'assiette (`5c6b2e3e`) ; une seule règle de tarif, `TarifDuRevenu`, dans
+   l'ordre facturé (`b5dd6277`) ; l'assiette est la **somme** des lignes du chargement cible.
    Mesure en production : aucun cas sur les trois écarts, donc aucun historique à reprendre.
    (Un épinglage « forfait = montant facturé » a été écarté : un renouvellement recopie le
    forfait du revenu — `MouvementAvenantBuilder::revenusReconduits` — et l'aurait figé pour
@@ -127,8 +127,8 @@ supprimée (§7) : ces règles n'ont plus qu'un exemplaire.
    (`ControllerUtilsTrait::exigerLaLectureDesNotes`). Test : `ExporterEtatPdfTest`.
 6. ~~Émission d'une note : numéro et montants figés~~ — **fait** (règle OHADA, décisions du
    2026-10-15 et du 2026-10-16 ; §5, trois invariants acquis). Numéro à la validation
-   (`9032c97c`), montants figés (`b8ddf2fa`), intangibilité et écart à facturer / à créditer
-   (`3707bbeb`), conservation et archive avant purge (`47a520d4`). Mesure en production avant
+   (`f7b164c3`), montants figés (`378d3a9c`), intangibilité et écart à facturer / à créditer
+   (`c98e2749`), conservation et archive avant purge (`b0878a28`). Mesure en production avant
    livraison : une seule note validée, aucun trou, aucun doublon. Après le déploiement du
    2026-10-16, `app:notes:figer --confirmer` a figé `N1790767662318` à 11,60 (contrôle 0,00,
    entièrement réglée).

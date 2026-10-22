@@ -27,7 +27,7 @@
 #    chantier 18), var/uploads/assistant et assistant-documents (fichiers de Ket)
 #    sont référencés en base. Seul var/cache est jetable, et « cache:clear » s'en
 #    charge proprement.
-#  · RETOUR ARRIÈRE au-delà du chantier 18 (commit 07320285) : l'ancien code lit
+#  · RETOUR ARRIÈRE au-delà du chantier 18 (commit fd0d2aa9) : l'ancien code lit
 #    les pièces dans public/uploads/documents — elles n'y sont plus. Voir
 #    deploiement/README.md, « Revenir en arrière ».
 # =============================================================================

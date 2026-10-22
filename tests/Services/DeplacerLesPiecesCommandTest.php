@@ -161,6 +161,19 @@ final class DeplacerLesPiecesCommandTest extends KernelTestCase
         self::assertStringContainsString('phpunit-orphelin.txt', $testeur->getDisplay());
     }
 
+    /** Le dossier des logos est public : un ancien logo à l'extension hors liste n'y entre pas. */
+    public function testUnAncienLogoALExtensionHorsListeNEntrePasDansLeDossierPublic(): void
+    {
+        $this->referencer([], 'ancien-logo.php');
+        $source = $this->deposer('anciensLogos', 'ancien-logo.php', 'GIF89a…');
+
+        $testeur = $this->lancer(true);
+
+        self::assertSame(Command::FAILURE, $testeur->getStatusCode());
+        self::assertFileDoesNotExist($this->racine . '/logos/ancien-logo.php');
+        self::assertFileExists($source, 'rien n’est supprimé');
+    }
+
     public function testUnSeulEchecEtAucunOriginalNEstSupprime(): void
     {
         $bon = 'phpunit-c-' . bin2hex(random_bytes(4)) . '.pdf';

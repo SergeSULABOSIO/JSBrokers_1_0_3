@@ -37,7 +37,7 @@ ci-dessous est remplie dans le plan (fiche de rubrique, case « États »), écr
 | 409 — règle métier | Le refus explique et propose le geste possible | `NoteIntangible` (`ControllerUtilsTrait.php:1780`) ; suppression refusée (mémoire « Suppression refusée = 409 qui explique ») |
 | Sans droit | Lecture seule ; action ABSENTE (pas grisée sans explication) | `accessDeniedJson` (`ControllerUtilsTrait.php:277`, :1759) ; `_access_denied.html.twig` ; `droit` sur chaque `attribute_action` ; test `PisteVueCartesTest::testSansDroitDEcritureAucuneActionNEstProposee` |
 | Solde de jetons épuisé | 402, rien n'est enregistré, la saisie reste possible | `tokensBlockedJson` (`ControllerUtilsTrait.php:536`) ; `dry_run` non facturé (:1922) |
-| Plafonné | Le chiffre dit qu'il est plafonné (« + de USD 900 000 ») | `plafond_transformees` (`PisteListCanvasProvider.php:100`) ; infobulle `_tableau.html.twig:28-29` ; commit `7e10482d` |
+| Plafonné | Le chiffre dit qu'il est plafonné (« + de USD 900 000 ») | `plafond_transformees` (`PisteListCanvasProvider.php:100`) ; infobulle `_tableau.html.twig:28-29` ; commit `93f949d6` |
 | Élément masqué par un filtre | Après enregistrement : avertissement qui nomme le filtre + « Retirer ce filtre » | `verifierLaFicheEnregistree` (`ControllerUtilsTrait.php:1043`) ; `fiche-hors-filtre.js:45` ; `cerveau_controller.js:1256` ; test `fiche-hors-filtre.test.mjs` |
 | Après enregistrement | Toast de succès ; aucun commentaire si rien n'a été enregistré | `messageDEtape` (`vue-cartes-regles.js:85-96`) : fiche fermée sans enregistrement → aucun message |
 | Après F5 | Onglet, vue, chips, critères et sélection restaurés | cookie de vue `preparerLaVueCartes` (`ControllerUtilsTrait.php:1267`) ; `criteres-persistes.js` ; `choix-persiste.js` ; `echange-perimetre-persiste.js` ; tests `selection-persistee.test.mjs`, `criteres-persistes.test.mjs`, `premier-rendu.test.mjs` |
@@ -49,20 +49,20 @@ l'échelon de `SKILL.md` §5.
 
 - **Cartes restées grisées** : `aria-busy` retiré seulement à l'arrivée de nouvelles cartes ;
   le pipe restait gris après une bascule Liste → Cartes. Il s'éteint désormais avec
-  `app:loading.stop` (`03e5f6b0` ; `vue-cartes_controller.js:47-48`).
+  `app:loading.stop` (`300ed88a` ; `vue-cartes_controller.js:47-48`).
 - **Piste créée invisible sous « Mon portefeuille »** : le toast disait « réussi », la liste
   rafraîchie (sous le filtre) ne la montrait pas. Le serveur dit désormais quel filtre l'écarte
-  (`03e5f6b0`). Réflexe : lire le SQL du journal (`var/log/dev.log`) avant de soupçonner le JS.
+  (`300ed88a`). Réflexe : lire le SQL du journal (`var/log/dev.log`) avant de soupçonner le JS.
 - **Carte décochée après F5** : la sélection reposée par programme ne déclenche pas `change` ;
-  la carte se recale sur `app:context.changed` (`03e5f6b0`). Même famille : la sélection ne
-  revenait pas après F5 sur la liste (`9520f6f9`).
+  la carte se recale sur `app:context.changed` (`300ed88a`). Même famille : la sélection ne
+  revenait pas après F5 sur la liste (`62d7ebde`).
 - **Toast de reproche après une simple annulation** : une fiche fermée sans rien enregistrer ne
   commente rien (`vue-cartes-regles.js:78-79`, :86-88). Commit d'origine : **À CONFIRMER
-  (Serge)** — la règle est née avec la vue Cartes (`a830dd89`).
+  (Serge)** — la règle est née avec la vue Cartes (`2efcce3c`).
 - **Chips vidés en silence dans tous les cabinets** par un `NOT IN` qui recevait un NULL
-  (`9520f6f9`) : un état « vide » faux est pire qu'une erreur.
+  (`62d7ebde`) : un état « vide » faux est pire qu'une erreur.
 - **Onglet contextuel vide jusqu'à « Réinitialiser »** : il appliquait les filtres par défaut
-  de la rubrique à la fiche ouverte (`03e5f6b0`).
+  de la rubrique à la fiche ouverte (`300ed88a`).
 
 ## 4. Checklist
 

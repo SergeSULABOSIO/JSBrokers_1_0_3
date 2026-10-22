@@ -119,7 +119,7 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
 - **Tout contenu dynamique est échappé.** Twig échappe par défaut : jamais `|raw` sur une donnée
   saisie. En JS, une donnée se pose par `textContent`, jamais par `innerHTML` ni par une chaîne
   HTML — infobulles comprises (modèle : `infobulle_controller.js`, contenu construit par
-  `textContent`). Incident (`03e5f6b0`) : les infobulles « pistes » et « renouvellements » du
+  `textContent`). Incident (`300ed88a`) : les infobulles « pistes » et « renouvellements » du
   tableau de bord injectaient leurs valeurs en HTML (`dataset` décode l'attribut) ; un nom de
   piste piégé s'exécutait au survol, malgré le `|e` du gabarit (corrigé `assets/app.js:1744`
   et `:1979`).
@@ -224,6 +224,16 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   - Nouveau mapping Vich : hors de `public/` (`StockageDesPiecesTest` refuse le contraire,
     logos exceptés), nommeur `App\Service\Document\NomAleatoire` — qui doit rester PUBLIC
     dans `services.yaml`, sinon tout dépôt échoue.
+  - **ÉCART ACCEPTÉ (Serge, 2026-10-22)** : le verrou des logos est une LISTE DE REFUS (types
+    actifs refusés), pas « images seulement » — un « tout refuser puis autoriser les images »
+    par `<FilesMatch>` n'est pas éprouvé sous LiteSpeed, et un échec y couperait tous les
+    logos. Condition, tenue par `StockageDesPiecesTest` : le téléversement de logo (mapping
+    `entreprises`, `NomAleatoire::pourUnLogo` — extension tirée du CONTENU, png/jpg/gif/webp)
+    est le seul code qui ÉCRIT dans `public/uploads/logos` ; tout autre code qui y touche est
+    motivé dans le test. Filet : `sandbox` + `nosniff` sur chaque réponse.
+  - `public/uploads/` est ignoré par git EN BLOC (verrous et `.gitkeep` exceptés) : des pièces
+    y avaient été commitées par le passé, dans un dépôt public — purgées de l'historique le
+    2026-10-22 (réécriture `git filter-repo`, tous les SHA postérieurs au 2025-08-29 changés).
   - Un test qui dépose un fichier lit le vrai dossier : `tests/Support/DossierDesPieces`.
   - E2E sur les fichiers : une instance Apache qui LIT les `.htaccess` (`AllowOverride All`,
     `mod_rewrite`/`mod_headers`) — l'instance E2E habituelle les ignore et répondrait 200.
@@ -443,7 +453,7 @@ Inscrits le 2026-10-20 (décisions de Serge) :
     (`ux:icons:import`), garde-fou `IconesEcritesDansLeCodeVendoriseesTest` (src/ + assets/ ;
     `IconInvocationsVendoriseesTest` couvre les gabarits). **Règle** : une icône nouvelle s'importe
     et se versionne dans `assets/icons/` ; le test donne la commande exacte.
-15. ✅ **FAIT (2026-10-21, `2ddfc46e`) — Restauration des onglets à l'identique** (règle de Serge : « après plantage, au moment de
+15. ✅ **FAIT (2026-10-21, `d6dedf8e`) — Restauration des onglets à l'identique** (règle de Serge : « après plantage, au moment de
     la restauration, tout doit être restauré à l'identique »). Chaque onglet restauré retrouve SES
     critères, chips, page et tri. Constat : `ui:search.submitted` ne porte que `{criteria}`, et le
     cerveau l'applique à l'onglet ACTIF (`_handleSearchRequest` → `_getActiveTabState()`) ; le chip
@@ -462,10 +472,10 @@ Inscrits le 2026-10-20 (décisions de Serge) :
 
 Inscrits le 2026-10-22 (décisions de Serge) :
 
-17. ✅ **FAIT (2026-10-22, `7f4f94c8`) — Tâches : frontière de visibilité.** Règles au §2.
+17. ✅ **FAIT (2026-10-22, `38fec8ca`) — Tâches : frontière de visibilité.** Règles au §2.
 18. 🔶 **EN COURS — Fichiers déposés HORS de `public/` (avant l'ouverture aux clients).** Fait :
-    `ca92cf77` (code mort `public/pdfs` retiré), `37c056d9` (emplacement à source unique),
-    `2a6fb035` (réponse durcie), `07320285` (pièces dans `var/uploads/documents`, logos dans
+    `040f7293` (code mort `public/pdfs` retiré), `67fe84a3` (emplacement à source unique),
+    `3311e0c0` (réponse durcie), `fd0d2aa9` (pièces dans `var/uploads/documents`, logos dans
     `public/uploads/logos`, noms aléatoires, `app:documents:deplacer` lancée par le déploiement
     sous maintenance). Reste : commit 6 — case « Partagée avec le client » sur la pièce
     (option (c) de Serge, décochée par défaut) : le relevé public `/soa/{token}` ne liste et ne

@@ -83,6 +83,40 @@ final class StockageDesPiecesTest extends KernelTestCase
         }
     }
 
+    /**
+     * LE DOSSIER DES LOGOS EST PUBLIC, ET SON VERROU EST UNE LISTE DE REFUS (écart accepté par
+     * Serge, LiteSpeed). La condition : le TÉLÉVERSEMENT DE LOGO est le seul code qui y ÉCRIT
+     * (mapping Vich `entreprises`, nommeur `NomAleatoire::pourUnLogo` — liste fermée), le reste
+     * du code n'y touche que pour des raisons nommées ci-dessous.
+     */
+    public function testSeulLeTeleversementDeLogoEcritDansLeDossierDesLogos(): void
+    {
+        $motifs = [
+            'NotePdf.php' => 'LIT le logo pour le PDF de la note',
+            'ServiceSuppressionEntreprise.php' => 'SUPPRIME le logo d\'un cabinet supprimé',
+            'DeplacerLesPiecesCommand.php' => 'COPIE les anciens logos, extensions de la liste fermée seulement (testé)',
+        ];
+        $touchent = [];
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(self::RACINE . '/src', \FilesystemIterator::SKIP_DOTS)) as $f) {
+            if ($f->getExtension() === 'php' && preg_match('#dossier_des_logos|uploads/logos#', (string) file_get_contents($f->getPathname()))) {
+                $touchent[] = $f->getFilename();
+            }
+        }
+        sort($touchent);
+        $permis = array_keys($motifs);
+        sort($permis);
+        self::assertSame($permis, $touchent, 'Un nouveau code touche au dossier public des logos : le motiver ici, ou passer par le téléversement.');
+
+        // Et le téléversement lui-même : seul mapping vers ce dossier, nommeur à liste fermée.
+        $mappings = Yaml::parseFile(self::RACINE . '/config/packages/vich_uploader.yaml')['vich_uploader']['mappings'];
+        $versLogos = array_keys(array_filter($mappings, static fn (array $m): bool => str_contains((string) $m['upload_destination'], 'dossier_des_logos')));
+        self::assertSame(['entreprises'], $versLogos);
+        self::assertSame(['png', 'jpg', 'gif', 'webp'], NomAleatoire::EXTENSIONS_DES_LOGOS);
+        foreach (DeplacerLesPiecesCommand::EXTENSIONS_DE_LOGO as $extension) {
+            self::assertContains($extension === 'jpeg' ? 'jpg' : $extension, NomAleatoire::EXTENSIONS_DES_LOGOS);
+        }
+    }
+
     /** Aucun gabarit n'écrit l'adresse d'un logo : Vich la donne (vich_uploader_asset). */
     public function testAucuneAdresseDeLogoEcriteEnDurDansLesGabarits(): void
     {

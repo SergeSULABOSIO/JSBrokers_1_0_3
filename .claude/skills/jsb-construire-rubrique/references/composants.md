@@ -149,10 +149,10 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
 ## 3. Anti-modèles vécus dans ce projet
 
 - **`saveCookie` dupliqué et faux** : recopié dans `base_controller.js` et `app.js`, il
-  préfixait la valeur et posait une expiration invalide. Une seule porte depuis `1131705c`
+  préfixait la valeur et posait une expiration invalide. Une seule porte depuis `97a9c2a0`
   (`cookies.js:4-14`).
 - **Infobulles du tableau de bord non échappées** : valeurs injectées en HTML, un nom de piste
-  piégé s'exécutait au survol (`03e5f6b0`).
+  piégé s'exécutait au survol (`300ed88a`).
 - **Composants dupliqués encore présents** (chantier 3 de `jsbrokers-dev`) : quatre infobulles
   (`infobulle` / `.jsb-ctx-tip` ; `#db-meta-tip` et `data-renew-tip` dans `assets/app.js` ;
   `soa-section-tip` dans `soa-context-menu_controller.js`) et quatre menus contextuels

@@ -52,6 +52,9 @@ final class DeplacerLesPiecesCommand extends Command
         'stockcake-stock-market-frenzy-1728165108-676de97bde631598424533.jpg',
     ];
 
+    /** Les extensions admises dans le dossier PUBLIC des logos (`jpeg` : anciens noms). */
+    public const EXTENSIONS_DE_LOGO = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
+
     public function __construct(
         private readonly EntityManagerInterface $em,
         #[Autowire('%app.ancien_dossier_des_pieces%')]
@@ -106,6 +109,12 @@ final class DeplacerLesPiecesCommand extends Command
                 $nom = (string) $nom;
                 if ($nom !== basename($nom)) {
                     $rapport['echecs'][] = sprintf('%s : nom refusé (%s).', $libelle, $nom);
+                    continue;
+                }
+                // Le dossier des logos est PUBLIC : n'y entre qu'une extension de la liste fermée
+                // (un ancien nom gardait l'extension ANNONCÉE). Sinon : échec, à traiter à la main.
+                if ($libelle === 'Logos' && !\in_array(strtolower(pathinfo($nom, PATHINFO_EXTENSION)), self::EXTENSIONS_DE_LOGO, true)) {
+                    $rapport['echecs'][] = sprintf('%s : « %s » n\'a pas une extension d\'image admise (%s).', $libelle, $nom, implode(', ', self::EXTENSIONS_DE_LOGO));
                     continue;
                 }
                 $de = $source . '/' . $nom;

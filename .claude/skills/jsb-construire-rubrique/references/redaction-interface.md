@@ -72,18 +72,18 @@ faire.
 ## 3. Anti-modèles vécus dans ce projet
 
 - **« USD » en dur dans `PisteType`** sur les deux montants : mentait à tout cabinet qui compte
-  dans une autre monnaie. Monnaie d'affichage du cabinet depuis `9520f6f9`
+  dans une autre monnaie. Monnaie d'affichage du cabinet depuis `62d7ebde`
   (`PisteType.php:42-45`). Restent des replis `'USD'` et `format_montant` à `'$'` par défaut —
   chantier 5 de `jsbrokers-dev`.
 - **« Transformée (Souscrite) » contre « Transformées »** : la sous-ligne ne parlait pas la
-  langue du chip. Un seul libellé, en badge coloré, depuis `a4cc2500`
+  langue du chip. Un seul libellé, en badge coloré, depuis `2809442f`
   (`PisteListCanvasProvider.php:30-33`).
 - **« Nouvelle » pour une piste de 200 jours** : commit introuvable dans l'historique,
   **À CONFIRMER (Serge)**. La carte affiche aujourd'hui l'ancienneté de la dernière activité
   (« N j », `_carte_piste.html.twig:68-71`).
 - **« Rien à facturer » sans le reste à encaisser** : une énigme devant une échéance que la
-  liste annonce exigible. Corrigé par `9d850466` (`_facturation_picker.html.twig:13-14`, :100-102).
-- **« Total » à côté de « 1–20 sur 42 »** : c'était la somme de la page (`9520f6f9`).
+  liste annonce exigible. Corrigé par `d67fbd91` (`_facturation_picker.html.twig:13-14`, :100-102).
+- **« Total » à côté de « 1–20 sur 42 »** : c'était la somme de la page (`62d7ebde`).
 - **Messages « mécaniques »** (« Relation obligatoire à préciser (identifiant) ») : nom de
   propriété et terme de stockage, sans la colonne (mémoire « Messages en langage du métier »).
 

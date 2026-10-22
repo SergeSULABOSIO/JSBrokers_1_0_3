@@ -232,7 +232,7 @@ AssistantParametres) n'ont que le menu. D'ici l'unification : **les deux déclar
 identiques**, et aucune icône n'est écrite en dur dans un gabarit.
 
 **Anti-modèle.** `texte_principal.icone = mdi:road-variant` sur la liste des Pistes : lue par
-personne, retirée (`9520f6f9` ; `PisteListCanvasProvider.php:26-28`).
+personne, retirée (`62d7ebde` ; `PisteListCanvasProvider.php:26-28`).
 
 **Tests.** `IconAliasVendorisationTest` et `IconInvocationsVendoriseesTest` restent verts.
 **Test prescrit, pas encore écrit** (décision de Serge, 2026-10-16) : au premier chantier de

@@ -109,7 +109,7 @@ catégories Vie + 29 IARD = 43, « Risques pétroliers » en doublon dans le tex
 - **Barème de 2024, sans indice d'un barème antérieur.** Les 43 valeurs coïncident avec le
   005/24, y compris ses distinctions fines (Incendie *MRH* 25 % / *Autres* 16 %, Accidents
   corporels et Maladies *Individuelle* / *Groupe*, Automobile *RC* / *Dommages* et *Flotte*
-  11 %). Le fichier est né le 2026-06-16 (`0eb7b06d`), après la signature du règlement
+  11 %). Le fichier est né le 2026-06-16 (`b07d72f7`), après la signature du règlement
   (2024-12-20). ⚠ Le texte du 25 mai 2018 n'étant pas en référence, on ne peut pas exclure que
   certaines valeurs y soient identiques : la coïncidence prouve l'accord avec 2024, pas
   l'absence de reprise de 2018.
@@ -145,7 +145,7 @@ de frais accessoires + 1 840 de TVA + 230 d'ARCA, risque à 15 %.
   **conforme**. *À confirmer auprès de l'ARCA en cas de contrôle.* (La lecture large — toute la
   prime hors taxes — aurait donné 11 500 × 15 % = 1 725, soit 225 de plus dans l'épreuve ; elle
   n'est PAS retenue.)
-- ✅ **Écart 1 RÉSOLU** (`310a724f`) : le sélecteur n'offre plus de taxe (ni de chargement
+- ✅ **Écart 1 RÉSOLU** (`5c6b2e3e`) : le sélecteur n'offre plus de taxe (ni de chargement
   d'un autre cabinet) et une garde serveur refuse, écran comme Ket (`AssietteDeLaCommissionTest`).
   Constat d'origine : **un chargement de TAXE pouvait servir d'assiette.** Le champ « Chargement cible »
   (`TypeRevenuType.php:56-62`) n'est filtré sur aucune fonction : un type à 10 % visant la TVA
