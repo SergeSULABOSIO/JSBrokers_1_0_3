@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
  *
  * - public/uploads/documents : l'application les sert TOUTES par son contrôleur (droits,
  *   cabinet, pièce jointe — DocumentController::downloadApi). L'accès direct par URL est fermé.
- * - public/images/entreprises : les logos, montrés par <img>. Le formulaire n'accepte que des
+ * - public/uploads/logos (chantier 18 ; avant : public/images/entreprises) : les logos, montrés par <img>. Le formulaire n'accepte que des
  *   images matricielles (le SVG peut porter du script) ; le dossier ne sert que des images, sous
  *   une politique `sandbox` qui interdit tout script même si un fichier passait.
  *
@@ -101,9 +101,17 @@ class TeleversementsInertesTest extends KernelTestCase
         self::assertSame(1, $code, 'public/uploads/documents/.htaccess est ignoré par git : il ne partirait pas en production (exception à garder dans .gitignore).');
     }
 
-    public function testLeDossierDesLogosRefuseLesTypesActifsSousSandbox(): void
+    /** @return iterable<string, array{string}> */
+    public static function dossiersDImages(): iterable
     {
-        $htaccess = (string) @file_get_contents(self::RACINE . '/public/images/entreprises/.htaccess');
+        yield 'logos déposés (chantier 18)' => ['public/uploads/logos'];
+        yield 'images de marque' => ['public/images/entreprises'];
+    }
+
+    /** @dataProvider dossiersDImages */
+    public function testLeDossierDesLogosRefuseLesTypesActifsSousSandbox(string $dossier): void
+    {
+        $htaccess = (string) @file_get_contents(self::RACINE . '/' . $dossier . '/.htaccess');
 
         // Les types ACTIFS refusés — et pas « tout refuser puis accorder les images », dont
         // la levée n'est pas éprouvée sous LiteSpeed (un échec couperait tous les logos).

@@ -2,18 +2,20 @@ vich_uploader:
   db_driver: orm
 
   mappings:
-    # Le nom de notre mapping, que nous utiliserons dans l'entité
+    # LES PIÈCES DÉPOSÉES (Document) — HORS de public/ (chantier 18) : aucune URL ne les
+    # atteint ; seules les routes contrôlées les servent (ReponseDePiece). `uri_prefix` n'est
+    # là que parce que Vich l'exige : aucune page ne doit construire cette adresse.
     piece_sinistre_documents:
-      # Le chemin web pour accéder aux fichiers (pour les téléchargements)
-      uri_prefix: /uploads/documents
-      # Le dossier sur le serveur où les fichiers seront stockés
+      uri_prefix: /_prive/pieces
       upload_destination: "%app.dossier_des_pieces%"
-      namer: Vich\UploaderBundle\Naming\SmartUniqueNamer
+      namer: App\Service\Document\NomAleatoire
 
+    # LES LOGOS des cabinets : publics (montrés par <img>), dans leur propre dossier, séparé
+    # des images de marque suivies par git ; noms aléatoires.
     entreprises:
-      uri_prefix: /images/entreprises
-      upload_destination: "%kernel.project_dir%/public/images/entreprises"
-      namer: Vich\UploaderBundle\Naming\SmartUniqueNamer
+      uri_prefix: /uploads/logos
+      upload_destination: "%app.dossier_des_logos%"
+      namer: App\Service\Document\NomAleatoire
 
       inject_on_load: false
       delete_on_update: true

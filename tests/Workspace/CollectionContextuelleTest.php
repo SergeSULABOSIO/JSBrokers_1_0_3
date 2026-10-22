@@ -67,7 +67,7 @@ class CollectionContextuelleTest extends WebTestCase
         $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email = :e', ['e' => self::OWNER]);
 
         // Les binaires d'abord, et par leur VRAI nom : Vich renomme le fichier déposé.
-        $dossier = static::getContainer()->getParameter('kernel.project_dir') . '/public/uploads/documents';
+        $dossier = \App\Tests\Support\DossierDesPieces::chemin(static::getContainer());
         $stockes = $conn->fetchFirstColumn(
             'SELECT d.nom_fichier_stocke FROM document d JOIN entreprise e ON d.entreprise_id = e.id WHERE e.nom = :nom',
             ['nom' => self::ENT],

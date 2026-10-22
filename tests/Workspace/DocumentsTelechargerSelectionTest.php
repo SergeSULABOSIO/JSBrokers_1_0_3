@@ -61,7 +61,7 @@ class DocumentsTelechargerSelectionTest extends WebTestCase
 
     private function dossierUploads(): string
     {
-        return static::getContainer()->getParameter('kernel.project_dir') . '/public/uploads/documents';
+        return \App\Tests\Support\DossierDesPieces::chemin(static::getContainer());
     }
 
     private function cleanUp(): void

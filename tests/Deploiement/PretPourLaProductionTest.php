@@ -102,7 +102,7 @@ final class PretPourLaProductionTest extends KernelTestCase
      */
     public function testLesDossiersDeTeleversementRefusentLExecution(): void
     {
-        foreach (['public/uploads', 'public/images/entreprises'] as $dossier) {
+        foreach (['public/uploads', 'public/uploads/logos', 'public/images/entreprises'] as $dossier) {
             $htaccess = self::racine() . '/' . $dossier . '/.htaccess';
 
             self::assertFileExists($htaccess, sprintf('%s reçoit des fichiers utilisateurs : il lui faut un .htaccess qui interdit PHP.', $dossier));

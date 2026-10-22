@@ -33,8 +33,7 @@ class BordereauEnrichirLignesCommandTest extends KernelTestCase
     protected function setUp(): void
     {
         static::bootKernel();
-        $this->cheminFichier = static::getContainer()->getParameter('kernel.project_dir')
-            . '/public/uploads/documents/' . self::FICHIER;
+        $this->cheminFichier = \App\Tests\Support\DossierDesPieces::chemin(static::getContainer()) . '/' . self::FICHIER;
         $this->cleanUp();
     }
 

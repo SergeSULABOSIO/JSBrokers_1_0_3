@@ -1,0 +1,38 @@
+# =============================================================================
+#  LOGOS DÉPOSÉS PAR LES CABINETS — DES IMAGES, ET RIEN QUI S'EXÉCUTE
+#  (chantiers 13 et 18)
+# -----------------------------------------------------------------------------
+#  Ce dossier ne contient QUE les logos déposés par les cabinets (noms aléatoires,
+#  App\Service\Document\NomAleatoire), montrés par <img>. Les images de marque
+#  restent dans public/images. Le parent (public/uploads/.htaccess) interdit déjà
+#  toute exécution ; ce fichier ajoute la règle propre aux logos, au cas où un
+#  fichier passerait autrement que par le formulaire (qui n'accepte que PNG,
+#  JPEG, GIF, WebP — Entreprise::$thumbnailFile, SVG refusé) :
+#   1. les types actifs ne sont jamais servis ;
+#   2. chaque réponse porte une politique « sandbox » sans aucune source : même
+#      ouvert seul dans un onglet, un fichier ne peut rien exécuter ;
+#   3. le navigateur ne devine pas le type (nosniff).
+# =============================================================================
+
+<FilesMatch "\.(php|phar|phtml|php[0-9]|phps|cgi|pl|py|rb|shtml|htaccess)$">
+    Require all denied
+</FilesMatch>
+
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
+RemoveType .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
+AddType text/plain .php .phtml .phar
+
+Options -Indexes -ExecCGI
+
+# Les types ACTIFS sont refusés (ils portent ou déclenchent du script). Pas de
+# « tout refuser puis accorder les images » : la levée d'un refus par <FilesMatch> n'est
+# pas éprouvée sous LiteSpeed, et un échec y couperait tous les logos. Le verrou de fond
+# reste l'en-tête ci-dessous, qui rend inerte même un type oublié ici.
+<FilesMatch "\.(svgz?|x?html?|shtml|xml|xsl|xslt|js|mjs|json|swf|pdf|txt|htm)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    Header always set Content-Security-Policy "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox"
+    Header always set X-Content-Type-Options "nosniff"
+</IfModule>

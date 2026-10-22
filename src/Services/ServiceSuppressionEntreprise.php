@@ -48,7 +48,7 @@ class ServiceSuppressionEntreprise
         private readonly EntityManagerInterface $em,
         private readonly Filesystem $filesystem,
         private readonly LoggerInterface $logger,
-        #[Autowire('%kernel.project_dir%/public/images/entreprises')]
+        #[Autowire('%app.dossier_des_logos%')]
         private readonly string $repertoireLogos,
         #[Autowire('%app.dossier_des_pieces%')]
         private readonly string $repertoireDocuments,

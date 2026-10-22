@@ -47,7 +47,14 @@
 /public/uploads/documents/*
 !/public/uploads/documents/.gitkeep
 # Le verrou du dossier (aucun accès direct par URL) DOIT partir en production.
+# (Dossier vidé au chantier 18 : les pièces vivent dans var/uploads/documents ; le
+# verrou reste, au cas où.)
 !/public/uploads/documents/.htaccess
+# Les logos déposés par les cabinets (chantier 18) : données, jamais versionnées ;
+# leur verrou (images seulement, sandbox) part en production.
+/public/uploads/logos/*
+!/public/uploads/logos/.gitkeep
+!/public/uploads/logos/.htaccess
 ###< vich/uploader-bundle ###
 
 ###> déploiement ###

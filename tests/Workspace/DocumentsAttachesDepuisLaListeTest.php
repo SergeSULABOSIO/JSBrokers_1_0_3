@@ -67,8 +67,8 @@ class DocumentsAttachesDepuisLaListeTest extends WebTestCase
 
         // LES BINAIRES D'ABORD, ET PAR LEUR VRAI NOM. Vich renomme le fichier déposé
         // (SmartUniqueNamer) : un balayage par préfixe de test ne les retrouverait pas,
-        // et chaque exécution laisserait ses pièces dans public/uploads/documents.
-        $dossier = static::getContainer()->getParameter('kernel.project_dir') . '/public/uploads/documents';
+        // et chaque exécution laisserait ses pièces dans le dossier des pièces.
+        $dossier = \App\Tests\Support\DossierDesPieces::chemin(static::getContainer());
         $stockes = $conn->fetchFirstColumn(
             'SELECT d.nom_fichier_stocke FROM document d JOIN entreprise e ON d.entreprise_id = e.id WHERE e.nom IN (:noms)',
             ['noms' => $noms],

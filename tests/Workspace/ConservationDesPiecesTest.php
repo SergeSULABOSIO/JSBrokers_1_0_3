@@ -179,7 +179,7 @@ class ConservationDesPiecesTest extends WebTestCase
         $depense->setEntreprise($cabinet);
         $em->persist($depense);
         if ($avecJustificatif) {
-            $dossier = static::getContainer()->getParameter('kernel.project_dir') . '/public/uploads/documents';
+            $dossier = \App\Tests\Support\DossierDesPieces::chemin(static::getContainer());
             if (!is_dir($dossier)) {
                 mkdir($dossier, 0o777, true);
             }

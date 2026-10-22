@@ -583,6 +583,7 @@ titre "5/11  Dossiers de donnees et permissions"
 executer "mkdir -p '$APP_DIR/var/cache' '$APP_DIR/var/log' '$APP_DIR/var/sessions' \
           '$APP_DIR/var/tmp' '$APP_DIR/var/echange' \
           '$APP_DIR/var/uploads/assistant' '$APP_DIR/var/uploads/assistant-documents' \
+          '$APP_DIR/var/uploads/documents' '$PUBLIC_DIR/uploads/logos' \
           '$PUBLIC_DIR/uploads/documents' '$PUBLIC_DIR/images/entreprises'"
 # 755/644 et JAMAIS 777 : avec suexec ou PHP-FPM par utilisateur, Apache REFUSE
 # d'exécuter un script situé dans une arborescence ouverte en écriture au
@@ -825,6 +826,22 @@ if [ "$SKIP_MIGRATIONS" -eq 0 ]; then
   fi
 else
   ko "Migrations SAUTEES a la demande"
+fi
+
+# LES FICHIERS DÉPOSÉS QUITTENT LA RACINE WEB (chantier 18) — site ENCORE en maintenance.
+# Pièces → var/uploads/documents, logos → public/uploads/logos. Copie vérifiée par SHA-256 ;
+# un seul échec et AUCUN original n'est supprimé, le déploiement s'arrête et le site reste
+# fermé (comme pour une migration). Idempotente : relancée, elle compte « déjà présents ».
+# Hors « executer » pour que son rapport S'AFFICHE ; en répétition à blanc, l'essai à blanc
+# de la commande elle-même (sans --executer).
+if [ "$DRY_RUN" -eq 1 ]; then
+  APP_ENV=prod "$PHP" bin/console app:documents:deplacer --no-interaction 2>&1 | tee -a "$JOURNAL" || true
+else
+  if ! APP_ENV=prod "$PHP" bin/console app:documents:deplacer --executer --no-interaction 2>&1 | tee -a "$JOURNAL"; then
+    ko "Deplacement des fichiers deposes en ECHEC : aucun original supprime. Site laisse en maintenance."
+    exit 1
+  fi
+  ok "Fichiers deposes hors de la racine web (rapport ci-dessus)"
 fi
 
 # ===========================================================================

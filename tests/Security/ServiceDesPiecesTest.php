@@ -73,7 +73,7 @@ final class ServiceDesPiecesTest extends WebTestCase
         $em->persist($client);
 
         $nomStocke = 'phpunit-piege-' . bin2hex(random_bytes(6)) . '.html';
-        $this->fichier = static::getContainer()->getParameter('app.dossier_des_pieces') . '/' . $nomStocke;
+        $this->fichier = \App\Tests\Support\DossierDesPieces::chemin(static::getContainer()) . '/' . $nomStocke;
         file_put_contents($this->fichier, '<!doctype html><html><body><script>alert(document.cookie)</script></body></html>');
         $document = (new Document())->setNom("Piège\"\r\nX-Injecte: 1")->setClient($client);
         $document->setNomFichierStocke($nomStocke);

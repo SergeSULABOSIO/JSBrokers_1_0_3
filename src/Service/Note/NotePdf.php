@@ -28,6 +28,8 @@ final class NotePdf
         private readonly ServiceMonnaies $serviceMonnaies,
         private readonly BordereauAnalysisPdfService $bordereauPdfService,
         #[Autowire('%kernel.project_dir%')] private readonly string $projectDir,
+        // Les logos déposés ont leur dossier (chantier 18) ; les images de marque restent dans public/images.
+        #[Autowire('%app.dossier_des_logos%')] private readonly string $dossierDesLogos,
     ) {
     }
 
@@ -55,7 +57,7 @@ final class NotePdf
         // de référence de la plateforme.
         $monnaie = ($entreprise !== null ? $this->serviceMonnaies->getMonnaieAffichagePourEntreprise($entreprise)?->getCode() : null) ?? 'USD';
         $logo = $entreprise?->getThumbnail()
-            ? $this->projectDir . '/public/images/entreprises/' . $entreprise->getThumbnail()
+            ? $this->dossierDesLogos . '/' . $entreprise->getThumbnail()
             : $this->projectDir . '/public/images/entreprises/logofav.png';
 
         $dompdf->loadHtml($this->twig->render('admin/note/note_preview.html.twig', [

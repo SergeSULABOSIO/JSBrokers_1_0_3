@@ -219,7 +219,7 @@ class SoaAccesClientTest extends WebTestCase
 
     private static function uploadsDir(): string
     {
-        return \dirname(__DIR__, 2) . '/public/uploads/documents';
+        return \App\Tests\Support\DossierDesPieces::chemin(static::getContainer());
     }
 
     /**
