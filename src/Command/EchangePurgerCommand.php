@@ -42,8 +42,8 @@ final class EchangePurgerCommand extends Command
     public function __construct(
         private readonly EchangeImportRunRepository $runs,
         private readonly ImportateurJsbx $importateur,
-        #[Autowire('%kernel.project_dir%')]
-        private readonly string $projectDir,
+        #[Autowire('%app.dossier_de_l_echange%')]
+        private readonly string $dossierEchange,
     ) {
         parent::__construct();
     }
@@ -111,7 +111,7 @@ final class EchangePurgerCommand extends Command
      */
     private function orphelins(bool $simuler): int
     {
-        $racine = $this->projectDir . '/var/echange';
+        $racine = $this->dossierEchange;
         if (!is_dir($racine)) {
             return 0;
         }

@@ -17,7 +17,7 @@ final class CacheAudio
     private const DUREE_DE_VIE_SECONDES = 30 * 86400;
 
     public function __construct(
-        #[Autowire('%kernel.project_dir%/var/ket-voix')] private readonly string $racine,
+        #[Autowire('%app.dossier_de_la_voix_de_ket%')] private readonly string $racine,
     ) {
     }
 

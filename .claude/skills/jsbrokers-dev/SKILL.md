@@ -473,11 +473,19 @@ Inscrits le 2026-10-20 (décisions de Serge) :
 Inscrits le 2026-10-22 (décisions de Serge) :
 
 17. ✅ **FAIT (2026-10-22, `38fec8ca`) — Tâches : frontière de visibilité.** Règles au §2.
-18. 🔶 **EN COURS — Fichiers déposés HORS de `public/` (avant l'ouverture aux clients).** Fait :
-    `040f7293` (code mort `public/pdfs` retiré), `67fe84a3` (emplacement à source unique),
-    `3311e0c0` (réponse durcie), `fd0d2aa9` (pièces dans `var/uploads/documents`, logos dans
-    `public/uploads/logos`, noms aléatoires, `app:documents:deplacer` lancée par le déploiement
-    sous maintenance). Reste : commit 6 — case « Partagée avec le client » sur la pièce
-    (option (c) de Serge, décochée par défaut) : le relevé public `/soa/{token}` ne liste et ne
-    sert QUE les pièces partagées. Production : application dans `/home/josearac/joseara`
-    (compte `josearac`) ; `public/pdfs` n'y a jamais existé.
+18. ✅ **FAIT (2026-10-22) — Fichiers déposés HORS de `public/`.** `040f7293` (code mort
+    `public/pdfs`), `67fe84a3` (emplacement à source unique), `3311e0c0` (réponse durcie),
+    `fd0d2aa9` (pièces dans `var/uploads/documents`, logos dans `public/uploads/logos`, noms
+    aléatoires, `app:documents:deplacer` au déploiement sous maintenance), `3fd1d382` (case
+    « Partagée avec le client », décochée par défaut : le relevé public `/soa/{token}` ne liste et
+    ne sert QUE les pièces partagées ; le courtier voit tout). Production : application dans
+    `/home/josearac/joseara` (compte `josearac`) ; `public/pdfs` n'y a jamais existé.
+19. ✅ **FAIT (2026-10-22) — Supprimer un cabinet efface TOUT ce qui est à lui.**
+    `ServiceSuppressionEntreprise` : sur le disque, les 7 emplacements (logo, pièces, fichiers
+    joints à Ket, documents produits par Ket, dépôts et exports de l'échange `<id>/`, cache de
+    la voix `<id>/`) — chacun déclaré UNE fois en paramètre (`app.dossier_*`) que lisent Vich,
+    le code qui écrit et la purge ; en base, les tables rattachées INDIRECTEMENT (par une
+    relation vers une table du cabinet, de proche en proche — `cartographierDependantes`,
+    découvertes dans le modèle, jamais listées), effacées avant leurs parents. `utilisateur`
+    est seulement détaché. **Règle** : un nouvel emplacement de fichiers par cabinet s'y
+    ajoute ; `SuppressionDUnCabinetEffaceSesFichiersTest` (bout en bout) le prouve.

@@ -13,7 +13,10 @@ use Symfony\Component\Filesystem\Filesystem;
  * Détruit INTÉGRALEMENT et INCONDITIONNELLEMENT une entreprise : toutes ses
  * données opérationnelles (toutes les entités scopées par `entreprise_id`), ses
  * lignes de paramétrage, l'entreprise elle-même, ET ses fichiers uploadés sur le
- * serveur (logo, pièces déposées).
+ * serveur : TOUS (chantier 19, décision de Serge) — logo, pièces déposées, fichiers joints au
+ * chat de Ket et documents qu'il a produits, dépôts et exports de l'échange, cache audio de la
+ * voix. Les temporaires (var/tmp, dossier système) n'appartiennent à personne : ils sont
+ * effacés juste après usage, et leurs restes par l'âge.
  *
  * Stratégie « table rase » assumée : on neutralise les contraintes d'intégrité
  * le temps de la purge (SET FOREIGN_KEY_CHECKS = 0 sous MariaDB/MySQL) et on
@@ -52,6 +55,14 @@ class ServiceSuppressionEntreprise
         private readonly string $repertoireLogos,
         #[Autowire('%app.dossier_des_pieces%')]
         private readonly string $repertoireDocuments,
+        #[Autowire('%app.dossier_des_fichiers_de_ket%')]
+        private readonly string $repertoireFichiersDeKet,
+        #[Autowire('%app.dossier_des_documents_de_ket%')]
+        private readonly string $repertoireDocumentsDeKet,
+        #[Autowire('%app.dossier_de_l_echange%')]
+        private readonly string $repertoireEchange,
+        #[Autowire('%app.dossier_de_la_voix_de_ket%')]
+        private readonly string $repertoireVoix,
         // Les pièces comptables se conservent dix ans : pas de purge sans archive remise.
         private readonly \App\Service\Note\ConservationDesPieces $conservation,
     ) {}
@@ -111,6 +122,37 @@ class ServiceSuppressionEntreprise
             }
         }
 
+        $conn = $this->em->getConnection();
+        $id = (int) $entreprise->getId();
+
+        // Les fichiers JOINTS au chat de Ket : rattachés par la conversation, pas par le cabinet.
+        foreach ($conn->fetchFirstColumn(
+            'SELECT f.nom_fichier_stocke FROM assistant_conversation_fichier f
+             JOIN assistant_conversation c ON c.id = f.conversation_id
+             WHERE c.entreprise_id = :id AND f.nom_fichier_stocke IS NOT NULL',
+            ['id' => $id],
+        ) as $nom) {
+            if ($nom !== '' && $nom === basename($nom)) {
+                $chemins[] = $this->repertoireFichiersDeKet . '/' . $nom;
+            }
+        }
+
+        // Les documents PRODUITS par Ket pour ce cabinet.
+        foreach ($conn->fetchFirstColumn(
+            'SELECT nom_fichier_stocke FROM assistant_document WHERE entreprise_id = :id AND nom_fichier_stocke IS NOT NULL',
+            ['id' => $id],
+        ) as $nom) {
+            if ($nom !== '' && $nom === basename($nom)) {
+                $chemins[] = $this->repertoireDocumentsDeKet . '/' . $nom;
+            }
+        }
+
+        // Les dossiers NOMMÉS par l'identifiant du cabinet, effacés entiers : dépôts et
+        // exports de l'échange, cache audio de la voix de Ket.
+        $chemins[] = $this->repertoireEchange . '/' . $id;
+        $chemins[] = $this->repertoireEchange . '/exports/' . $id;
+        $chemins[] = $this->repertoireVoix . '/' . $id;
+
         return $chemins;
     }
 
@@ -138,6 +180,27 @@ class ServiceSuppressionEntreprise
                         $conn->quoteIdentifier($jt['joinColumn']),
                         $conn->quoteIdentifier($jt['sourceTable']),
                     ),
+                    ['id' => $id],
+                );
+            }
+
+            // 1 bis. LES LIGNES RATTACHÉES INDIRECTEMENT (chantier 19) : messages et fichiers
+            //    d'une conversation de Ket, retours d'un ticket, opérations d'un bordereau…
+            //    Elles ne portent pas entreprise_id ; contraintes désactivées, rien ne les
+            //    emportait. Effacées AVANT leurs parents (qui disent encore à qui elles sont),
+            //    du plus profond au moins profond.
+            $dependantes = $this->cartographierDependantes($tablesScopees);
+            foreach ($this->ordreDEffacement($dependantes) as $table) {
+                $conditions = [];
+                foreach ($dependantes[$table] as $lien) {
+                    $conditions[] = sprintf(
+                        '%s IN (%s)',
+                        $conn->quoteIdentifier($lien['colonne']),
+                        $this->sqlIdsDuCabinet($lien['parent'], $tablesScopees, $dependantes, [$table]),
+                    );
+                }
+                $conn->executeStatement(
+                    sprintf('DELETE FROM %s WHERE %s', $conn->quoteIdentifier($table), implode(' OR ', $conditions)),
                     ['id' => $id],
                 );
             }
@@ -220,6 +283,114 @@ class ServiceSuppressionEntreprise
         unset($tablesScopees['entreprise']);
 
         return [$tablesScopees, $tablesJointure];
+    }
+
+    /**
+     * LES TABLES RATTACHÉES AU CABINET SANS PORTER SON IDENTIFIANT, découvertes dans le modèle
+     * Doctrine (jamais une liste figée : une table ajoutée demain est couverte d'office). Une
+     * table l'est si l'une de ses relations « vers un » pointe vers une table du cabinet, ou
+     * vers une table elle-même rattachée — jusqu'au point fixe. Exclus : `utilisateur` (un
+     * compte peut servir à d'autres cabinets ; il est seulement détaché) et les relations d'une
+     * table vers elle-même (une réponse à un message suit déjà sa conversation).
+     *
+     * @param array<string, string> $tablesScopees table => colonne entreprise
+     * @return array<string, list<array{colonne: string, parent: string}>>
+     */
+    public function cartographierDependantes(array $tablesScopees): array
+    {
+        $parTable = [];
+        foreach ($this->em->getMetadataFactory()->getAllMetadata() as $meta) {
+            if (!$meta->isMappedSuperclass && !$meta->isEmbeddedClass) {
+                $parTable[$meta->getTableName()] = $meta;
+            }
+        }
+
+        $dependantes = [];
+        do {
+            $ajout = false;
+            foreach ($parTable as $table => $meta) {
+                if (isset($tablesScopees[$table]) || \in_array($table, ['entreprise', 'utilisateur'], true)) {
+                    continue;
+                }
+                foreach ($meta->associationMappings as $champ => $mapping) {
+                    if (!$mapping->isToOneOwningSide()) {
+                        continue;
+                    }
+                    $parent = $this->em->getClassMetadata($mapping->targetEntity)->getTableName();
+                    if ($parent === $table || !($parent === 'entreprise' || isset($tablesScopees[$parent]) || isset($dependantes[$parent]))) {
+                        continue;
+                    }
+                    $lien = ['colonne' => $meta->getSingleAssociationJoinColumnName($champ), 'parent' => $parent];
+                    if (!\in_array($lien, $dependantes[$table] ?? [], true)) {
+                        $dependantes[$table][] = $lien;
+                        $ajout = true;
+                    }
+                }
+            }
+        } while ($ajout);
+
+        return $dependantes;
+    }
+
+    /**
+     * Du plus profond au moins profond : une ligne s'efface pendant que ses parents disent
+     * encore à quel cabinet elle appartient.
+     *
+     * @param array<string, list<array{colonne: string, parent: string}>> $dependantes
+     * @return list<string>
+     */
+    private function ordreDEffacement(array $dependantes): array
+    {
+        $profondeur = [];
+        $mesurer = function (string $table, array $chemin) use (&$mesurer, &$profondeur, $dependantes): int {
+            if (!isset($dependantes[$table]) || \in_array($table, $chemin, true)) {
+                return 0;
+            }
+            if (isset($profondeur[$table])) {
+                return $profondeur[$table];
+            }
+            $max = 0;
+            foreach ($dependantes[$table] as $lien) {
+                $max = max($max, $mesurer($lien['parent'], [...$chemin, $table]));
+            }
+
+            return $profondeur[$table] = $max + 1;
+        };
+        $tables = array_keys($dependantes);
+        usort($tables, static fn (string $a, string $b): int => $mesurer($b, []) <=> $mesurer($a, []) ?: strcmp($a, $b));
+
+        return $tables;
+    }
+
+    /**
+     * La requête des identifiants d'une table qui appartiennent au cabinet `:id`.
+     *
+     * @param array<string, string> $tablesScopees
+     * @param array<string, list<array{colonne: string, parent: string}>> $dependantes
+     * @param list<string> $chemin tables déjà traversées (garde contre les cycles)
+     */
+    private function sqlIdsDuCabinet(string $table, array $tablesScopees, array $dependantes, array $chemin): string
+    {
+        $conn = $this->em->getConnection();
+        if ($table === 'entreprise') {
+            return 'SELECT :id';
+        }
+        if (isset($tablesScopees[$table])) {
+            return sprintf('SELECT id FROM %s WHERE %s = :id', $conn->quoteIdentifier($table), $conn->quoteIdentifier($tablesScopees[$table]));
+        }
+        if (\in_array($table, $chemin, true) || !isset($dependantes[$table])) {
+            return 'SELECT NULL';
+        }
+        $conditions = [];
+        foreach ($dependantes[$table] as $lien) {
+            $conditions[] = sprintf(
+                '%s IN (%s)',
+                $conn->quoteIdentifier($lien['colonne']),
+                $this->sqlIdsDuCabinet($lien['parent'], $tablesScopees, $dependantes, [...$chemin, $table]),
+            );
+        }
+
+        return sprintf('SELECT id FROM %s WHERE %s', $conn->quoteIdentifier($table), implode(' OR ', $conditions));
     }
 
     /**

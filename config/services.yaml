@@ -21,6 +21,12 @@ parameters:
     app.dossier_des_logos: '%kernel.project_dir%/public/uploads/logos'
     # L'ANCIEN dossier des pièces (public/), lu par la seule commande de déplacement.
     app.ancien_dossier_des_pieces: '%kernel.project_dir%/public/uploads/documents'
+    # Les autres fichiers d'un cabinet (chantier 19) — UNE écriture chacun, que lisent Vich,
+    # le code qui y écrit ET la suppression d'un cabinet (qui doit tout effacer) :
+    app.dossier_des_fichiers_de_ket: '%kernel.project_dir%/var/uploads/assistant'           # joints au chat
+    app.dossier_des_documents_de_ket: '%kernel.project_dir%/var/uploads/assistant-documents' # produits par Ket
+    app.dossier_de_l_echange: '%kernel.project_dir%/var/echange'                             # <id>/ et exports/<id>/
+    app.dossier_de_la_voix_de_ket: '%kernel.project_dir%/var/ket-voix'                       # <id>/ : cache audio
 
 services:
     # default configuration for services in *this* file

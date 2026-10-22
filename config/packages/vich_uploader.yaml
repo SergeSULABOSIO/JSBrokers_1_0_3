@@ -26,7 +26,7 @@ vich_uploader:
     # seulement via la route de téléchargement fail-closed du contrôleur IA.
     assistant_fichiers:
       uri_prefix: /_private/assistant
-      upload_destination: "%kernel.project_dir%/var/uploads/assistant"
+      upload_destination: "%app.dossier_des_fichiers_de_ket%"
       namer: Vich\UploaderBundle\Naming\SmartUniqueNamer
 
       inject_on_load: false
@@ -39,7 +39,7 @@ vich_uploader:
     # ils sont conservés tant que vit la conversation qui les a produits.
     assistant_documents:
       uri_prefix: /_private/assistant-documents
-      upload_destination: "%kernel.project_dir%/var/uploads/assistant-documents"
+      upload_destination: "%app.dossier_des_documents_de_ket%"
       namer: Vich\UploaderBundle\Naming\SmartUniqueNamer
 
       inject_on_load: false

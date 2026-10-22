@@ -108,8 +108,8 @@ class EchangeController extends AbstractController
         private readonly TokenAccountService $tokenAccountService,
         // Le texte d'une panne (SQL, chemin, classe) ne sort pas : il part au journal.
         private readonly MessageDErreur $messageDErreur,
-        #[Autowire('%kernel.project_dir%')]
-        private readonly string $projectDir,
+        #[Autowire('%app.dossier_de_l_echange%')]
+        private readonly string $dossierEchange,
     ) {
     }
 
@@ -404,7 +404,7 @@ class EchangeController extends AbstractController
 
     private function repertoireExports(Entreprise $entreprise): string
     {
-        return sprintf('%s/var/echange/exports/%d', $this->projectDir, $entreprise->getId());
+        return sprintf('%s/exports/%d', $this->dossierEchange, $entreprise->getId());
     }
 
     private function nomExport(Entreprise $entreprise): string
@@ -864,7 +864,7 @@ class EchangeController extends AbstractController
      */
     private function deposer(UploadedFile $fichier, Entreprise $entreprise): string
     {
-        $repertoire = sprintf('%s/var/echange/%d', $this->projectDir, $entreprise->getId());
+        $repertoire = sprintf('%s/%d', $this->dossierEchange, $entreprise->getId());
         if (!is_dir($repertoire) && !mkdir($repertoire, 0775, true) && !is_dir($repertoire)) {
             throw new \RuntimeException('Impossible de préparer le dépôt du fichier.');
         }
