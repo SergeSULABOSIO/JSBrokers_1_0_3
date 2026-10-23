@@ -2,8 +2,9 @@
  * OÙ POSER L'INFOBULLE SOMBRE — règles pures (testées en node).
  *
  * AU CURSEUR, la règle des infobulles du tableau de bord (#db-piste-tip, #db-renew-tip,
- * commit-tip) : en haut à gauche du pointeur, à 10 px, et de l'autre côté du pointeur
- * quand le bord manque. L'infobulle suit la souris sans jamais la masquer.
+ * commit-tip) : en haut à gauche du pointeur, tout contre lui, et de l'autre côté du pointeur
+ * quand le bord manque. Calculée au POINT D'ENTRÉE du pointeur, une fois : l'infobulle unique
+ * ne suit plus la souris (chantier 3 — elle doit pouvoir être survolée, WCAG 1.4.13).
  *
  * ⚠ ET TOUJOURS DANS L'ÉCRAN. La règle d'origine ne regardait que les bords haut et gauche :
  * une infobulle haute, appelée près du bas de l'écran, passait SOUS le pointeur puis
@@ -14,7 +15,9 @@
  * l'aligne sur le bord gauche de l'élément, en dessous — au-dessus s'il manque de place.
  */
 
-const DECALAGE = 10;
+// 4 px, plus 10 (revue du chantier 3) : la bulle est SURVOLABLE, et le chemin du pointeur vers
+// elle ne doit traverser aucun autre élément porteur d'infobulle (une carte voisine la reprendrait).
+const DECALAGE = 4;
 const MARGE = 8;
 
 /** Ramène une coordonnée dans [MARGE, limite − taille − MARGE] ; le début l'emporte. */
@@ -48,4 +51,21 @@ export function positionSousLElement(cadre, bulle, ecran) {
     if (top + bulle.hauteur > ecran.hauteur - MARGE) top = cadre.top - bulle.hauteur - MARGE;
 
     return { left: dansLEcran(cadre.left, bulle.largeur, ecran.largeur), top: dansLEcran(top, bulle.hauteur, ecran.hauteur) };
+}
+
+/**
+ * SOUS UN BOUTON DE BARRE D'ACTIONS (décision de Serge, chantier 3) : centrée sous lui, au-dessus
+ * s'il manque de place — au curseur, la bulle masquerait les boutons voisins.
+ *
+ * @param {{left: number, top: number, bottom: number, width: number}} cadre
+ * @param {{largeur: number, hauteur: number}} bulle
+ * @param {{largeur: number, hauteur: number}} ecran
+ * @returns {{left: number, top: number}}
+ */
+export function positionCentreeSous(cadre, bulle, ecran) {
+    let top = cadre.bottom + MARGE;
+    if (top + bulle.hauteur > ecran.hauteur - MARGE) top = cadre.top - bulle.hauteur - MARGE;
+    const left = cadre.left + cadre.width / 2 - bulle.largeur / 2;
+
+    return { left: dansLEcran(left, bulle.largeur, ecran.largeur), top: dansLEcran(top, bulle.hauteur, ecran.hauteur) };
 }

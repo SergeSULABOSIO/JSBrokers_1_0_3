@@ -9,20 +9,20 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { positionAuCurseur, positionSousLElement } from '../../assets/controllers/infobulle-position.js';
+import { positionAuCurseur, positionSousLElement, positionCentreeSous } from '../../assets/controllers/infobulle-position.js';
 
 const ECRAN = { largeur: 1366, hauteur: 768 };
 const BULLE = { largeur: 280, hauteur: 300 };
 const contenue = ({ left, top }, bulle = BULLE, ecran = ECRAN) =>
     left >= 8 && top >= 8 && left + bulle.largeur <= ecran.largeur - 8 && top + bulle.hauteur <= ecran.hauteur - 8;
 
-test('au milieu de l’écran : en haut à gauche du pointeur, à 10 px (la règle du tableau de bord)', () => {
-    assert.deepEqual(positionAuCurseur({ x: 700, y: 500 }, BULLE, ECRAN), { left: 410, top: 190 });
+test('au milieu de l’écran : en haut à gauche du pointeur, TOUT CONTRE lui (4 px : le chemin vers la bulle ne traverse rien)', () => {
+    assert.deepEqual(positionAuCurseur({ x: 700, y: 500 }, BULLE, ECRAN), { left: 416, top: 196 });
 });
 
 test('près du bord gauche ou haut : de l’autre côté du pointeur', () => {
     const p = positionAuCurseur({ x: 100, y: 100 }, BULLE, ECRAN);
-    assert.deepEqual(p, { left: 110, top: 110 });
+    assert.deepEqual(p, { left: 104, top: 104 });
     assert.ok(contenue(p));
 });
 
@@ -51,4 +51,44 @@ test('au clavier : sous l’élément, au-dessus s’il manque de place, toujour
     assert.equal(enBas.top, 292);
     const aDroite = positionSousLElement({ left: 1300, top: 100, bottom: 140 }, BULLE, ECRAN);
     assert.ok(contenue(aDroite), JSON.stringify(aDroite));
+});
+
+test('sous un bouton de barre d’actions : CENTRÉE sous lui (les boutons voisins restent visibles)', () => {
+    const bouton = { left: 500, top: 60, bottom: 92, width: 32 };
+    assert.deepEqual(positionCentreeSous(bouton, { largeur: 120, hauteur: 30 }, ECRAN), { left: 456, top: 100 });
+});
+
+test('sous un bouton : au-dessus s’il manque de place, et jamais hors de l’écran', () => {
+    const enBas = positionCentreeSous({ left: 500, top: 740, bottom: 764, width: 32 }, { largeur: 120, hauteur: 30 }, ECRAN);
+    assert.equal(enBas.top, 702);
+    for (const left of [0, 4, 1340, 1366]) {
+        const p = positionCentreeSous({ left, top: 60, bottom: 92, width: 24 }, BULLE, ECRAN);
+        assert.ok(contenue(p), `bouton à ${left} → ${JSON.stringify(p)}`);
+    }
+});
+
+// La bulle est SURVOLABLE (pointer-events) : posée SUR le pointeur, elle prendrait le clic destiné
+// à l'élément. Revue du chantier 3, commit 1.
+const couvre = ({ left, top }, bulle, { x, y }) => x >= left && x <= left + bulle.largeur && y >= top && y <= top + bulle.hauteur;
+
+test('jamais SUR le pointeur, où qu’il soit — tant qu’un côté a la place', () => {
+    for (const x of [0, 5, 150, 683, 1200, 1361, 1366]) {
+        for (const y of [0, 5, 150, 384, 600, 763, 768]) {
+            const p = positionAuCurseur({ x, y }, BULLE, ECRAN);
+            assert.ok(!couvre(p, BULLE, { x, y }), `pointeur (${x}, ${y}) couvert par ${JSON.stringify(p)}`);
+            assert.ok(contenue(p), `pointeur (${x}, ${y}) → ${JSON.stringify(p)}`);
+        }
+    }
+});
+
+test('écran ÉTROIT (pas la place à gauche ni à droite) : la bulle passe au-dessus ou au-dessous, jamais sur lui', () => {
+    const etroit = { largeur: 400, hauteur: 700 };
+    const haute = { largeur: 280, hauteur: 330 }; // ni à gauche ni à droite ; au-dessus OU au-dessous selon le pointeur
+    for (const x of [10, 120, 200, 300, 390]) {
+        for (const y of [20, 200, 350, 500, 690]) {
+            const p = positionAuCurseur({ x, y }, haute, etroit);
+            assert.ok(!couvre(p, haute, { x, y }), `pointeur (${x}, ${y}) couvert par ${JSON.stringify(p)}`);
+            assert.ok(contenue(p, haute, etroit), `pointeur (${x}, ${y}) → ${JSON.stringify(p)}`);
+        }
+    }
 });

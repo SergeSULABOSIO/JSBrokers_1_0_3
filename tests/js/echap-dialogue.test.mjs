@@ -35,6 +35,16 @@ test('un élément ouvert DANS le dialogue se ferme d’abord : le dialogue rest
     assert.equal(decisionEchap({ ...base, sousElementOuvert: true }), 'laisser');
 });
 
+test('une infobulle ouverte prend le premier Échap (WCAG 1.4.13) : le dialogue reste, même une confirmation', () => {
+    assert.equal(decisionEchap({ ...base, infobulleOuverte: true }), 'laisser');
+    assert.equal(decisionEchap({ ...base, dessus: 'simple', infobulleOuverte: true }), 'laisser');
+    assert.equal(decisionEchap({ ...base, dessus: 'confirmation', infobulleOuverte: true }), 'laisser');
+});
+
+test('le gestionnaire des dialogues lit l’infobulle unique', () => {
+    assert.match(source('assets/controllers/dialog-manager_controller.js'), /infobulleOuverte:\s*infobulleOuverte\(\)/);
+});
+
 test('pendant une saisie dans un éditeur riche, Échap ne ferme rien', () => {
     assert.equal(decisionEchap({ ...base, dansEditeurRiche: true }), 'laisser');
 });

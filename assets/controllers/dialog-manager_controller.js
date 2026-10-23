@@ -1,6 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 import { Modal } from 'bootstrap';
 import { decisionEchap, OUVERTS_DANS_LE_DIALOGUE } from './echap-dialogue.js';
+import { infobulleOuverte } from './infobulle_controller.js';
 import { reserverLInstallation, libererLInstallation } from './gestionnaire-dialogues.js';
 
 /**
@@ -165,6 +166,7 @@ export default class extends Controller {
             dessus: genre,
             dansEditeurRiche: !!focus?.closest?.('.ql-editor, .ql-tooltip'),
             sousElementOuvert: !!dessus?.querySelector(OUVERTS_DANS_LE_DIALOGUE),
+            infobulleOuverte: infobulleOuverte(),
         });
         if (decision === 'laisser') return;
 

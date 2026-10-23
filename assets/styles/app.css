@@ -5414,6 +5414,14 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 /* Un paragraphe qui EXPLIQUE (infobulle_controller : description d'une étape du pipe, mode
    de calcul) : lisible, sur plusieurs lignes — pas une note en italique. */
 .jsb-ctx-tip .tip-para { color: #e9ecef; white-space: normal; font-size: .7rem; line-height: 1.45; padding-top: 2px; padding-bottom: 4px; }
+/* L'INFOBULLE UNIQUE (infobulle_controller, chantier 3) : posée, immobile, SURVOLABLE (WCAG
+   1.4.13) — le pointeur peut y entrer, d'où pointer-events. Montrée et cachée par `hidden`. */
+.jsb-ctx-tip.est-survolable { display: block; pointer-events: auto; }
+.jsb-ctx-tip.est-survolable[hidden] { display: none; }
+/* Les MONTANTS à droite, chiffres alignés en colonne (décision de Serge : style « Pistes »
+   partout, montants alignés à droite). */
+.jsb-ctx-tip td.tip-montant { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.jsb-ctx-tip .tip-fort { font-weight: 600; color: #fff; }
 /* Infobulle posée AU-DESSUS d'une surface déjà sombre (chat de l'assistant en
    mode sombre) : son ombre portée noire n'y délimite plus rien. On lui rend un
    contour perceptible, sans toucher au style partagé avec le tableau de bord.
