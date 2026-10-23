@@ -58,5 +58,7 @@
     </listeners>
 
     <extensions>
+        <!-- Désigne les tests qui laissent des fichiers sur le disque (var/fichiers-laisses-par-les-tests.log). -->
+        <extension class="App\Tests\Support\FichiersLaissesParLesTests" />
     </extensions>
 </phpunit>

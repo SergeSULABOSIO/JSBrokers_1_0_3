@@ -70,6 +70,9 @@ class KetDocumentGenerationTest extends WebTestCase
      */
     private function cleanUp(): void
     {
+        // Les FICHIERS des cabinets d'essai d'abord (la liste se lit en base) : sans
+        // quoi ils restent sur le poste (FichiersLaissesParLesTests).
+        \App\Tests\Support\FichiersDesCabinetsDeTest::effacer(static::getContainer(), self::ENT);
         $conn = $this->em()->getConnection();
         $emails = [self::OWNER, self::GUEST, self::OTHER];
         $noms = [self::ENT];

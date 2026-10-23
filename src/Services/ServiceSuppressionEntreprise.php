@@ -103,27 +103,38 @@ class ServiceSuppressionEntreprise
      */
     private function collecterFichiers(Entreprise $entreprise): array
     {
+        return $this->fichiersDuCabinet((int) $entreprise->getId());
+    }
+
+    /**
+     * TOUS LES FICHIERS D'UN CABINET, par son identifiant : la source unique de la purge — et des
+     * tests, qui effacent ainsi les fichiers de leurs cabinets d'essai (sans quoi ils
+     * s'accumulent sur le poste). Lue en base : à appeler AVANT d'effacer les lignes.
+     *
+     * @return string[] chemins absolus (fichiers, et dossiers propres au cabinet)
+     */
+    public function fichiersDuCabinet(int $idCabinet): array
+    {
         $chemins = [];
+        $conn = $this->em->getConnection();
+        $id = $idCabinet;
 
         // Logo de l'entreprise.
-        $logo = $entreprise->getThumbnail();
-        if ($logo !== null && $logo !== '' && !$this->estProtege($logo)) {
+        $logo = $conn->fetchOne('SELECT thumbnail FROM entreprise WHERE id = :id', ['id' => $id]);
+        if (\is_string($logo) && $logo !== '' && $logo === basename($logo) && !$this->estProtege($logo)) {
             $chemins[] = $this->repertoireLogos . '/' . $logo;
         }
 
         // Tous les documents scopés à cette entreprise.
-        $noms = $this->em->getConnection()->fetchFirstColumn(
+        $noms = $conn->fetchFirstColumn(
             'SELECT nom_fichier_stocke FROM document WHERE entreprise_id = :id AND nom_fichier_stocke IS NOT NULL',
-            ['id' => $entreprise->getId()],
+            ['id' => $id],
         );
         foreach ($noms as $nom) {
-            if ($nom !== '' && !$this->estProtege($nom)) {
+            if ($nom !== '' && $nom === basename($nom) && !$this->estProtege($nom)) {
                 $chemins[] = $this->repertoireDocuments . '/' . $nom;
             }
         }
-
-        $conn = $this->em->getConnection();
-        $id = (int) $entreprise->getId();
 
         // Les fichiers JOINTS au chat de Ket : rattachés par la conversation, pas par le cabinet.
         foreach ($conn->fetchFirstColumn(

@@ -235,6 +235,12 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
     y avaient été commitées par le passé, dans un dépôt public — purgées de l'historique le
     2026-10-22 (réécriture `git filter-repo`, tous les SHA postérieurs au 2025-08-29 changés).
   - Un test qui dépose un fichier lit le vrai dossier : `tests/Support/DossierDesPieces`.
+  - **Un test efface les fichiers de ses cabinets d'essai comme leurs lignes** : en TÊTE de son
+    nettoyage, `FichiersDesCabinetsDeTest::effacer(static::getContainer(), self::ENT)` (même
+    source que la suppression d'un cabinet : `ServiceSuppressionEntreprise::fichiersDuCabinet`).
+    L'extension `FichiersLaissesParLesTests` (phpunit.xml.dist) désigne tout test qui laisse un
+    fichier, dans `var/fichiers-laisses-par-les-tests.log` — ce fichier doit rester absent.
+    (37 178 fichiers orphelins nettoyés sur le poste le 2026-10-22.)
   - E2E sur les fichiers : une instance Apache qui LIT les `.htaccess` (`AllowOverride All`,
     `mod_rewrite`/`mod_headers`) — l'instance E2E habituelle les ignore et répondrait 200.
 - Asset Mapper : aucune compilation. En dev, rien à builder ; en E2E, ne pas laisser `public/assets`.

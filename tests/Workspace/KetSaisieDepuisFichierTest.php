@@ -61,6 +61,9 @@ class KetSaisieDepuisFichierTest extends WebTestCase
 
     private function cleanUp(): void
     {
+        // Les FICHIERS des cabinets d'essai d'abord (la liste se lit en base) : sans
+        // quoi ils restent sur le poste (FichiersLaissesParLesTests).
+        \App\Tests\Support\FichiersDesCabinetsDeTest::effacer(static::getContainer(), self::ENT);
         $conn = $this->em->getConnection();
         $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email = :e', ['e' => self::OWNER]);
         // Document AVANT Classeur (FK), Classeur avant Invite (FK invite_id).

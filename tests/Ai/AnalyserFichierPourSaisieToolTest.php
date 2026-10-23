@@ -49,6 +49,9 @@ class AnalyserFichierPourSaisieToolTest extends WebTestCase
 
     private function cleanUp(): void
     {
+        // Les FICHIERS des cabinets d'essai d'abord (la liste se lit en base) : sans
+        // quoi ils restent sur le poste (FichiersLaissesParLesTests).
+        \App\Tests\Support\FichiersDesCabinetsDeTest::effacer(static::getContainer(), self::ENT);
         $conn = $this->em->getConnection();
         $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email = :e', ['e' => self::OWNER]);
         $conn->executeStatement('DELETE f FROM assistant_conversation_fichier f JOIN assistant_conversation c ON f.conversation_id = c.id JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);

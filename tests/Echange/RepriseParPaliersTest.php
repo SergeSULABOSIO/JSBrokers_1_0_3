@@ -645,6 +645,9 @@ class RepriseParPaliersTest extends WebTestCase
     /** Purge dérivée du schéma — cf. ControleImportTest, même raison. */
     private function nettoyer(): void
     {
+        // Les FICHIERS des cabinets d'essai d'abord (la liste se lit en base) : sans
+        // quoi ils restent sur le poste (FichiersLaissesParLesTests).
+        \App\Tests\Support\FichiersDesCabinetsDeTest::effacer(static::getContainer(), self::ENT);
         $cnx = $this->em()->getConnection();
         $ids = $cnx->fetchFirstColumn('SELECT id FROM entreprise WHERE nom = ?', [self::ENT]);
 

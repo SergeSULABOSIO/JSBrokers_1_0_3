@@ -72,6 +72,9 @@ class ProductionIntermediaireRubriqueTest extends WebTestCase
 
     private function cleanUp(): void
     {
+        // Les FICHIERS des cabinets d'essai d'abord (la liste se lit en base) : sans
+        // quoi ils restent sur le poste (FichiersLaissesParLesTests).
+        \App\Tests\Support\FichiersDesCabinetsDeTest::effacer(static::getContainer(), self::ENTREPRISE_NOM);
         $conn = $this->em()->getConnection();
         foreach ([
             // Les pièces AVANT les versements, les versements AVANT les avenants : les clés

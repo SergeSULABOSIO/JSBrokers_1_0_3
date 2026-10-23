@@ -77,6 +77,9 @@ class AssistantIaFichierTest extends WebTestCase
 
     private function cleanUp(): void
     {
+        // Les FICHIERS des cabinets d'essai d'abord (la liste se lit en base) : sans
+        // quoi ils restent sur le poste (FichiersLaissesParLesTests).
+        \App\Tests\Support\FichiersDesCabinetsDeTest::effacer(static::getContainer(), self::ENTREPRISE_NOM);
         $conn = $this->em()->getConnection();
         $emails = [self::OWNER_EMAIL, self::GUEST_EMAIL, self::OTHER_EMAIL];
         $noms = [self::ENTREPRISE_NOM];
