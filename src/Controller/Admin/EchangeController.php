@@ -13,6 +13,8 @@ use App\Echange\Etat\ExerciceDesTranches;
 use App\Echange\Etat\ValiditeDesTranches;
 use App\Echange\Etat\ProducteurDeLEtat;
 use App\Echange\Service\AvanceurDImport;
+use App\Echange\Service\DepotDeLEchange;
+use App\Service\Document\EnvoiPuisEffacement;
 use App\Echange\Service\FileDImport;
 use App\Echange\Service\FluxNdjson;
 use App\Echange\Service\Progression;
@@ -110,6 +112,7 @@ class EchangeController extends AbstractController
         private readonly MessageDErreur $messageDErreur,
         #[Autowire('%app.dossier_de_l_echange%')]
         private readonly string $dossierEchange,
+        private readonly DepotDeLEchange $depot,
     ) {
     }
 
@@ -366,17 +369,8 @@ class EchangeController extends AbstractController
             throw $this->createNotFoundException('Ce fichier a expiré ou a déjà été téléchargé.');
         }
 
-        $nom = $this->nomExport($entreprise);
-        $reponse = new StreamedResponse(static function () use ($chemin): void {
-            readfile($chemin);
-            @unlink($chemin);
-        });
-        $reponse->headers->set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        $reponse->headers->set('Content-Disposition', HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_ATTACHMENT, $nom));
-        $reponse->headers->set('Content-Length', (string) filesize($chemin));
-        $reponse->headers->set('Cache-Control', 'no-store, private');
-
-        return $reponse;
+        // Envoyé puis effacé, même téléchargement coupé, et d'un seul tenant (19 bis).
+        return EnvoiPuisEffacement::reponse($chemin, $this->nomExport($entreprise));
     }
 
     /**
@@ -864,15 +858,11 @@ class EchangeController extends AbstractController
      */
     private function deposer(UploadedFile $fichier, Entreprise $entreprise): string
     {
-        $repertoire = sprintf('%s/%d', $this->dossierEchange, $entreprise->getId());
-        if (!is_dir($repertoire) && !mkdir($repertoire, 0775, true) && !is_dir($repertoire)) {
-            throw new \RuntimeException('Impossible de préparer le dépôt du fichier.');
-        }
+        // Le même rangement que la copie de Ket (DepotDeLEchange) : une seule règle.
+        $chemin = $this->depot->nouveauChemin($entreprise);
+        $fichier->move(\dirname($chemin), basename($chemin));
 
-        $nom = bin2hex(random_bytes(16)) . '.xlsx';
-        $fichier->move($repertoire, $nom);
-
-        return $repertoire . '/' . $nom;
+        return $chemin;
     }
 
     /**

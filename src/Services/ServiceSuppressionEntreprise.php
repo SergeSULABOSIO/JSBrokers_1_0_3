@@ -15,8 +15,10 @@ use Symfony\Component\Filesystem\Filesystem;
  * lignes de paramétrage, l'entreprise elle-même, ET ses fichiers uploadés sur le
  * serveur : TOUS (chantier 19, décision de Serge) — logo, pièces déposées, fichiers joints au
  * chat de Ket et documents qu'il a produits, dépôts et exports de l'échange, cache audio de la
- * voix. Les temporaires (var/tmp, dossier système) n'appartiennent à personne : ils sont
- * effacés juste après usage, et leurs restes par l'âge.
+ * voix, et ses fichiers de passage (`TemporairesDuCabinet`, chantier 19 bis). Un temporaire du
+ * dossier système ou de `var/tmp` ne porte jamais de données d'un cabinet au-delà de la requête
+ * qui l'écrit : il est effacé dans un `finally`. Les restes des dépôts, des exports et des
+ * fichiers de passage sont purgés par l'âge (`app:echange:purger`, une heure de grâce).
  *
  * Stratégie « table rase » assumée : on neutralise les contraintes d'intégrité
  * le temps de la purge (SET FOREIGN_KEY_CHECKS = 0 sous MariaDB/MySQL) et on
@@ -63,6 +65,8 @@ class ServiceSuppressionEntreprise
         private readonly string $repertoireEchange,
         #[Autowire('%app.dossier_de_la_voix_de_ket%')]
         private readonly string $repertoireVoix,
+        #[Autowire('%app.dossier_des_temporaires%')]
+        private readonly string $repertoireTemporaires,
         // Les pièces comptables se conservent dix ans : pas de purge sans archive remise.
         private readonly \App\Service\Note\ConservationDesPieces $conservation,
     ) {}
@@ -163,6 +167,9 @@ class ServiceSuppressionEntreprise
         $chemins[] = $this->repertoireEchange . '/' . $id;
         $chemins[] = $this->repertoireEchange . '/exports/' . $id;
         $chemins[] = $this->repertoireVoix . '/' . $id;
+        // Et ses fichiers de passage : une copie que Vich n'a pas emportée, un rapport de Ket
+        // dont l'enregistrement a échoué (19 bis).
+        $chemins[] = $this->repertoireTemporaires . '/' . $id;
 
         return $chemins;
     }

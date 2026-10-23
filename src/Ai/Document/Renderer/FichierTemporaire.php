@@ -47,11 +47,13 @@ final class FichierTemporaire
     }
 
     /**
-     * Un chemin de fichier neuf, dont l'appelant garde la charge.
+     * Un chemin de fichier neuf, dont l'appelant garde la charge — et qu'il efface LUI-MÊME dans
+     * la requête : par un `finally`, ou en le confiant à `EnvoiPuisEffacement` (une archive à
+     * télécharger).
      *
-     * Sert le dépôt Vich : le binaire y est écrit puis DÉPLACÉ au flush. Le
-     * supprimer ici ferait disparaître le document avant même qu'il soit rangé —
-     * d'où une méthode distincte de avec(), qui, elle, nettoie toujours.
+     * ⚠ JAMAIS POUR VICH (2026-10-23). Elle servait aussi le dépôt Vich d'un rapport de Ket : si
+     * le flush échouait, le rapport dormait ici pour toujours, hors de portée de la suppression
+     * du cabinet. Un fichier remis à Vich naît dans `TemporairesDuCabinet`.
      */
     public function chemin(string $extension): string
     {

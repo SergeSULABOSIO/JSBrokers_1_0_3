@@ -9,6 +9,7 @@ use App\Ai\Presentation\Colonnes;
 use App\Ai\Scope\AiScope;
 use App\Ai\Trousse\AiToolEcriture;
 use App\Echange\Service\Anomalie;
+use App\Echange\Service\DepotDeLEchange;
 use App\Echange\Service\ImportImpossibleException;
 use App\Echange\Service\ImportateurJsbx;
 use App\Entity\EchangeImportRun;
@@ -49,6 +50,7 @@ final class EchangeImporterTool implements AiToolInterface, AiToolEcriture, AiTo
         private readonly ConversationFichierResolver $fichiers,
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly UrlGeneratorInterface $urlGenerator,
+        private readonly DepotDeLEchange $depot,
     ) {
     }
 
@@ -190,7 +192,13 @@ final class EchangeImporterTool implements AiToolInterface, AiToolEcriture, AiTo
         // ⚠ Le chemin est COPIÉ : le fichier de la conversation appartient à la pièce
         // jointe, et l'import efface son dépôt une fois abouti. L'effacer reviendrait à
         // supprimer la pièce jointe de l'utilisateur sous ses yeux.
-        $copie = $this->copier($chemin);
+        $copie = $this->copier($chemin, $scope);
+        if ($copie === null) {
+            return AiToolResult::introuvable(
+                (string) $fichier->getNomOriginal(),
+                'Le fichier joint n\'a pas pu être préparé pour le contrôle. Demande à l\'utilisateur de réessayer.',
+            );
+        }
 
         $run = $this->importateur->controler(
             $copie,
@@ -339,18 +347,19 @@ final class EchangeImporterTool implements AiToolInterface, AiToolEcriture, AiTo
     }
 
     /**
-     * Copie de travail du fichier joint.
+     * Copie de travail du fichier joint, rangée dans le dépôt du CABINET (DepotDeLEchange).
      *
      * L'import efface son dépôt une fois abouti — c'est voulu, il porte des données
      * personnelles. Mais la pièce jointe, elle, appartient à la conversation de
      * l'utilisateur : la lui supprimer sous les yeux serait un effet de bord qu'il n'a
-     * pas demandé.
+     * pas demandé. La copie part donc là où part le dépôt de l'écran, et avec le cabinet
+     * s'il est supprimé — jamais dans le dossier temporaire du système, d'où rien ne
+     * l'aurait retirée.
      */
-    private function copier(string $chemin): string
+    private function copier(string $chemin, AiScope $scope): ?string
     {
-        $copie = tempnam(sys_get_temp_dir(), 'ket_import_') . '.xlsx';
-        copy($chemin, $copie);
+        $copie = $this->depot->nouveauChemin($scope->entreprise);
 
-        return $copie;
+        return @copy($chemin, $copie) ? $copie : null;
     }
 }

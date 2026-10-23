@@ -79,6 +79,7 @@ class ConservationDesPiecesTest extends WebTestCase
         $reference = $this->note($id)->getReference();
 
         $remise = static::getContainer()->get(ArchiveComptableDuCabinet::class)->remettre($this->cabinet($c));
+        $this->fichiers[] = $remise['chemin']; // effacée au tearDown, même si une assertion échoue
         $zip = new \ZipArchive();
         self::assertTrue($zip->open($remise['chemin']));
 
@@ -154,6 +155,7 @@ class ConservationDesPiecesTest extends WebTestCase
         $conn->executeStatement('UPDATE paiement SET created_at = ?, updated_at = NULL WHERE entreprise_id = ?', [$uneHeure, $c['entreprise']]);
         $this->em()->clear();
         $remise = static::getContainer()->get(ArchiveComptableDuCabinet::class)->remettre($this->cabinet($c));
+        $this->fichiers[] = $remise['chemin']; // effacée au tearDown, même si une assertion échoue
         @unlink($remise['chemin']);
         $this->em()->clear();
         $suppression->supprimer($this->cabinet($c));
@@ -239,6 +241,7 @@ class ConservationDesPiecesTest extends WebTestCase
 
         $this->vieillirLesPieces($c);
         $remise = static::getContainer()->get(ArchiveComptableDuCabinet::class)->remettre($this->cabinet($c));
+        $this->fichiers[] = $remise['chemin']; // effacée au tearDown, même si une assertion échoue
         @unlink($remise['chemin']);
         $this->em()->clear();
         static::getContainer()->get(ServiceSuppressionEntreprise::class)->supprimer($this->cabinet($c));
@@ -268,6 +271,7 @@ class ConservationDesPiecesTest extends WebTestCase
         $em->clear();
 
         $remise = static::getContainer()->get(ArchiveComptableDuCabinet::class)->remettre($this->cabinet($c));
+        $this->fichiers[] = $remise['chemin']; // effacée au tearDown, même si une assertion échoue
         $zip = new \ZipArchive();
         self::assertTrue($zip->open($remise['chemin']));
         self::assertStringContainsString('FACT-LOYER', (string) $zip->getFromName('depenses.csv'));
@@ -357,6 +361,7 @@ class ConservationDesPiecesTest extends WebTestCase
             [(new \DateTimeImmutable('-1 hour'))->format('Y-m-d H:i:s'), $c['entreprise']]);
         $this->em()->clear();
         $remise = static::getContainer()->get(ArchiveComptableDuCabinet::class)->remettre($this->cabinet($c));
+        $this->fichiers[] = $remise['chemin']; // effacée au tearDown, même si une assertion échoue
         @unlink($remise['chemin']);
         $conservation = static::getContainer()->get(ConservationDesPieces::class);
         $this->em()->clear();

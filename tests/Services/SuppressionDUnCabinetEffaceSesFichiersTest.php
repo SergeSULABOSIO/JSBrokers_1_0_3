@@ -127,6 +127,7 @@ final class SuppressionDUnCabinetEffaceSesFichiersTest extends KernelTestCase
             'dépôt de l’échange' => $this->deposer($parametre('app.dossier_de_l_echange') . "/$id", 'depot.xlsx'),
             'export de l’échange' => $this->deposer($parametre('app.dossier_de_l_echange') . "/exports/$id", 'export.xlsx'),
             'cache de la voix' => $this->deposer($parametre('app.dossier_de_la_voix_de_ket') . "/$id", 'phrase.wav'),
+            'fichier de passage' => $this->deposer($parametre('app.dossier_des_temporaires') . "/$id", 'copie.pdf'),
         ];
 
         static::getContainer()->get(ServiceSuppressionEntreprise::class)->supprimer($em->find(Entreprise::class, $id));
@@ -134,7 +135,7 @@ final class SuppressionDUnCabinetEffaceSesFichiersTest extends KernelTestCase
         foreach ($surLeDisque as $quoi => $chemin) {
             self::assertFileDoesNotExist($chemin, "Le $quoi du cabinet supprimé est resté sur le disque.");
         }
-        foreach (['app.dossier_de_l_echange' => "/$id", 'app.dossier_de_l_echange ' => "/exports/$id", 'app.dossier_de_la_voix_de_ket' => "/$id"] as $p => $suffixe) {
+        foreach (['app.dossier_de_l_echange' => "/$id", 'app.dossier_de_l_echange ' => "/exports/$id", 'app.dossier_de_la_voix_de_ket' => "/$id", 'app.dossier_des_temporaires' => "/$id"] as $p => $suffixe) {
             self::assertDirectoryDoesNotExist($parametre(trim($p)) . $suffixe, 'le dossier du cabinet part entier');
         }
 

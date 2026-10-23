@@ -165,8 +165,8 @@ class DocumentsTelechargerSelectionTest extends WebTestCase
      * L'archive téléchargée, relue : nom de fichier => contenu.
      *
      * ON LIT `getInternalResponse()`, ni `getResponse()->getContent()` ni le fichier
-     * pointé par la réponse : celle-ci est un BinaryFileResponse construit avec
-     * `deleteFileAfterSend`, et le client de test l'a DÉJÀ envoyée pour en capturer la
+     * pointé par la réponse : celle-ci efface son fichier une fois envoyé
+     * (`EnvoiPuisEffacement`), et le client de test l'a DÉJÀ envoyée pour en capturer la
      * sortie — le temporaire n'existe plus. Ce que le client a capturé est exactement ce
      * qu'un navigateur aurait reçu.
      */
@@ -175,18 +175,22 @@ class DocumentsTelechargerSelectionTest extends WebTestCase
         $chemin = tempnam(sys_get_temp_dir(), 'phpunit_zip_');
         file_put_contents($chemin, (string) $this->client->getInternalResponse()->getContent());
 
-        $zip = new \ZipArchive();
-        $this->assertTrue($zip->open($chemin) === true, 'La réponse doit être une archive lisible.');
+        // Effacé dans un `finally` : une assertion qui échoue ne laisse rien sur le poste.
+        try {
+            $zip = new \ZipArchive();
+            $this->assertTrue($zip->open($chemin) === true, 'La réponse doit être une archive lisible.');
 
-        $entrees = [];
-        for ($i = 0; $i < $zip->numFiles; ++$i) {
-            $nom = (string) $zip->getNameIndex($i);
-            $entrees[$nom] = (string) $zip->getFromIndex($i);
+            $entrees = [];
+            for ($i = 0; $i < $zip->numFiles; ++$i) {
+                $nom = (string) $zip->getNameIndex($i);
+                $entrees[$nom] = (string) $zip->getFromIndex($i);
+            }
+            $zip->close();
+
+            return $entrees;
+        } finally {
+            @unlink($chemin);
         }
-        $zip->close();
-        @unlink($chemin);
-
-        return $entrees;
     }
 
     /**

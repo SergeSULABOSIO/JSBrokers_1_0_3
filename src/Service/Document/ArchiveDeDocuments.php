@@ -6,9 +6,7 @@ use App\Entity\Document;
 use App\Entity\Entreprise;
 use App\Ai\Document\Renderer\FichierTemporaire;
 use App\Services\JSBDynamicSearchService;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -137,24 +135,27 @@ final class ArchiveDeDocuments
         }
 
         $cheminZip = $this->fichierTemporaire->chemin('zip');
-        $zip = new \ZipArchive();
-        if ($zip->open($cheminZip, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
-            throw new \RuntimeException("L'archive n'a pas pu être créée.");
+        try {
+            $zip = new \ZipArchive();
+            if ($zip->open($cheminZip, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+                throw new \RuntimeException("L'archive n'a pas pu être créée.");
+            }
+
+            $utilises = [];
+            foreach ($aEmpaqueter as [$chemin, $nom]) {
+                $zip->addFile($chemin, self::nomUniqueDansArchive($nom, $utilises));
+            }
+            $zip->close();
+        } catch (\Throwable $e) {
+            @unlink($cheminZip);
+
+            throw $e;
         }
 
-        $utilises = [];
-        foreach ($aEmpaqueter as [$chemin, $nom]) {
-            $zip->addFile($chemin, self::nomUniqueDansArchive($nom, $utilises));
-        }
-        $zip->close();
-
-        $reponse = new BinaryFileResponse($cheminZip);
-        $reponse->deleteFileAfterSend(true);
-        $reponse->setContentDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT, self::nomDeFichier($nomArchive));
-        $reponse->headers->set('Content-Type', 'application/zip');
-        ReponseDePiece::durcir($reponse);
-
-        return $reponse;
+        // Envoyée puis effacée, même téléchargement coupé, et d'un seul tenant (19 bis) : la
+        // réponse de fichier de Symfony servait des morceaux sur `Range`, et le premier morceau
+        // effaçait l'archive sous les suivants. Durcie comme toute pièce (chantier 18).
+        return EnvoiPuisEffacement::reponse($cheminZip, self::nomDeFichier($nomArchive), 'application/zip');
     }
 
     /** Un refus lisible, en texte brut : il s'affiche tel quel si le navigateur l'ouvre. */

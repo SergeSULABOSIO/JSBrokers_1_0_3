@@ -311,7 +311,10 @@ class KetMutationTest extends TestCase
             $cascade ?? $this->createMock(CascadeImpactAnalyzer::class),
             new ChampsObligatoiresInspector($emResolved, $formsResolved),
             new FormTreeInspector($formsResolved, $emResolved),
-            new \App\Ai\Fichier\ConversationFichierResolver($this->createMock(\Vich\UploaderBundle\Storage\StorageInterface::class)),
+            new \App\Ai\Fichier\ConversationFichierResolver(
+                $this->createMock(\Vich\UploaderBundle\Storage\StorageInterface::class),
+                new \App\Service\Fichier\TemporairesDuCabinet(sys_get_temp_dir() . '/phpunit_passages_inutilises'),
+            ),
             // Énumération des référentiels : ces tests portent sur le fail-closed et le
             // scope, jamais sur l'inventaire des champs — un double suffit.
             $this->createMock(\App\Service\Workspace\ReferentielEnumerateur::class),

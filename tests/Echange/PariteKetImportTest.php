@@ -173,6 +173,44 @@ class PariteKetImportTest extends WebTestCase
         self::assertSame($avant, $this->compterClients($entreprise), 'Le contrôle de Ket n\'écrit rien non plus.');
     }
 
+    /**
+     * LA COPIE DE KET EST RANGÉE CHEZ LE CABINET, comme le dépôt de l'écran (Serge, 2026-10-23).
+     *
+     * Elle partait dans le dossier temporaire du système (`tempnam(…) . '.xlsx'`) : supprimer le
+     * cabinet effaçait la ligne d'import mais pas le classeur — des données de clients restées
+     * sur le serveur, plus un fichier vide à chaque import (44 + 44 relevés sur le poste).
+     */
+    public function testLaCopieDeKetEstRangeeChezLeCabinetEtPartAvecLui(): void
+    {
+        [$entreprise, $proprietaire, $conversation] = $this->fixture();
+        $chemin = $this->classeurDeReprise($entreprise, [$this->uneEcheance('Client Rangé')]);
+        $idFichier = $this->joindre($conversation, $chemin);
+        $temporairesAvant = glob(sys_get_temp_dir() . '/ket*') ?: [];
+
+        $this->outilImport()->execute(
+            ['etape' => 'controle', 'idFichier' => $idFichier],
+            new AiScope($entreprise, $proprietaire, $conversation),
+        );
+
+        $run = static::getContainer()->get(\App\Repository\EchangeImportRunRepository::class)
+            ->aDeciderOuACorrigerPour($entreprise, $proprietaire);
+        self::assertNotNull($run);
+        $copie = str_replace('\\', '/', (string) $run->getCheminFichier());
+        $depot = str_replace('\\', '/', static::getContainer()->getParameter('app.dossier_de_l_echange')) . '/' . $entreprise->getId() . '/';
+
+        self::assertStringStartsWith($depot, $copie, 'La copie de Ket se range dans le dépôt du cabinet.');
+        self::assertMatchesRegularExpression('/^[0-9a-f]{32}\.xlsx$/', basename($copie), 'Nom aléatoire, comme à l\'écran.');
+        self::assertFileExists($copie);
+        self::assertSame([], array_values(array_diff(glob(sys_get_temp_dir() . '/ket*') ?: [], $temporairesAvant)), 'Rien ne reste dans le dossier temporaire du système.');
+
+        // Et elle part avec le cabinet : le dossier de dépôt est dans l'inventaire de la suppression.
+        $inventaire = array_map(
+            static fn (string $c): string => rtrim(str_replace('\\', '/', $c), '/') . '/',
+            static::getContainer()->get(\App\Services\ServiceSuppressionEntreprise::class)->fichiersDuCabinet((int) $entreprise->getId()),
+        );
+        self::assertContains($depot, $inventaire);
+    }
+
     /** Sans droit d'ÉCRITURE, l'import est refusé à Ket comme à l'écran. */
     public function testSansDroitDEcritureKetRefuseLImport(): void
     {
@@ -335,7 +373,8 @@ class PariteKetImportTest extends WebTestCase
         $reponse->sendContent();
         $contenu = (string) ob_get_clean();
 
-        $chemin = tempnam(sys_get_temp_dir(), 'jsbx_par_') . '.xlsx';
+        // `tempnam` CRÉE son fichier : on écrit dessus, sans lui accoler « .xlsx » (le résidu vide restait).
+        $chemin = (string) tempnam(sys_get_temp_dir(), 'jsbx_par_');
         file_put_contents($chemin, $contenu);
         $this->temporaires[] = $chemin;
 
@@ -415,6 +454,7 @@ class PariteKetImportTest extends WebTestCase
     /** Purge dérivée du schéma — cf. ExportJsbxTest, même raison. */
     private function nettoyer(): void
     {
+        \App\Tests\Support\FichiersDesCabinetsDeTest::effacer(static::getContainer(), self::ENT);
         $cnx = $this->em()->getConnection();
         $ids = $cnx->fetchFirstColumn('SELECT id FROM entreprise WHERE nom = ?', [self::ENT]);
 

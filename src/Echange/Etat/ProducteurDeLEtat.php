@@ -15,9 +15,8 @@ use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Psr\Log\LoggerInterface;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use Symfony\Component\HttpFoundation\HeaderUtils;
+use App\Service\Document\EnvoiPuisEffacement;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * PRODUIT ET FACTURE l'état du portefeuille.
@@ -259,17 +258,18 @@ final class ProducteurDeLEtat
     private function reponse(Spreadsheet $classeur, string $nom): Response
     {
         $chemin = (string) tempnam(sys_get_temp_dir(), 'jsbx_etat_');
-        $this->ecrireSur($classeur, $chemin);
-
-        $reponse = new StreamedResponse(static function () use ($chemin): void {
-            readfile($chemin);
+        try {
+            $this->ecrireSur($classeur, $chemin);
+        } catch (\Throwable $e) {
             @unlink($chemin);
-        });
-        $reponse->headers->set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        $reponse->headers->set('Content-Disposition', HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_ATTACHMENT, $nom));
-        $reponse->headers->set('Cache-Control', 'no-store, private');
 
-        return $reponse;
+            throw $e;
+        }
+
+        // ⚠ ENVOYÉ PUIS EFFACÉ, MÊME TÉLÉCHARGEMENT COUPÉ (2026-10-23). Le flux lisait puis
+        // effaçait : une coupure arrêtait PHP avant l'effacement, et l'état du portefeuille
+        // restait dans le dossier temporaire du système. D'un seul tenant : voir EnvoiPuisEffacement.
+        return EnvoiPuisEffacement::reponse($chemin, $nom);
     }
 
     /**

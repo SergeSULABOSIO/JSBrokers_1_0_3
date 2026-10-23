@@ -16,7 +16,8 @@ use PHPUnit\Runner\BeforeTestHook;
  *
  * Le relevé ne fait pas échouer un test : il s'écrit dans var/fichiers-laisses-par-les-tests.log
  * et se résume en fin de suite. Les dossiers sont ceux des paramètres `app.dossier_*`
- * (config/services.yaml) — relus ici en chemins, l'extension tournant hors du conteneur.
+ * (config/services.yaml) — relus ici en chemins, l'extension tournant hors du conteneur —,
+ * plus le dossier temporaire du système, noté `[temp]/`.
  */
 final class FichiersLaissesParLesTests implements BeforeTestHook, AfterTestHook, AfterLastTestHook
 {
@@ -27,9 +28,19 @@ final class FichiersLaissesParLesTests implements BeforeTestHook, AfterTestHook,
         'var/echange',
         'var/echange/exports',
         'var/ket-voix',
+        'var/tmp/cabinets',
         'public/uploads/logos',
         'public/uploads/documents',
     ];
+
+    /**
+     * LE DOSSIER TEMPORAIRE DU SYSTÈME AUSSI (2026-10-23) : 44 copies d'import de Ket, leurs 44
+     * résidus vides et 220 résidus de tests y dormaient, invisibles d'ici. On n'y regarde que
+     * les noms que NOS `tempnam` produisent — le préfixe entier sous Linux, ses trois premières
+     * lettres sous Windows (`ket52E5.tmp`) —, pour ne pas désigner les fichiers des autres
+     * programmes du poste.
+     */
+    private const PREFIXES_TEMPORAIRES = ['ket', 'jsb', 'arc', 'not', 'php', 'par', 'doc', 'xls', 'csv', 'txt'];
 
     /** @var array<string, true> */
     private array $avant = [];
@@ -53,6 +64,17 @@ final class FichiersLaissesParLesTests implements BeforeTestHook, AfterTestHook,
                     && !($dossier === 'var/echange' && $entree === 'exports')
                     && !($dossier === 'var/ket-voix' && $entree === 'epuisement')) {
                     $liste[$dossier . '/' . $entree] = true;
+                }
+            }
+        }
+
+        $temporaire = sys_get_temp_dir();
+        foreach (scandir($temporaire) ?: [] as $entree) {
+            $minuscule = strtolower($entree);
+            foreach (self::PREFIXES_TEMPORAIRES as $prefixe) {
+                if (str_starts_with($minuscule, $prefixe) && is_file($temporaire . '/' . $entree)) {
+                    $liste['[temp]/' . $entree] = true;
+                    break;
                 }
             }
         }

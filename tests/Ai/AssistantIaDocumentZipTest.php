@@ -229,7 +229,7 @@ class AssistantIaDocumentZipTest extends WebTestCase
      * Les octets réellement reçus.
      *
      * PAS `getResponse()->getContent()`, et pas non plus un second `sendContent()` :
-     * la réponse est un BinaryFileResponse construit avec `deleteFileAfterSend`, et
+     * la réponse efface son fichier une fois envoyé (`EnvoiPuisEffacement`), et
      * HttpKernelBrowser l'a DÉJÀ envoyée pour en capturer la sortie — le temporaire
      * n'existe donc plus. Ce que le client a capturé vit dans la réponse BrowserKit,
      * et c'est exactement ce qu'un navigateur aurait téléchargé.
@@ -245,18 +245,22 @@ class AssistantIaDocumentZipTest extends WebTestCase
         $chemin = tempnam(sys_get_temp_dir(), 'phpunit_zip_');
         file_put_contents($chemin, $octets);
 
-        $zip = new \ZipArchive();
-        self::assertTrue($zip->open($chemin) === true, "L'archive téléchargée doit être un ZIP valide.");
+        // Effacé dans un `finally` : une assertion qui échoue ne laisse rien sur le poste.
+        try {
+            $zip = new \ZipArchive();
+            self::assertTrue($zip->open($chemin) === true, "L'archive téléchargée doit être un ZIP valide.");
 
-        $entrees = [];
-        for ($i = 0; $i < $zip->numFiles; ++$i) {
-            $nom = (string) $zip->getNameIndex($i);
-            $entrees[$nom] = (string) $zip->getFromIndex($i);
+            $entrees = [];
+            for ($i = 0; $i < $zip->numFiles; ++$i) {
+                $nom = (string) $zip->getNameIndex($i);
+                $entrees[$nom] = (string) $zip->getFromIndex($i);
+            }
+            $zip->close();
+
+            return $entrees;
+        } finally {
+            @unlink($chemin);
         }
-        $zip->close();
-        @unlink($chemin);
-
-        return $entrees;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

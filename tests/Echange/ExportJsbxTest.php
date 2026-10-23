@@ -612,7 +612,7 @@ class ExportJsbxTest extends KernelTestCase
         $reponse->sendContent();
         $contenu = (string) ob_get_clean();
 
-        $chemin = tempnam(sys_get_temp_dir(), 'jsbx_') . '.xlsx';
+        $chemin = (string) tempnam(sys_get_temp_dir(), 'jsbx_'); // sans « .xlsx » accolé : le fichier vide de tempnam restait
         file_put_contents($chemin, $contenu);
 
         try {

@@ -2,12 +2,12 @@
 
 namespace App\Ai\Document;
 
-use App\Ai\Document\Renderer\FichierTemporaire;
 use App\Ai\Document\Renderer\RapportRendererResolver;
 use App\Entity\AssistantDocument;
 use App\Entity\AssistantMessage;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
+use App\Service\Fichier\TemporairesDuCabinet;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
@@ -30,7 +30,7 @@ final class DocumentProducteur
         private readonly RapportRendererResolver $resolver,
         private readonly RapportAssembleur $assembleur,
         private readonly DocumentNommage $nommage,
-        private readonly FichierTemporaire $temporaire,
+        private readonly TemporairesDuCabinet $temporaires,
         private readonly EntityManagerInterface $em,
     ) {
     }
@@ -83,7 +83,7 @@ final class DocumentProducteur
             ->setCreatedAt($produitLe);
 
         // Vich attend un fichier sur disque : on écrit les octets dans un
-        // temporaire, qu'il DÉPLACERA au flush. Le temporaire n'est donc pas
+        // fichier de passage, qu'il DÉPLACERA au flush. Il n'est donc pas
         // supprimé ici — d'où l'écriture directe plutôt qu'un passage par
         // FichierTemporaire::avec(), qui nettoie toujours.
         //
@@ -93,7 +93,9 @@ final class DocumentProducteur
         // nomFichierStocke reste null — la ligne existe alors en base sans fichier
         // derrière, et le téléchargement répond 404. C'est le même détour que
         // ConversationFichierResolver pour les pièces jointes.
-        $chemin = $this->temporaire->chemin($format->extension());
+        // Un fichier de passage DU CABINET (19 bis) : s'il n'est pas emporté — flush refusé,
+        // exception —, il est effacé à la fin du travail, et part de toute façon avec le cabinet.
+        $chemin = $this->temporaires->nouveau($entreprise, $format->extension());
         file_put_contents($chemin, $octets);
         $document->setFichier(new UploadedFile($chemin, $nom, $format->mime(), null, true));
 

@@ -527,7 +527,7 @@ class GabaritEtAnomaliesTest extends WebTestCase
 
     private function ecrire(\PhpOffice\PhpSpreadsheet\Spreadsheet $classeur): string
     {
-        $chemin = tempnam(sys_get_temp_dir(), 'jsbx_gab_') . '.xlsx';
+        $chemin = (string) tempnam(sys_get_temp_dir(), 'jsbx_gab_'); // sans « .xlsx » accolé : le fichier vide de tempnam restait
         (new Xlsx($classeur))->save($chemin);
         $this->temporaires[] = $chemin;
 
@@ -536,7 +536,7 @@ class GabaritEtAnomaliesTest extends WebTestCase
 
     private function fichierTemporaire(string $contenu): string
     {
-        $chemin = tempnam(sys_get_temp_dir(), 'jsbx_gab_') . '.xlsx';
+        $chemin = (string) tempnam(sys_get_temp_dir(), 'jsbx_gab_'); // sans « .xlsx » accolé : le fichier vide de tempnam restait
         file_put_contents($chemin, $contenu);
         $this->temporaires[] = $chemin;
 

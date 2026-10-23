@@ -240,7 +240,22 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
     source que la suppression d'un cabinet : `ServiceSuppressionEntreprise::fichiersDuCabinet`).
     L'extension `FichiersLaissesParLesTests` (phpunit.xml.dist) désigne tout test qui laisse un
     fichier, dans `var/fichiers-laisses-par-les-tests.log` — ce fichier doit rester absent.
-    (37 178 fichiers orphelins nettoyés sur le poste le 2026-10-22.)
+    (37 178 fichiers orphelins nettoyés sur le poste le 2026-10-22.) Elle surveille aussi le
+    dossier temporaire du SYSTÈME (`[temp]/`, noms de nos `tempnam`) : `tempnam(…) . '.xlsx'`
+    y laisse un fichier vide — écrire sur le chemin que rend `tempnam` (314 restes effacés le
+    2026-10-23 ; sous Windows le préfixe est tronqué à 3 lettres : `ket52E5.tmp`).
+  - **Un fichier de passage qui porte des données d'un cabinet ne dort JAMAIS hors de chez lui**
+    (chantier 19 bis, 2026-10-23) :
+    - une copie ou un rendu remis à Vich (qui le DÉPLACE au flush) naît dans
+      `TemporairesDuCabinet::nouveau()` (`var/tmp/cabinets/<id>/`) : effacé s'il n'a pas été
+      emporté (remise à zéro du service, destruction), parti avec le cabinet, purgé après une
+      heure par `app:echange:purger` (PHP tué net) ;
+    - un classeur déposé pour l'import, par l'écran OU par Ket : `DepotDeLEchange::nouveauChemin()` ;
+    - un fichier produit pour UN téléchargement : `EnvoiPuisEffacement::reponse()` — effacé
+      dans un `finally`, coupure ignorée, d'un seul tenant (jamais `readfile` puis `unlink` ;
+      jamais `BinaryFileResponse`, qui sert des morceaux sur `Range`) ;
+    - un temporaire de travail (`tempnam`, `FichierTemporaire::avec`) s'efface dans un `finally`
+      de la requête qui l'écrit.
   - E2E sur les fichiers : une instance Apache qui LIT les `.htaccess` (`AllowOverride All`,
     `mod_rewrite`/`mod_headers`) — l'instance E2E habituelle les ignore et répondrait 200.
 - Asset Mapper : aucune compilation. En dev, rien à builder ; en E2E, ne pas laisser `public/assets`.
@@ -495,3 +510,7 @@ Inscrits le 2026-10-22 (décisions de Serge) :
     découvertes dans le modèle, jamais listées), effacées avant leurs parents. `utilisateur`
     est seulement détaché. **Règle** : un nouvel emplacement de fichiers par cabinet s'y
     ajoute ; `SuppressionDUnCabinetEffaceSesFichiersTest` (bout en bout) le prouve.
+    **19 bis (2026-10-23)** : les TEMPORAIRES — copie d'import de Ket rangée dans le dépôt du
+    cabinet, copie de pièce jointe et rapport de Ket dans `var/tmp/cabinets/<id>/` (8ᵉ
+    emplacement), export envoyé puis effacé même coupé, purge par l'âge des exports et des
+    fichiers de passage. Règles au §4 (« fichier de passage »).

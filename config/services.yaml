@@ -27,6 +27,7 @@ parameters:
     app.dossier_des_documents_de_ket: '%kernel.project_dir%/var/uploads/assistant-documents' # produits par Ket
     app.dossier_de_l_echange: '%kernel.project_dir%/var/echange'                             # <id>/ et exports/<id>/
     app.dossier_de_la_voix_de_ket: '%kernel.project_dir%/var/ket-voix'                       # <id>/ : cache audio
+    app.dossier_des_temporaires: '%kernel.project_dir%/var/tmp/cabinets'                     # <id>/ : fichiers de passage (19 bis)
 
 services:
     # default configuration for services in *this* file

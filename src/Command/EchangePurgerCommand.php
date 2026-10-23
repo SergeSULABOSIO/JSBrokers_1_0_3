@@ -28,8 +28,10 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  *
  * ── CE QU'ELLE NE FAIT PAS ──────────────────────────────────────────────────────────
  * Elle ne touche ni aux occurrences — un import qui a eu lieu se trace pour toujours —,
- * ni aux données importées, ni à quoi que ce soit de l'exportation. Elle referme des
- * dossiers restés ouverts, et rien d'autre.
+ * ni aux données importées. Elle referme des dossiers restés ouverts, et rien d'autre.
+ * Depuis le chantier 19 bis (2026-10-23), elle efface aussi les FICHIERS DE PASSAGE
+ * oubliés depuis plus d'une heure : exports préparés jamais téléchargés, copies et
+ * rapports de Ket que Vich n'a pas emportés (`TemporairesDuCabinet`).
  *
  * À planifier une fois par jour. `--simuler` dit ce qu'elle ferait, sans rien effacer.
  */
@@ -44,6 +46,8 @@ final class EchangePurgerCommand extends Command
         private readonly ImportateurJsbx $importateur,
         #[Autowire('%app.dossier_de_l_echange%')]
         private readonly string $dossierEchange,
+        #[Autowire('%app.dossier_des_temporaires%')]
+        private readonly string $dossierDesTemporaires,
     ) {
         parent::__construct();
     }
@@ -89,13 +93,18 @@ final class EchangePurgerCommand extends Command
         // la création de son contrôle : le classeur reste, et rien ne le réclame plus.
         $orphelins = $this->orphelins($simuler);
 
+        // ⚠ ET LES FICHIERS DE PASSAGE OUBLIÉS (chantier 19 bis) : exports préparés jamais
+        // téléchargés, copies et rapports que Vich n'a pas emportés parce que PHP a été tué net.
+        $passages = $this->passagesOublies($simuler);
+
         $io->success(sprintf(
-            '%s : %d contrôle(s) expiré(s), %d fichier(s) déposé(s) (%s), %d orphelin(s).',
+            '%s : %d contrôle(s) expiré(s), %d fichier(s) déposé(s) (%s), %d orphelin(s), %d fichier(s) de passage.',
             $simuler ? 'Simulation' : 'Purge',
             count($expires),
             $fichiers,
             $this->lisible($octets),
             $orphelins,
+            $passages,
         ));
 
         return Command::SUCCESS;
@@ -105,7 +114,8 @@ final class EchangePurgerCommand extends Command
      * Les classeurs déposés que plus aucun contrôle ne référence.
      *
      * ⚠ ON NE TOUCHE QU'AU RÉPERTOIRE DES DÉPÔTS D'IMPORT. Les exports préparés vivent
-     * ailleurs et suivent leur propre règle — ils s'effacent à la lecture.
+     * ailleurs et suivent leur propre règle — ils s'effacent à la lecture, et ceux qu'on
+     * ne vient pas chercher, par passagesOublies().
      *
      * @return int le nombre de fichiers effacés (ou qui le seraient)
      */
@@ -134,6 +144,35 @@ final class EchangePurgerCommand extends Command
 
         foreach (glob($racine . '/*/*.xlsx') ?: [] as $chemin) {
             if (isset($reclames[$chemin]) || filemtime($chemin) > $seuil) {
+                continue;
+            }
+            if (!$simuler) {
+                @unlink($chemin);
+            }
+            ++$efface;
+        }
+
+        return $efface;
+    }
+
+    /**
+     * Les fichiers produits pour UN usage et restés là : un export préparé (`exports/<id>/`) que
+     * personne n'est venu chercher, un fichier de passage (`TemporairesDuCabinet`) que ni le
+     * destructeur ni la remise à zéro n'ont effacé. Même heure de grâce que les dépôts : un
+     * téléchargement ou un enregistrement peut être en cours.
+     *
+     * @return int le nombre de fichiers effacés (ou qui le seraient)
+     */
+    private function passagesOublies(bool $simuler): int
+    {
+        $seuil = time() - 3600;
+        $efface = 0;
+        $candidats = array_merge(
+            glob($this->dossierEchange . '/exports/*/*.xlsx') ?: [],
+            glob($this->dossierDesTemporaires . '/*/*') ?: [],
+        );
+        foreach ($candidats as $chemin) {
+            if (!is_file($chemin) || filemtime($chemin) > $seuil) {
                 continue;
             }
             if (!$simuler) {

@@ -71,7 +71,7 @@ final class ReponseDePiece
     }
 
     /** Les en-têtes de toute réponse qui livre un fichier déposé (archives comprises). */
-    public static function durcir(BinaryFileResponse $reponse): void
+    public static function durcir(\Symfony\Component\HttpFoundation\Response $reponse): void
     {
         $reponse->headers->set('X-Content-Type-Options', 'nosniff');
         $reponse->headers->set('Content-Security-Policy', 'sandbox');

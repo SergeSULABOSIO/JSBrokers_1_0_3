@@ -5,6 +5,7 @@ namespace App\Ai\Fichier;
 use App\Ai\Mutation\ConversationFichierRef;
 use App\Ai\Scope\AiScope;
 use App\Entity\AssistantConversationFichier;
+use App\Service\Fichier\TemporairesDuCabinet;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Vich\UploaderBundle\Storage\StorageInterface;
 
@@ -14,11 +15,17 @@ use Vich\UploaderBundle\Storage\StorageInterface;
  * fichier RÉELLEMENT attaché à cette conversation peut être injecté dans un
  * formulaire d'entité (ex. le Document d'un Avenant). Point de passage unique,
  * partagé par le dry-run et l'exécution du WorkspaceMutationService.
+ *
+ * ⚠ LA COPIE REMISE À L'EXÉCUTION EST UN FICHIER DE PASSAGE DU CABINET (2026-10-23). Vich la
+ * déplace au flush ; si l'enregistrement échoue, elle — le fichier d'un client — restait dans
+ * le dossier temporaire du système, hors de portée de la suppression du cabinet. Elle naît
+ * désormais dans `TemporairesDuCabinet`, qui l'efface si Vich ne l'a pas emportée.
  */
 final class ConversationFichierResolver
 {
     public function __construct(
         private readonly StorageInterface $storage,
+        private readonly TemporairesDuCabinet $temporaires,
     ) {
     }
 
@@ -83,8 +90,8 @@ final class ConversationFichierResolver
 
         $source = $chemin;
         if ($pourExecution) {
-            $tmp = tempnam(sys_get_temp_dir(), 'ket_pj_');
-            if ($tmp === false || !@copy($chemin, $tmp)) {
+            $tmp = $this->temporaires->nouveau($scope->entreprise, pathinfo($chemin, PATHINFO_EXTENSION));
+            if (!@copy($chemin, $tmp)) {
                 return PieceResolue::refus(sprintf(
                     'Le fichier « %s » (#%d) n’a pas pu être préparé pour l’enregistrement.',
                     (string) $fichier->getNomOriginal(),
