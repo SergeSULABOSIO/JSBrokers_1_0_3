@@ -11,6 +11,7 @@ import {
     themeOppose,
 } from './assistant-theme.js';
 import { positionnerMenu, indexApresTouche } from './menu-flottant.js';
+import { fermerInfobulle } from './infobulle-moteur.js';
 import { fusionnerTranscripts } from './dictee-transcript.js';
 import { DEBIT, HAUTEUR, choisirVoix, decouperEnPhrases, texteAPrononcer } from './assistant-lecture-vocale.js';
 import {
@@ -108,14 +109,6 @@ export default class extends Controller {
 
     /** Seuil d'affichage du compteur de caractères restants (proche de maxlength). */
     static COUNT_THRESHOLD = 400;
-
-    /**
-     * Lignes de fiche affichées dans l'infobulle d'une puce de contexte. Borne
-     * d'AFFICHAGE seulement : la fiche transmise à l'assistante n'est jamais
-     * tronquée. L'infobulle flotte au <body>, ne défile pas et suit le curseur —
-     * au-delà d'une vingtaine de lignes elle déborderait du viewport.
-     */
-    static CTX_TIP_MAX_LIGNES = 20;
 
     /** Message autoritaire affiché quand le modèle décrit un plan sans l'avoir préparé (aucun bouton ne viendra). */
     static MUTATION_ABSENT_MESSAGE = "Aucun plan n'est réellement en attente de validation : l'opération n'a pas été préparée, donc aucun bouton « Valider et exécuter » n'apparaîtra. Redemandez l'action (par ex. « supprime le revenu de cette cotation ») pour que le plan et son bouton s'affichent.";
@@ -259,32 +252,8 @@ export default class extends Controller {
         // réponse n'est plus perdue avec l'onglet, ce qui n'était pas vrai avant.
         if (this.hasEtatUrlValue) this._planifierScrutin(0);
 
-        // Infobulle sombre des puces de contexte (pattern du bloc Pistes du
-        // tableau de bord : élément flottant au <body>, suit le curseur).
-        // Délégation sur la barre de contexte : survit aux re-rendus innerHTML.
-        this._ctxTip = null;
-        this._ctxTipActive = false;
-        this._ctxTipPinned = false;
-        this._onCtxTipOver = this._ctxTipOver.bind(this);
-        this._onCtxTipOut = this._ctxTipOut.bind(this);
-        this._onCtxTipMove = this._ctxTipMove.bind(this);
-        if (this.hasContextBarTarget) {
-            this.contextBarTarget.addEventListener('mouseover', this._onCtxTipOver);
-            this.contextBarTarget.addEventListener('mouseout', this._onCtxTipOut);
-        }
-        // Puces fichiers : même infobulle sombre, déléguée à la barre de fichiers
-        // (survit aux re-rendus innerHTML des endpoints d'attache/retrait).
-        if (this.hasFichierBarTarget) {
-            this.fichierBarTarget.addEventListener('mouseover', this._onCtxTipOver);
-            this.fichierBarTarget.addEventListener('mouseout', this._onCtxTipOut);
-        }
-        // Agrafes des bulles utilisateur (instantané de contexte du message) :
-        // même infobulle sombre, déléguée au fil de messages (survit aux ajouts).
-        if (this.hasMessagesTarget) {
-            this.messagesTarget.addEventListener('mouseover', this._onCtxTipOver);
-            this.messagesTarget.addEventListener('mouseout', this._onCtxTipOut);
-        }
-        document.addEventListener('mousemove', this._onCtxTipMove);
+        // Les infobulles du chat (puces, fichiers, agrafes, micro) : l'infobulle unique — contenu
+        // déclaré par le serveur (data-infobulle), servi par l'instance du <body> (chantier 3, 3c).
 
         // Exécution d'un plan de mutation confirmé : la modale de confirmation
         // notifie le bus cerveau:event ; on capte notre type dédié.
@@ -320,18 +289,6 @@ export default class extends Controller {
         this.element.addEventListener('ket-live:question', this._onLiveQuestion);
         this.element.addEventListener('ket-live:lire', this._onLiveLire);
         this.element.addEventListener('ket-live:interrompre', this._onLiveInterrompre);
-
-        // Infobulle sombre du bouton micro (pattern Joseara .jsb-ctx-tip) :
-        // ANCRÉE au-dessus du bouton (le composer est au coin inférieur droit de
-        // l'écran) plutôt que suiveuse de curseur — réutilise l'infobulle du chat.
-        if (this.hasMicTarget) {
-            this._onMicTipOver = this._micTipShow.bind(this);
-            this._onMicTipOut = () => this._ctxTipHide();
-            this.micTarget.addEventListener('mouseenter', this._onMicTipOver);
-            this.micTarget.addEventListener('mouseleave', this._onMicTipOut);
-            this.micTarget.addEventListener('focus', this._onMicTipOver);
-            this.micTarget.addEventListener('blur', this._onMicTipOut);
-        }
     }
 
     /**
@@ -585,15 +542,6 @@ export default class extends Controller {
         if (this._onMutationExecute) {
             document.removeEventListener('cerveau:event', this._onMutationExecute);
         }
-        if (this.hasContextBarTarget) {
-            this.contextBarTarget.removeEventListener('mouseover', this._onCtxTipOver);
-            this.contextBarTarget.removeEventListener('mouseout', this._onCtxTipOut);
-        }
-        if (this.hasMessagesTarget) {
-            this.messagesTarget.removeEventListener('mouseover', this._onCtxTipOver);
-            this.messagesTarget.removeEventListener('mouseout', this._onCtxTipOut);
-        }
-        document.removeEventListener('mousemove', this._onCtxTipMove);
         if (this._onLiveSession) {
             this.element.removeEventListener('ket-live:session', this._onLiveSession);
         }
@@ -602,10 +550,7 @@ export default class extends Controller {
             this.element.removeEventListener('ket-live:lire', this._onLiveLire);
             this.element.removeEventListener('ket-live:interrompre', this._onLiveInterrompre);
         }
-        if (this._ctxTip) {
-            this._ctxTip.remove();
-            this._ctxTip = null;
-        }
+        fermerInfobulle(this.element);
         // Coupe une éventuelle dictée en cours quand le panneau col-4 est re-rendu.
         if (this.recognition) {
             this._dicteeVoulue = false;
@@ -617,12 +562,6 @@ export default class extends Controller {
         if (this._dicteeMinuteur) {
             clearInterval(this._dicteeMinuteur);
             this._dicteeMinuteur = null;
-        }
-        if (this.hasMicTarget && this._onMicTipOver) {
-            this.micTarget.removeEventListener('mouseenter', this._onMicTipOver);
-            this.micTarget.removeEventListener('mouseleave', this._onMicTipOut);
-            this.micTarget.removeEventListener('focus', this._onMicTipOver);
-            this.micTarget.removeEventListener('blur', this._onMicTipOut);
         }
         if (this._onThemeChanged) {
             document.removeEventListener(EVENEMENT_THEME, this._onThemeChanged);
@@ -698,6 +637,9 @@ export default class extends Controller {
     _appliquerTheme(theme, { rethemer = true } = {}) {
         this._theme = theme;
         this.element.setAttribute('data-aic-theme', theme);
+        // L'infobulle unique vit au <body>, hors du thème du chat : la zone se DÉCLARE sombre
+        // et la bulle prend son contour (son ombre noire n'y délimiterait plus rien).
+        this.element.toggleAttribute('data-infobulle-sur-sombre', theme === THEME_SOMBRE);
         this.element.querySelectorAll('.aic-theme').forEach((btn) => {
             const sombre = theme === THEME_SOMBRE ? 'true' : 'false';
             btn.setAttribute('aria-pressed', sombre);
@@ -2988,8 +2930,9 @@ export default class extends Controller {
         }
         // La puce survolée peut venir d'être retirée du DOM : le navigateur
         // n'émet alors aucun mouseout — sans masquage explicite, l'infobulle
-        // resterait affichée et suivrait le curseur indéfiniment.
-        this._ctxTipHide();
+        // resterait affichée. Seulement la bulle d'une puce (ou d'un élément disparu) : celle
+        // d'un bouton survolé ailleurs pendant la requête reste.
+        fermerInfobulle(this.hasContextBarTarget ? this.contextBarTarget : this.element);
     }
 
     /** État courant du contexte, lu depuis les puces rendues serveur. */
@@ -3170,7 +3113,7 @@ export default class extends Controller {
             this.fichierBarTarget.innerHTML = html;
         }
         // Une puce survolée peut disparaître du DOM sans mouseout : masquage explicite.
-        this._ctxTipHide();
+        fermerInfobulle(this.hasFichierBarTarget ? this.fichierBarTarget : this.element);
     }
 
     /** Retire UN fichier de la conversation (bouton × d'une puce fichier). */
@@ -3402,290 +3345,6 @@ export default class extends Controller {
         return formatTaille(octets);
     }
 
-    // ── Infobulle sombre des puces (pattern data-piste-tip du tableau de bord) ──
-
-    _ctxTipOver(event) {
-        if (this._ctxTipPinned) return; // infobulle épinglée par clic : ne pas écraser
-        const cible = event.target.closest ? event.target.closest('[data-ctx-tip], [data-fic-tip], [data-msg-contextes]') : null;
-        if (!cible || event.target.closest('.aic-chip-remove')) return;
-        const tip = this._ctxTipCreate();
-        if (cible.dataset.ficTip !== undefined) {
-            this._ctxTipBuildFichier(tip, cible);
-        } else if (cible.dataset.msgContextes !== undefined) {
-            this._ctxTipBuildMessage(tip, cible);
-        } else {
-            this._ctxTipBuild(tip, cible);
-        }
-        tip.style.display = 'block';
-        this._ctxTipActive = true;
-    }
-
-    _ctxTipOut(event) {
-        if (this._ctxTipPinned) return;
-        const cible = event.target.closest ? event.target.closest('[data-ctx-tip], [data-fic-tip], [data-msg-contextes]') : null;
-        if (cible && !cible.contains(event.relatedTarget)) {
-            this._ctxTipHide();
-        }
-    }
-
-    /**
-     * Clic sur l'agrafe d'un message : épingle l'infobulle (elle cesse de suivre
-     * le curseur — utile aussi au tactile) ; second clic = masquage.
-     */
-    toggleMsgContextes(event) {
-        const bouton = event.currentTarget;
-        if (this._ctxTipPinned) {
-            this._ctxTipHide();
-            return;
-        }
-        const tip = this._ctxTipCreate();
-        this._ctxTipBuildMessage(tip, bouton);
-        const rect = bouton.getBoundingClientRect();
-        tip.style.display = 'block';
-        tip.style.left = `${Math.max(8, rect.left - 220)}px`;
-        tip.style.top = `${rect.bottom + 6}px`;
-        this._ctxTipActive = true;
-        this._ctxTipPinned = true;
-    }
-
-    /** Masque l'infobulle et coupe le suivi du curseur. */
-    _ctxTipHide() {
-        if (this._ctxTip) this._ctxTip.style.display = 'none';
-        this._ctxTipActive = false;
-        this._ctxTipPinned = false;
-    }
-
-    /** Suit le curseur : au-dessus à gauche, repli sous/à droite près des bords. */
-    _ctxTipMove(event) {
-        if (!this._ctxTipActive || !this._ctxTip || this._ctxTipPinned) return;
-        const tip = this._ctxTip;
-        const offset = 10;
-        let left = event.clientX - tip.offsetWidth - offset;
-        let top = event.clientY - tip.offsetHeight - offset;
-        if (left < 8) left = event.clientX + offset;
-        if (top < 8) top = event.clientY + offset;
-        tip.style.left = `${left}px`;
-        tip.style.top = `${top}px`;
-    }
-
-    _ctxTipCreate() {
-        if (this._ctxTip) return this._ctxTip;
-        const tip = document.createElement('div');
-        tip.className = this._ctxTipClasse();
-        tip.setAttribute('role', 'tooltip');
-        document.body.appendChild(tip);
-        this._ctxTip = tip;
-        return tip;
-    }
-
-    /**
-     * Classes de l'infobulle partagée (.jsb-ctx-tip, stylée dans styles/infobulle.css et
-     * mutualisée avec le bloc Pistes du tableau de bord — donc déjà sombre, on
-     * n'y touche pas). Elle est attachée au <body>, HORS du sous-arbre du chat :
-     * la cascade du thème ne l'atteint pas, d'où ce marqueur explicite. Utile
-     * uniquement pour son contour : son ombre portée noire disparaît sur un chat
-     * sombre, et l'infobulle perdrait ses limites.
-     *
-     * Source unique des classes : les 5 endroits qui (ré)affectent className
-     * passent par ici.
-     * @param {string} variante Variante de style (ex. 'commit-tip').
-     */
-    _ctxTipClasse(variante = '') {
-        const base = variante ? `jsb-ctx-tip ${variante}` : 'jsb-ctx-tip';
-
-        return this._theme === THEME_SOMBRE ? `${base} is-sur-sombre` : base;
-    }
-
-    /**
-     * Contenu : la fiche EXACTE capturée par l'assistant (posée en data-ctx-fiche
-     * par le partial serveur), rendue en tableau sombre — construction DOM via
-     * textContent (échappement garanti). Sans fiche : objet supprimé/hors périmètre.
-     */
-    /**
-     * Infobulle ANCRÉE du bouton micro : titre blanc (commit-tip-lead) + texte
-     * explicatif gris (commit-tip-para), copie lue sur les data-* du bouton.
-     * Position figée au-dessus du micro et alignée à droite (le composer est au
-     * coin inférieur droit) — épinglée pour que le suivi du curseur l'ignore.
-     */
-    _micTipShow() {
-        if (!this.hasMicTarget) return;
-        const tip = this._ctxTipCreate();
-        tip.className = this._ctxTipClasse('commit-tip');
-        tip.textContent = '';
-
-        const table = document.createElement('table');
-        const addRow = (text, className) => {
-            const tr = document.createElement('tr');
-            const td = document.createElement('td');
-            td.setAttribute('colspan', '2');
-            td.className = className;
-            td.textContent = text;
-            tr.appendChild(td);
-            table.appendChild(tr);
-        };
-        addRow(this.micTarget.dataset.micTipTitle || 'Dicter votre message', 'commit-tip-lead');
-        (this.micTarget.dataset.micTipBody || '').split('\n').forEach((para) => {
-            if (para.trim() !== '') addRow(para.trim(), 'commit-tip-para');
-        });
-        tip.appendChild(table);
-
-        // Affiché puis positionné (mesures valides une fois display:block).
-        tip.style.display = 'block';
-        const rect = this.micTarget.getBoundingClientRect();
-        let left = rect.right - tip.offsetWidth;           // aligné au bord droit du micro
-        if (left < 8) left = 8;
-        let top = rect.top - tip.offsetHeight - 8;          // au-dessus du bouton
-        if (top < 8) top = rect.bottom + 8;                 // repli en dessous si pas de place
-        tip.style.left = `${left}px`;
-        tip.style.top = `${top}px`;
-
-        this._ctxTipActive = true;
-        this._ctxTipPinned = true; // figée : _ctxTipMove ne la déplacera pas
-    }
-
-    _ctxTipBuild(tip, chip) {
-        tip.className = this._ctxTipClasse(); // repli du style partagé (annule un éventuel commit-tip du micro)
-        tip.textContent = '';
-        const table = document.createElement('table');
-
-        const addRow = (cells, classes = []) => {
-            const tr = document.createElement('tr');
-            cells.forEach(({ text, colspan, className }) => {
-                const td = document.createElement('td');
-                td.textContent = text;
-                if (colspan) td.setAttribute('colspan', String(colspan));
-                if (className) td.className = className;
-                tr.appendChild(td);
-            });
-            table.appendChild(tr);
-        };
-
-        addRow([{ text: chip.dataset.ctxTypeLabel || chip.dataset.entityType || 'Objet', colspan: 2, className: 'tip-section' }]);
-        addRow([{ text: 'Nom' }, { text: chip.dataset.ctxLabel || '—' }]);
-
-        let fiche = null;
-        try {
-            fiche = JSON.parse(chip.dataset.ctxFiche || 'null');
-        } catch { /* fiche illisible : traitée comme absente */ }
-
-        if (fiche && typeof fiche === 'object') {
-            addRow([{ text: 'Fiche capturée par l\'assistant', colspan: 2, className: 'tip-section' }]);
-            // La fiche transmise à l'assistante porte TOUS les indicateurs calculés
-            // de l'objet (plusieurs dizaines). Cette infobulle flotte au <body> en
-            // pointer-events: none et suit le curseur : elle ne peut pas défiler, et
-            // tout afficher la ferait déborder du viewport — donc rogner en silence.
-            // On borne donc L'AFFICHAGE, jamais la donnée, et on annonce le reste :
-            // l'utilisateur sait ainsi ce que l'assistante a réellement reçu.
-            const lignes = Object.entries(fiche);
-            for (const [cle, valeur] of lignes.slice(0, this.constructor.CTX_TIP_MAX_LIGNES)) {
-                addRow([{ text: cle }, { text: this._ctxTipFormat(valeur) }]);
-            }
-            const restants = lignes.length - this.constructor.CTX_TIP_MAX_LIGNES;
-            if (restants > 0) {
-                addRow([{
-                    text: `… et ${restants} autre${restants > 1 ? 's' : ''} indicateur${restants > 1 ? 's' : ''} : la fiche COMPLÈTE est transmise à l'assistant.`,
-                    colspan: 2,
-                    className: 'tip-libelle',
-                }]);
-            }
-        } else {
-            addRow([{ text: 'Détails indisponibles (objet supprimé ou hors de votre périmètre).', colspan: 2, className: 'tip-libelle' }]);
-        }
-
-        tip.appendChild(table);
-    }
-
-    /**
-     * Contenu de l'agrafe d'un message : l'instantané IMMUABLE des objets qui
-     * étaient en contexte à l'envoi (posé en data-msg-contextes par le partial
-     * serveur ou la bulle optimiste) — construction DOM via textContent.
-     */
-    _ctxTipBuildMessage(tip, bouton) {
-        tip.className = this._ctxTipClasse(); // repli du style partagé (annule un éventuel commit-tip du micro)
-        tip.textContent = '';
-        const table = document.createElement('table');
-
-        const addRow = (cells) => {
-            const tr = document.createElement('tr');
-            cells.forEach(({ text, colspan, className }) => {
-                const td = document.createElement('td');
-                td.textContent = text;
-                if (colspan) td.setAttribute('colspan', String(colspan));
-                if (className) td.className = className;
-                tr.appendChild(td);
-            });
-            table.appendChild(tr);
-        };
-
-        let objets = [];
-        try {
-            objets = JSON.parse(bouton.dataset.msgContextes || '[]');
-        } catch { /* instantané illisible : liste vide */ }
-
-        addRow([{ text: 'Objets en contexte à l\'envoi de ce message', colspan: 2, className: 'tip-section' }]);
-        if (!Array.isArray(objets) || objets.length === 0) {
-            addRow([{ text: 'Aucun objet.', colspan: 2, className: 'tip-libelle' }]);
-        } else {
-            objets.forEach((o) => {
-                addRow([
-                    { text: `${o.typeLabel || o.type || 'Objet'} #${o.id ?? '?'}` },
-                    { text: String(o.nom || '—') },
-                ]);
-            });
-        }
-
-        tip.appendChild(table);
-    }
-
-    /**
-     * Contenu de l'infobulle d'une puce FICHIER : caractéristiques du fichier
-     * survolé (posées en data-fic-* par le partial serveur), rendues en tableau
-     * sombre — construction DOM via textContent (échappement garanti).
-     */
-    _ctxTipBuildFichier(tip, chip) {
-        tip.className = this._ctxTipClasse(); // repli du style partagé (annule un éventuel commit-tip du micro)
-        tip.textContent = '';
-        const table = document.createElement('table');
-
-        const addRow = (cells) => {
-            const tr = document.createElement('tr');
-            cells.forEach(({ text, colspan, className }) => {
-                const td = document.createElement('td');
-                td.textContent = text;
-                if (colspan) td.setAttribute('colspan', String(colspan));
-                if (className) td.className = className;
-                tr.appendChild(td);
-            });
-            table.appendChild(tr);
-        };
-
-        addRow([{ text: 'Pièce jointe', colspan: 2, className: 'tip-section' }]);
-        addRow([{ text: 'Nom' }, { text: chip.dataset.ficNom || '—' }]);
-        addRow([{ text: 'Type' }, { text: chip.dataset.ficType || 'inconnu' }]);
-        addRow([{ text: 'Taille' }, { text: chip.dataset.ficTaille || '—' }]);
-        addRow([
-            { text: 'Contenu lisible' },
-            { text: chip.dataset.ficLisible === '1' ? 'Oui (l’assistant peut le lire)' : 'Non (format non extrait)' },
-        ]);
-        if (chip.dataset.ficDate) {
-            addRow([{ text: 'Ajouté le' }, { text: chip.dataset.ficDate }]);
-        }
-
-        tip.appendChild(table);
-    }
-
-    /** Valeur de fiche lisible : booléens en clair, structures résumées, textes bornés. */
-    _ctxTipFormat(valeur) {
-        if (valeur === null || valeur === undefined || valeur === '') return '—';
-        if (typeof valeur === 'boolean') return valeur ? 'Oui' : 'Non';
-        if (Array.isArray(valeur)) return `${valeur.length} élément(s)`;
-        if (typeof valeur === 'object') {
-            return String(valeur.nom ?? valeur.libelle ?? valeur.titre ?? valeur.id ?? '—');
-        }
-        const texte = String(valeur);
-        return texte.length > 120 ? `${texte.slice(0, 120)}…` : texte;
-    }
-
     /** Émet le cycle de feedback contexte vers le cerveau (médiateur). */
     emitContexteOperation(payload) {
         document.dispatchEvent(new CustomEvent('cerveau:event', {
@@ -3902,7 +3561,7 @@ export default class extends Controller {
             return;
         }
         this.fermerMenuBulle();
-        this._ctxTipHide(); // ne pas superposer deux surfaces flottantes
+        fermerInfobulle(); // ne pas superposer deux surfaces flottantes
 
         this._bulleActive = bulle;
         this._menuOuvertSur = boutonAncre ?? bulle;
@@ -4575,8 +4234,12 @@ export default class extends Controller {
             const attache = document.createElement('button');
             attache.type = 'button';
             attache.className = 'aic-msg-attach';
-            attache.dataset.msgContextes = JSON.stringify(contexteObjets);
-            attache.setAttribute('data-action', 'click->assistant-chat#toggleMsgContextes');
+            // L'infobulle unique : même contenu que l'agrafe rendue par le serveur
+            // (_assistant_ia_chat.html.twig), le temps que la conversation soit relue.
+            attache.dataset.infobulle = JSON.stringify([{
+                titre: 'Objets en contexte à l’envoi de ce message',
+                lignes: contexteObjets.map((o) => [`${o.typeLabel || o.type || 'Objet'} #${o.id ?? '?'}`, String(o.nom || '—')]),
+            }]);
             attache.setAttribute('aria-label', `${contexteObjets.length} objet${contexteObjets.length > 1 ? 's' : ''} en contexte à l'envoi de ce message`);
             // SVG statique (trombone lucide) : constante sûre, aucun contenu utilisateur.
             attache.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>';

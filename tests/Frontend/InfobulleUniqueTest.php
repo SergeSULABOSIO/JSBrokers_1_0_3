@@ -36,7 +36,9 @@ class InfobulleUniqueTest extends TestCase
             . '|dataset\.controller\s*=\s*[\'"](?:tooltip|dark-tooltip|owner-tip|commit-tip)[\'"]'
             . '|data-(?:owner-tip|commit-tip)\b|data-tooltip-(?:content|text)\b|tooltipContent|\bshowTooltip\b'
             // Commit 3b : l'ancienne bulle du relevé de compte (contrôleur SOA + script des pages autonomes).
-            . '|data-soa-tip\b|soa-section-tip\b|soaTip\b/';
+            . '|data-soa-tip\b|soa-section-tip\b|soaTip\b'
+            // Commit 3c : le chat de Ket et le graphique de production.
+            . '|data-(?:ctx-tip|ctx-fiche|fic-tip|msg-contextes|mic-tip-\w+)\b|_ctxTip|_micTip|db-prod-tip|commit-tip/';
         $fautifs = [];
         foreach (['templates', 'assets/controllers'] as $dossier) {
             $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(self::racine() . "/$dossier", \FilesystemIterator::SKIP_DOTS));

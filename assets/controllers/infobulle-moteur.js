@@ -1,5 +1,5 @@
 import { positionAuCurseur, positionCentreeSous, positionSousLElement } from './infobulle-position.js';
-import { lireSections, rangees } from './infobulle-contenu.js';
+import { lireSections, normaliserSections, rangees } from './infobulle-contenu.js';
 
 /**
  * LE MOTEUR DE L'INFOBULLE UNIQUE (chantier 3, décisions de Serge du 2026-10-23).
@@ -28,6 +28,9 @@ import { lireSections, rangees } from './infobulle-contenu.js';
  * `data-infobulle-si-replie` : la bulle se tait quand le <details> qui contient l'élément est
  * OUVERT — le détail est déjà à l'écran. Déclaratif, et pas une règle de tout <summary> : un
  * bouton « Voir tous… » dans l'en-tête d'un bloc ouvert garde sa bulle.
+ *
+ * `data-infobulle-taire` : posé sur un bouton DANS un élément porteur (le × d'une puce), il fait
+ * taire la bulle de l'élément tant que le pointeur est dessus — on va retirer, pas lire.
  *
  * Zones imbriquées : l'instance la plus proche de l'élément traite l'événement la première et le
  * marque (`event.infobulleTraitee`) ; les autres l'ignorent.
@@ -103,6 +106,88 @@ function fermer() {
     etat.proprietaire = null;
     etat.parLeClavier = false;
     if (etat.bulle) etat.bulle.hidden = true;
+}
+
+/**
+ * Les variantes de la bulle : compacte pour un texte seul (libellé d'un bouton) ; un contour
+ * sur fond sombre quand l'élément vit dans une zone sombre qui le déclare
+ * (`data-infobulle-sur-sombre`, ex. le chat de Ket en thème sombre) — l'ombre noire de la bulle
+ * n'y délimite plus rien.
+ */
+function habiller(b, cible, sections, poseeParLeCode) {
+    b.classList.toggle('est-courte', sections.length === 1 && !sections[0].titre && sections[0].lignes.length === 0);
+    b.classList.toggle('is-sur-sombre', !!(cible && cible.closest('[data-infobulle-sur-sombre]')));
+    // Posée par le code au point d'une courbe, la bulle peut tomber sous le pointeur : elle le
+    // laisse passer, sinon le canevas perd la souris, la bulle se ferme, et tout recommence.
+    b.classList.toggle('est-traversable', !!poseeParLeCode);
+}
+
+/**
+ * Ferme la bulle affichée.
+ *
+ * @param {Element} [zone] sans zone, toute bulle (un menu qui s'ouvre ne la recouvre pas) ; avec,
+ *   seulement celle d'un élément de cette zone, ou d'un élément disparu — la bulle qu'un voisin
+ *   vient d'ouvrir reste (une zone re-rendue, un graphique quitté, ne la ferment pas).
+ */
+export function fermerInfobulle(zone) {
+    if (zone && etat.cible && etat.cible.isConnected && !zone.contains(etat.cible)) return;
+    fermer();
+}
+
+/** Les gestes qui ferment une bulle posée par le code : aucune instance n'en est propriétaire. */
+let gestesDuCodeEcoutes = false;
+function ecouterLesGestesDuCode() {
+    if (gestesDuCodeEcoutes) return;
+    gestesDuCodeEcoutes = true;
+    document.addEventListener('keydown', (e) => {
+        if (etat.proprietaire !== null || !etat.cible) return;
+        if (!etat.cible.isConnected) {
+            fermer();
+            return;
+        }
+        if (e.key === 'Escape' || e.key === 'Esc') {
+            // Rejetable (WCAG 1.4.13) ; cet Échap n'a fermé que la bulle (le dialogue l'a laissé passer).
+            fermer();
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    });
+    document.addEventListener('mousemove', () => {
+        // Le graphique re-rendu sous le pointeur : son canevas n'existe plus.
+        if (etat.proprietaire === null && etat.cible && !etat.cible.isConnected) fermer();
+    }, { passive: true });
+}
+
+/**
+ * Une bulle posée PAR LE CODE, pour ce qui n'est pas un élément survolé : le point d'une courbe
+ * Chart.js (graphique de production). Mêmes styles, même élément, même contenu (sections, validées
+ * comme celles du serveur) ; la position est un point de l'écran, la bulle s'y pose comme au curseur.
+ *
+ * @param {HTMLElement} cible l'élément décrit (ex. le canevas du graphique) — aria-describedby
+ * @param {Array} sections le contenu (forme de infobulle-contenu.js)
+ * @param {{x: number, y: number}} point en coordonnées d'écran
+ */
+export function afficherInfobulle(cible, sections, point) {
+    const propres = normaliserSections(sections);
+    if (propres.length === 0) {
+        fermerInfobulle(cible);
+        return;
+    }
+    ecouterLesGestesDuCode();
+    if (etat.cible !== cible) fermer();
+    // Une grâce lancée en quittant la bulle ne ferme pas celle du point suivant.
+    clearTimeout(etat.minuterie);
+    const b = bulle();
+    construire(b, propres);
+    habiller(b, cible, propres, true);
+    b.hidden = false;
+    etat.cible = cible;
+    etat.proprietaire = null;
+    cible.setAttribute('aria-describedby', b.id);
+    const position = positionAuCurseur(point, { largeur: b.offsetWidth, hauteur: b.offsetHeight },
+        { largeur: window.innerWidth, hauteur: window.innerHeight });
+    b.style.left = `${position.left}px`;
+    b.style.top = `${position.top}px`;
 }
 
 function construire(b, sections) {
@@ -224,6 +309,11 @@ export class MoteurInfobulle {
         const cible = this._cibleDe(event.target);
         if (!cible) return;
         event.infobulleTraitee = true;
+        const taire = event.target.closest('[data-infobulle-taire]');
+        if (taire && cible.contains(taire)) {
+            if (etat.proprietaire === this && etat.cible === cible) fermer();
+            return;
+        }
         if (cible === etat.cible) {
             clearTimeout(etat.minuterie); // retour sur l'élément pendant la grâce
             return;
@@ -286,7 +376,7 @@ export class MoteurInfobulle {
         const b = bulle();
         construire(b, sections);
         // Un texte seul (libellé d'un bouton) : bulle compacte.
-        b.classList.toggle('est-courte', sections.length === 1 && !sections[0].titre && sections[0].lignes.length === 0);
+        habiller(b, cible, sections);
         if (this.source === 'titre') {
             if (cible.hasAttribute('title')) {
                 cible.dataset.infobulleTitre = cible.getAttribute('title');

@@ -20,23 +20,23 @@
     </div>
     <ul class="aic-context-chips" aria-label="Objets attachés à la conversation">
         {% for ctx in conversation.contextes %}
-            {# Fiche capturée par l'assistant (même source que le prompt) : porte
-               l'infobulle sombre au survol — pattern du bloc Pistes du tableau
-               de bord (suit le curseur). Pas de `title` natif : il doublerait
-               l'infobulle. Fiche absente = objet supprimé / hors périmètre. #}
+            {# Fiche capturée par l'assistant (même source que le prompt) : l'infobulle unique,
+               contenu mis en forme par le serveur (InfobulleContexte, chantier 3). Pas de `title`
+               natif : il doublerait la bulle. Fiche absente = objet supprimé / hors périmètre.
+               data-ctx-label / data-ctx-type-label servent aussi l'agrafe de la bulle optimiste. #}
             {% set fiche = fichesContextes[ctx.entityType ~ '#' ~ ctx.entityId]|default(null) %}
+            {% set typeLabel = token_entite_label('App\\Entity\\' ~ ctx.entityType) %}
             <li class="aic-chip"
                 data-entity-type="{{ ctx.entityType }}"
                 data-entity-id="{{ ctx.entityId }}"
-                data-ctx-tip
-                data-ctx-type-label="{{ token_entite_label('App\\Entity\\' ~ ctx.entityType) }}"
-                data-ctx-label="{{ ctx.label }}"
-                {% if fiche is not null %}data-ctx-fiche="{{ fiche|json_encode|e('html_attr') }}"{% endif %}>
+                data-infobulle="{{ infobulle_contexte(typeLabel, ctx.label|default(''), fiche)|json_encode|e('html_attr') }}"
+                data-ctx-type-label="{{ typeLabel }}"
+                data-ctx-label="{{ ctx.label }}">
                 <span class="aic-chip-icon" aria-hidden="true">
                     {{ ux_icon(resolve_icon_name(token_entite_icon('App\\Entity\\' ~ ctx.entityType)), {height: '13px', width: '13px'}) }}
                 </span>
                 <span class="aic-chip-label">{{ ctx.label }}</span>
-                <button type="button" class="aic-chip-remove"
+                <button type="button" class="aic-chip-remove" data-infobulle-taire="1"
                         data-contexte-id="{{ ctx.id }}"
                         data-action="click->assistant-chat#removeContexte"
                         aria-label="Retirer {{ ctx.label }} du contexte">

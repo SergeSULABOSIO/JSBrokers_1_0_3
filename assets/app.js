@@ -32,6 +32,7 @@ import { Chart } from 'chart.js';
 // (rendu DÉCODÉ : le |e du gabarit n'y protège de rien) : chacune passe ici. (Les infobulles,
 // elles, sont déclarées par le serveur et posées en texte : infobulle_controller, chantier 3.)
 import { echapper } from './controllers/echapper.js';
+import { afficherInfobulle, fermerInfobulle } from './controllers/infobulle-moteur.js';
 console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
 // LA CHAÎNE D'ICÔNES PAR COOKIE (defineIcone, setIcone, downloadIcone, updatTabIcones,
@@ -2374,7 +2375,6 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
     var _prodCurrency  = '€';
     var _prodTimer     = null;
     var _prodObserver  = null;
-    var _prodTipEl     = null;
     var _prodTableData      = null;
     var _prodTableUrl       = null;
     var _prodTableEl        = null;
@@ -2398,49 +2398,24 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
         return _prodCurrency + ' ' + n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    function _getOrCreateProdTip() {
-        if (!_prodTipEl) {
-            _prodTipEl = document.createElement('div');
-            _prodTipEl.className = 'db-prod-tip';
-            document.body.appendChild(_prodTipEl);
-        }
-        return _prodTipEl;
-    }
-
+    // L'infobulle unique (chantier 3, 3c) : posée par le code au point de la courbe — mêmes
+    // styles, même élément que toutes les autres bulles de l'application.
     function _prodExternalTooltip(context) {
         var tooltip = context.tooltip;
-        var tip = _getOrCreateProdTip();
-
-        if (tooltip.opacity === 0) {
-            tip.style.display = 'none';
+        var canvas = context.chart.canvas;
+        var idx = tooltip.dataPoints && tooltip.dataPoints[0] ? tooltip.dataPoints[0].dataIndex : -1;
+        if (tooltip.opacity === 0 || idx < 0) {
+            fermerInfobulle(canvas);
             return;
         }
 
-        var idx = tooltip.dataPoints && tooltip.dataPoints[0] ? tooltip.dataPoints[0].dataIndex : -1;
-        if (idx < 0) { tip.style.display = 'none'; return; }
-
-        var val = tooltip.dataPoints[0].raw;
-        var monthName = MONTHS[idx];
-        var year = (context.chart.canvas.closest('[data-prod-year]') || document.getElementById('db-prod-chart-wrapper') || {}).dataset
-            ? (document.getElementById('db-prod-chart-wrapper') || {}).dataset.prodYear || ''
-            : '';
-
-        tip.innerHTML =
-            '<div style="font-weight:600;color:#0047AB;margin-bottom:2px;">' + monthName + (year ? ' ' + echapper(year) : '') + '</div>' +
-            '<div style="font-size:.82rem;">Encaissé : <strong>' + echapper(_prodFmt(val)) + '</strong></div>';
-
-        var chartPos = context.chart.canvas.getBoundingClientRect();
-        var x = chartPos.left + window.scrollX + tooltip.caretX;
-        var y = chartPos.top  + window.scrollY + tooltip.caretY;
-
-        var offset = 12;
-        var left = x - tip.offsetWidth - offset;
-        var top  = y - tip.offsetHeight - offset;
-        if (left < 8) left = x + offset;
-        if (top  < 8) top  = y + offset;
-        tip.style.left    = left + 'px';
-        tip.style.top     = top  + 'px';
-        tip.style.display = 'block';
+        var wrapper = document.getElementById('db-prod-chart-wrapper');
+        var year = wrapper && wrapper.dataset ? (wrapper.dataset.prodYear || '') : '';
+        var chartPos = canvas.getBoundingClientRect();
+        afficherInfobulle(canvas, [{
+            titre: MONTHS[idx] + (year ? ' ' + year : ''),
+            lignes: [['Encaissé', _prodFmt(tooltip.dataPoints[0].raw), 'tip-montant tip-fort']],
+        }], { x: chartPos.left + tooltip.caretX, y: chartPos.top + tooltip.caretY });
     }
 
     function _buildChartConfig(data, mode) {
@@ -3084,8 +3059,10 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
     }
 
     document.addEventListener('mouseleave', function (e) {
-        if (_prodTipEl && e.target && e.target.closest && e.target.closest('#db-prod-chart')) {
-            _prodTipEl.style.display = 'none';
+        var canevas = e.target && e.target.closest ? e.target.closest('#db-prod-chart') : null;
+        if (canevas) {
+            // Seulement la bulle du graphique : celle qu'un voisin vient d'ouvrir reste.
+            fermerInfobulle(canevas);
         }
     }, true);
 

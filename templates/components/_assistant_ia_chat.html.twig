@@ -1372,15 +1372,15 @@
                     {% endif %}
                     {# Agrafe : instantané IMMUABLE des objets du contexte à l'envoi de CE
                        message (le contexte courant de la conversation évolue, ce cliché
-                       jamais). Survol = infobulle sombre ; clic = épinglage. #}
+                       jamais). L'infobulle unique (chantier 3) : au survol, au focus, et au
+                       toucher (l'appui l'affiche) — plus d'épinglage au clic. #}
                     {% if not estAssistant and message.contexteObjets %}
                         {% set agrafe = [] %}
                         {% for o in message.contexteObjets %}
-                            {% set agrafe = agrafe|merge([o|merge({typeLabel: token_entite_label('App\\Entity\\' ~ o.type)})]) %}
+                            {% set agrafe = agrafe|merge([[token_entite_label('App\\Entity\\' ~ o.type) ~ ' #' ~ (o.id ?? '?'), o.nom|default('—')]]) %}
                         {% endfor %}
                         <button type="button" class="aic-msg-attach"
-                                data-msg-contextes="{{ agrafe|json_encode|e('html_attr') }}"
-                                data-action="click->assistant-chat#toggleMsgContextes"
+                                data-infobulle="{{ [{titre: 'Objets en contexte à l’envoi de ce message', lignes: agrafe}]|json_encode|e('html_attr') }}"
                                 aria-label="{{ message.contexteObjets|length }} objet{{ message.contexteObjets|length > 1 ? 's' : '' }} en contexte à l'envoi de ce message">
                             {{ ux_icon(resolve_icon_name('lucide:paperclip'), {height: '11px', width: '11px'}) }}
                             <span>{{ message.contexteObjets|length }}</span>
@@ -1661,16 +1661,15 @@
                 <span class="aic-mic-timer" data-assistant-chat-target="micTimer" aria-hidden="true" hidden></span>
                 {# Dictée vocale : parler plutôt qu'écrire. Masqué par le contrôleur si
                    le navigateur ne supporte pas l'API Web Speech.
-                   Infobulle sombre (pattern Joseara .jsb-ctx-tip.commit-tip) au lieu
-                   du title natif : titre blanc + explication grise. #}
+                   L'infobulle unique (chantier 3) au lieu du title natif : centrée sous le
+                   bouton, au-dessus faute de place (le composer est en bas de l'écran). #}
                 <button type="button" class="aic-mic"
                         data-assistant-chat-target="mic"
                         data-action="click->assistant-chat#toggleDictation"
                         aria-pressed="false"
                         aria-label="Dicter le message vocalement"
-                        data-mic-tip-title="Dicter votre message"
-                        data-mic-tip-body="Parlez librement, pauses comprises : la dictée continue jusqu'à ce que vous cliquiez à nouveau sur le micro (ou Échap), 3 minutes au plus.
-Le texte est alors mis au propre (hésitations retirées, ponctuation, questions, listes) dans la zone de saisie. Relisez, puis envoyez.">
+                        data-infobulle-placement="bouton"
+                        data-infobulle="{{ [{titre: 'Dicter votre message', texte: "Parlez librement, pauses comprises : la dictée continue jusqu'à ce que vous cliquiez à nouveau sur le micro (ou Échap), 3 minutes au plus.\nLe texte est alors mis au propre (hésitations retirées, ponctuation, questions, listes) dans la zone de saisie. Relisez, puis envoyez."}]|json_encode|e('html_attr') }}">
                     {{ ux_icon(resolve_icon_name('action:mic'), {height: '20px', width: '20px'}) }}
                 </button>
                 {# LE BOUTON PRINCIPAL. Son libellé et son icône changent avec l'état du

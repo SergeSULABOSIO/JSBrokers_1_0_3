@@ -548,10 +548,14 @@ class AssistantIaContexteTest extends WebTestCase
         $this->assertStringContainsString('aic-chip', $content);
         $this->assertStringContainsString('Chip Alpha', $content);
         $this->assertStringContainsString('1 objet en contexte', $content);
-        // Infobulle : la fiche capturée par l'assistant est embarquée sur la
-        // puce (data-ctx-fiche, même source que le prompt).
-        $this->assertStringContainsString('data-ctx-fiche', $content);
-        $this->assertStringContainsString('data-ctx-tip', $content);
+        // Infobulle unique (chantier 3) : la fiche capturée par l'assistant (même source que le
+        // prompt), mise en forme par le serveur et déclarée sur la puce.
+        $puce = (new \Symfony\Component\DomCrawler\Crawler($content))->filter('.aic-chip[data-entity-type][data-infobulle]');
+        $this->assertGreaterThan(0, $puce->count(), 'La puce porte l’infobulle unique.');
+        $sections = json_decode((string) $puce->first()->attr('data-infobulle'), true, 512, \JSON_THROW_ON_ERROR);
+        $this->assertSame([['Nom', 'Chip Alpha']], $sections[0]['lignes']);
+        $this->assertSame('Fiche capturée par l’assistant', $sections[1]['titre'] ?? null, 'La fiche capturée est montrée.');
+        $this->assertSame('1', $puce->first()->filter('.aic-chip-remove')->attr('data-infobulle-taire'), 'Le × ne montre pas la fiche.');
     }
 
     public function testEnvoiMessageAvecEtSansContexte(): void
@@ -603,13 +607,18 @@ class AssistantIaContexteTest extends WebTestCase
             'Le cliché doit être persisté sur le message utilisateur.'
         );
 
-        // Le rendu du chat porte l'agrafe (bouton data-msg-contextes) sur la
-        // bulle du message envoyé avec contexte.
+        // Le rendu du chat porte l'agrafe sur la bulle du message envoyé avec contexte ;
+        // son infobulle unique liste les objets du cliché.
         $this->client->request('GET', sprintf('/admin/assistant-ia/chat/%d/%d', $e->getId(), $conversation->getId()));
         $this->assertResponseIsSuccessful();
         $content = (string) $this->client->getResponse()->getContent();
         $this->assertStringContainsString('aic-msg-attach', $content);
-        $this->assertStringContainsString('data-msg-contextes', $content);
+        $agrafe = (new \Symfony\Component\DomCrawler\Crawler($content))->filter('.aic-msg-attach[data-infobulle]');
+        $this->assertCount(1, $agrafe);
+        $sections = json_decode((string) $agrafe->attr('data-infobulle'), true, 512, \JSON_THROW_ON_ERROR);
+        $this->assertSame('Objets en contexte à l’envoi de ce message', $sections[0]['titre']);
+        $this->assertSame('Msg Alpha', $sections[0]['lignes'][0][1]);
+        $this->assertStringEndsWith(' #' . $idClient, $sections[0]['lignes'][0][0]);
         // (borne avant l'apostrophe : elle est typographique dans le template)
         $this->assertStringContainsString('1 objet en contexte à l', $content);
     }

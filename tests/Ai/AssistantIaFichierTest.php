@@ -249,6 +249,17 @@ class AssistantIaFichierTest extends WebTestCase
         $this->assertTrue($data['fichiers'][0]['aExtrait'], 'Le texte du .txt est extrait.');
         $this->assertStringContainsString('aic-fichier-chip', $data['html']);
         $this->assertStringContainsString('note.txt', $data['html']);
+        // L'infobulle unique (chantier 3) : les caractéristiques du fichier, déclarées par le serveur.
+        $puce = (new \Symfony\Component\DomCrawler\Crawler($data['html']))->filter('.aic-fichier-chip[data-infobulle]');
+        $this->assertCount(1, $puce);
+        $sections = json_decode((string) $puce->attr('data-infobulle'), true, 512, \JSON_THROW_ON_ERROR);
+        $this->assertSame('Pièce jointe', $sections[0]['titre']);
+        $lignes = array_column($sections[0]['lignes'], 1, 0);
+        $this->assertSame('note.txt', $lignes['Nom']);
+        $this->assertSame('text/plain', $lignes['Type']);
+        $this->assertSame('Oui (l’assistant peut le lire)', $lignes['Contenu lisible']);
+        $this->assertMatchesRegularExpression('#^\d{2}/\d{2}/\d{4} \d{2}:\d{2}$#', $lignes['Ajouté le']);
+        $this->assertSame('1', $puce->filter('.aic-chip-remove')->attr('data-infobulle-taire'), 'Le × ne montre pas la fiche.');
 
         // Persistance + extrait stocké.
         $this->em()->clear();

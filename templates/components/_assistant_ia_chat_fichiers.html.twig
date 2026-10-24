@@ -24,16 +24,17 @@
         {% for f in conversation.fichiers %}
             {% set ko = f.taille / 1024 %}
             {% set tailleLisible = f.taille < 1024 ? (f.taille ~ ' o') : (ko < 1024 ? (ko|round(1) ~ ' Ko') : ((ko / 1024)|round(1) ~ ' Mo')) %}
-            {# Infobulle sombre (même mécanique que les puces objets) : caractéristiques
-               du fichier, posées en data-* et rendues par le contrôleur Stimulus. #}
+            {# L'infobulle unique (chantier 3) : caractéristiques du fichier, déclarées ici.
+               data-fic-nom sert aussi l'agrafe de la bulle optimiste. #}
             <li class="aic-chip aic-fichier-chip"
                 data-fichier-id="{{ f.id }}"
-                data-fic-tip
-                data-fic-nom="{{ f.nomOriginal }}"
-                data-fic-type="{{ f.mimeType|default('inconnu') }}"
-                data-fic-taille="{{ tailleLisible }}"
-                data-fic-lisible="{{ f.texteExtrait is not null ? '1' : '0' }}"
-                data-fic-date="{{ f.createdAt ? f.createdAt|date('d/m/Y H:i') : '' }}">
+                data-infobulle="{{ [{titre: 'Pièce jointe', lignes: [
+                    ['Nom', f.nomOriginal ?: null],
+                    ['Type', f.mimeType|default('inconnu')],
+                    ['Taille', tailleLisible],
+                    ['Contenu lisible', f.texteExtrait is not null ? 'Oui (l’assistant peut le lire)' : 'Non (format non extrait)'],
+                ]|merge(f.createdAt ? [['Ajouté le', f.createdAt|date('d/m/Y H:i')]] : [])}]|json_encode|e('html_attr') }}"
+                data-fic-nom="{{ f.nomOriginal }}">
                 <span class="aic-chip-icon" aria-hidden="true">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -50,7 +51,7 @@
                     <span class="aic-chip-label">{{ f.nomOriginal }}</span>
                 {% endif %}
                 <span class="aic-chip-size" aria-hidden="true">{{ tailleLisible }}</span>
-                <button type="button" class="aic-chip-remove"
+                <button type="button" class="aic-chip-remove" data-infobulle-taire="1"
                         data-fichier-id="{{ f.id }}"
                         data-action="click->assistant-chat#removeFichier"
                         aria-label="Retirer {{ f.nomOriginal }} de la conversation">

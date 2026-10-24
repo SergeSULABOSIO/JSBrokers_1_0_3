@@ -5399,21 +5399,7 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     max-height: 230px;
     width: 100% !important;
 }
-.db-prod-tip {
-    position: fixed;
-    z-index: 9999;
-    pointer-events: none;
-    background: #fff;
-    border: 1px solid rgba(0,71,171,.18);
-    border-radius: 8px;
-    box-shadow: 0 4px 14px rgba(0,71,171,.18);
-    padding: .5rem .75rem;
-    font-size: .78rem;
-    color: #212529;
-    white-space: nowrap;
-    display: none;
-    min-width: 160px;
-}
+/* La bulle d'un point de la courbe : l'infobulle unique (styles/infobulle.css). */
 
 /* ── Production : vue tableau ── */
 .db-prod-table-wrap { overflow-x: auto; padding: .5rem .75rem 1rem; }

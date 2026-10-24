@@ -51,11 +51,19 @@ export function lireSections(brut) {
     if (typeof donnees === 'string') {
         return donnees.trim() === '' ? [] : [{ titre: null, lignes: [], texte: donnees, classe: null }];
     }
-    if (!Array.isArray(donnees)) {
-        return [];
-    }
 
-    return donnees.map(section).filter(Boolean);
+    return normaliserSections(donnees);
+}
+
+/**
+ * Des sections déjà en objets (posées PAR LE CODE, ex. le point d'une courbe) : la même
+ * validation que celles déclarées par le serveur — formes écartées, classes filtrées.
+ *
+ * @param {*} donnees
+ * @returns {Array<{titre: string|null, lignes: Array<[string, string, string|null]>, texte: string|null, classe: string|null}>}
+ */
+export function normaliserSections(donnees) {
+    return Array.isArray(donnees) ? donnees.map(section).filter(Boolean) : [];
 }
 
 /**

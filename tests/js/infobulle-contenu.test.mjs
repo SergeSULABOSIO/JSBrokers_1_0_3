@@ -9,7 +9,21 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { lireSections, rangees } from '../../assets/controllers/infobulle-contenu.js';
+import { lireSections, normaliserSections, rangees } from '../../assets/controllers/infobulle-contenu.js';
+
+test('des sections posées PAR LE CODE passent la même validation que celles du serveur', () => {
+    assert.deepEqual(normaliserSections([
+        { titre: 'Janvier 2026', lignes: [['Encaissé', 'USD 0,00', 'tip-montant d-none']] },
+        { titre: 'Sans lignes' },
+        { lignes: 'pas une liste' },
+        null,
+    ]), [
+        { titre: 'Janvier 2026', lignes: [['Encaissé', 'USD 0,00', 'tip-montant']], texte: null, classe: null },
+        { titre: 'Sans lignes', lignes: [], texte: null, classe: null },
+    ]);
+    assert.deepEqual(normaliserSections(undefined), []);
+    assert.deepEqual(normaliserSections('pas des sections'), []);
+});
 
 test('une section complète : titre, lignes libellé-valeur, texte', () => {
     const sections = lireSections(JSON.stringify([

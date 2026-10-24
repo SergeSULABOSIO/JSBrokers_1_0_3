@@ -361,9 +361,12 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->assertStringContainsString('data-assistant-chat-target="mic"', $content, 'Le bouton micro doit être un target Stimulus.');
         $this->assertStringContainsString('assistant-chat#toggleDictation', $content, 'Le bouton micro doit déclencher la dictée.');
         $this->assertStringContainsString('aic-mic', $content, 'Le bouton micro doit porter sa classe (styles + état d\'écoute).');
-        // Infobulle sombre Joseara (pas le title natif) : copie posée en data-*.
-        $this->assertStringContainsString('data-mic-tip-title="Dicter votre message"', $content, 'Le bouton micro doit porter le titre de l\'infobulle.');
-        $this->assertStringContainsString('data-mic-tip-body="', $content, 'Le bouton micro doit porter le texte explicatif de l\'infobulle.');
+        // L'infobulle unique (chantier 3), pas le title natif : contenu déclaré sur le bouton.
+        $micro = (new \Symfony\Component\DomCrawler\Crawler($content))->filter('[data-assistant-chat-target="mic"]');
+        $sections = json_decode((string) $micro->attr('data-infobulle'), true, 512, \JSON_THROW_ON_ERROR);
+        $this->assertSame('Dicter votre message', $sections[0]['titre'] ?? null, 'Le bouton micro doit porter le titre de l\'infobulle.');
+        $this->assertStringContainsString('3 minutes au plus', $sections[0]['texte'] ?? '', 'Le bouton micro doit porter le texte explicatif de l\'infobulle.');
+        $this->assertSame('bouton', $micro->attr('data-infobulle-placement'));
         $this->assertStringNotContainsString('title="Parler à', $content, 'Plus de title natif : l\'infobulle sombre le remplace.');
     }
 
