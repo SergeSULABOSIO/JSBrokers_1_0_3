@@ -48,23 +48,6 @@
     .soa-section-title:hover { background-color: #e2e6ea; }
     .soa-toggle-chevron { flex-shrink: 0; margin-left: auto; opacity: .55; line-height: 0; transition: transform 250ms ease; }
     .soa-section-title.soa-open .soa-toggle-chevron { transform: rotate(180deg); }
-    /* Infobulle de section (design dark, repris du tableau de bord) */
-    .soa-section-tip {
-        position: fixed;
-        z-index: 9999;
-        pointer-events: none;
-        background: #212529;
-        color: #fff;
-        padding: 8px 12px;
-        border-radius: 8px;
-        font-size: .72rem;
-        line-height: 1.4;
-        box-shadow: 0 4px 18px rgba(0,0,0,.45);
-        max-width: 300px;
-        display: none;
-    }
-    .soa-section-tip .soa-tip-title { display: block; font-weight: 700; color: #fff; margin-bottom: 3px; }
-    .soa-section-tip .soa-tip-desc { display: block; font-weight: 400; color: #c7ccd4; }
     .soa-section-body { padding: 0; overflow: hidden; transition: max-height 280ms ease; }
     .soa-section-body-inner { padding: 1rem 1.5rem; overflow-x: auto; }
     .soa-table { width: 100%; font-size: .85rem; border-collapse: collapse; }
@@ -204,6 +187,5 @@
         .soa-section-body-inner { overflow-x: visible !important; }
         .soa-toggle-chevron { display: none !important; }
         .soa-section-title { cursor: default !important; }
-        .soa-section-tip { display: none !important; }
     }
 </style>

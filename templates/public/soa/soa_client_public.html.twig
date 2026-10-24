@@ -14,6 +14,12 @@
     <link rel="icon" href="{{ asset('images/entreprises/logofav.png') }}" type="image/png">
     <link rel="stylesheet" href="{{ asset('vendor/bootstrap/dist/css/bootstrap.min.css') }}">
     {% include 'admin/soa/_soa_styles.html.twig' %}
+    {# L'infobulle unique, sans Stimulus : même moteur, mêmes styles que l'application (chantier 3).
+       Par l'importmap (son seul point d'entrée) : le moteur importe ses modules par chemin relatif,
+       qu'un simple <script src> ne résout pas (404). ⚠ AVANT tout module : un navigateur qui ne
+       gère qu'une importmap ignore celle qui arrive après un module chargé — plus de bulle. #}
+    <link rel="stylesheet" href="{{ asset('styles/infobulle.css') }}">
+    {{ importmap('infobulles-autonomes', {nonce: csp_nonce()}) }}
     {# Imprimer / fermer sans code dans le HTML (pas de Stimulus sur cette page autonome) : assets/gestes-autonomes.js. #}
     <script type="module" src="{{ asset('gestes-autonomes.js') }}"></script>
 </head>

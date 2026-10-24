@@ -3479,7 +3479,7 @@ export default class extends Controller {
     }
 
     /**
-     * Classes de l'infobulle partagée (.jsb-ctx-tip, stylée dans app.css et
+     * Classes de l'infobulle partagée (.jsb-ctx-tip, stylée dans styles/infobulle.css et
      * mutualisée avec le bloc Pistes du tableau de bord — donc déjà sombre, on
      * n'y touche pas). Elle est attachée au <body>, HORS du sous-arbre du chat :
      * la cascade du thème ne l'atteint pas, d'où ce marqueur explicite. Utile

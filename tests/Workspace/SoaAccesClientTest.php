@@ -477,6 +477,20 @@ class SoaAccesClientTest extends WebTestCase
         foreach (['soa-section-recap', 'soa-section-polices', 'soa-section-echeancier', 'soa-section-solvabilite'] as $section) {
             $this->assertStringContainsString($section, $html, sprintf('La section %s doit être rendue.', $section));
         }
+        $this->assertSoaAidesDeSection(new \Symfony\Component\DomCrawler\Crawler($html));
+    }
+
+    /** Chaque titre de section porte son aide, déclarée pour l'infobulle unique (chantier 3). */
+    private function assertSoaAidesDeSection(\Symfony\Component\DomCrawler\Crawler $page): void
+    {
+        $titres = $page->filter('.soa-section-title');
+        $this->assertGreaterThan(0, $titres->count());
+        foreach ($titres as $titre) {
+            $sections = json_decode($titre->getAttribute('data-infobulle'), true, 512, \JSON_THROW_ON_ERROR);
+            $this->assertNotEmpty($sections[0]['titre'] ?? null, 'L’aide nomme la section.');
+            $this->assertNotEmpty($sections[0]['texte'] ?? null, 'L’aide explique la section.');
+            $this->assertFalse($titre->hasAttribute('data-soa-tip'), 'Plus d’ancienne infobulle du relevé.');
+        }
     }
 
     // ── Boîte de choix du destinataire ────────────────────────────────────────
@@ -609,6 +623,20 @@ class SoaAccesClientTest extends WebTestCase
         // … et données de travail du courtier ABSENTES.
         foreach (['soa-section-pistes', 'soa-section-cotations', 'soa-section-taches', 'soa-section-sp', 'soa-section-solvabilite'] as $section) {
             $this->assertStringNotContainsString($section, $html, sprintf('La section %s ne doit PAS être exposée au client.', $section));
+        }
+
+        // L'INFOBULLE UNIQUE, sans Stimulus (chantier 3) : le moteur autonome et ses styles, et
+        // chaque aide de section déclarée en JSON (titre + texte).
+        $page = new \Symfony\Component\DomCrawler\Crawler($html);
+        $this->assertStringContainsString("import 'infobulles-autonomes'", $html, 'Le moteur autonome de l’infobulle est chargé, par l’importmap.');
+        $this->assertStringNotContainsString("import 'app'", $html, 'Pas l’application : la page publique reste sans Stimulus.');
+        $this->assertCount(1, $page->filter('link[rel="stylesheet"][href*="styles/infobulle"]'), 'Les styles de l’infobulle sont liés.');
+        $this->assertSoaAidesDeSection($page);
+        // REPLI des navigateurs sans importmap (le moteur ne s'y charge pas) : l'aide reste lisible
+        // par le `title` natif — que le moteur retire dès qu'il a pris la main.
+        foreach ($page->filter('.soa-section-title') as $titre) {
+            $aide = json_decode($titre->getAttribute('data-infobulle'), true, 512, \JSON_THROW_ON_ERROR);
+            $this->assertSame($aide[0]['texte'], $titre->getAttribute('title'), 'Le title de repli dit la même chose que la bulle.');
         }
 
         // Traçabilité : consultation comptée.

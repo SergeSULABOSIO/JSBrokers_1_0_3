@@ -16,6 +16,13 @@ return [
         'path' => './assets/app.js',
         'entrypoint' => true,
     ],
+    // L'infobulle unique des pages AUTONOMES (relevé de compte autonome et public, sans Stimulus) :
+    // leur seul point d'entrée par l'importmap — le moteur importe ses modules par chemin relatif,
+    // que seule l'importmap résout (chantier 3, commit 3b).
+    'infobulles-autonomes' => [
+        'path' => './assets/infobulles-autonomes.js',
+        'entrypoint' => true,
+    ],
     '@hotwired/stimulus' => [
         'version' => '3.2.2',
     ],

@@ -1,0 +1,69 @@
+/*
+ * L'INFOBULLE UNIQUE — ses styles, écrits UNE fois (chantier 3).
+ *
+ * Fichier à part, et non dans app.css : les pages autonomes (relevé de compte autonome et PUBLIC)
+ * n'ont ni Stimulus ni app.css, mais la même bulle (infobulles-autonomes.js) — elles lient ce
+ * fichier seul. L'application le lie après app.css (segments/_feuilles_de_l_application.html.twig).
+ *
+ * Style « Pistes » partout (décision de Serge) : titres de section, libellés gris, montants à
+ * droite, états sémantiques. Le bleu des titres (#0d6efd) est hors charte : chantier 5.
+ */
+
+/* L'INFOBULLE SOMBRE, style « Pistes » (décision de Serge, chantier 3) : celle de toute
+   l'application (infobulle_controller) et, jusqu'à leur migration, des puces du chat IA. */
+.jsb-ctx-tip {
+    position: fixed; z-index: 9999; pointer-events: none; display: none;
+    background: #1e2227; color: #e9ecef; border-radius: 6px;
+    font-size: .72rem; padding: 6px 0; min-width: 200px; max-width: 280px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.35);
+    /* ÉCRITE, pas héritée : le relevé de compte autonome a sa propre police (à empattements) ;
+       la bulle garde celle de l'application partout. */
+    font-family: var(--bs-body-font-family, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
+    line-height: 1.4; text-align: left;
+}
+.jsb-ctx-tip table { width: 100%; border-collapse: collapse; }
+.jsb-ctx-tip td { padding: 3px 10px; vertical-align: top; overflow-wrap: anywhere; }
+.jsb-ctx-tip td:first-child:not([colspan]) { color: #adb5bd; white-space: nowrap; padding-right: 6px; }
+.jsb-ctx-tip .tip-section { color: #0d6efd; font-weight: 600; padding-top: 6px; padding-bottom: 2px; border-top: 1px solid #3d4349; font-size: .68rem; letter-spacing: .03em; text-transform: uppercase; }
+.jsb-ctx-tip .tip-section:first-child { border-top: none; padding-top: 3px; }
+.jsb-ctx-tip .tip-risque { color: #fbbf24; }
+.jsb-ctx-tip .tip-libelle { color: #9ca3af; font-style: italic; font-size: .68rem; padding-top: 1px; padding-bottom: 3px; }
+/* Un paragraphe qui EXPLIQUE (infobulle_controller : description d'une étape du pipe, mode
+   de calcul) : lisible, sur plusieurs lignes — pas une note en italique. */
+.jsb-ctx-tip .tip-para { color: #e9ecef; white-space: normal; font-size: .7rem; line-height: 1.45; padding-top: 2px; padding-bottom: 4px; }
+/* L'INFOBULLE UNIQUE (infobulle_controller, chantier 3) : posée, immobile, SURVOLABLE (WCAG
+   1.4.13) — le pointeur peut y entrer, d'où pointer-events. Montrée et cachée par `hidden`. */
+.jsb-ctx-tip.est-survolable { display: block; pointer-events: auto; }
+.jsb-ctx-tip.est-survolable[hidden] { display: none; }
+/* Un TEXTE SEUL (libellé d'un bouton de barre d'actions) : bulle compacte, comme l'ancienne
+   infobulle des barres d'outils — la largeur minimale est celle des fiches. */
+.jsb-ctx-tip.est-survolable.est-courte { min-width: 0; }
+/* Les MONTANTS à droite, chiffres alignés en colonne (décision de Serge : style « Pistes »
+   partout, montants alignés à droite). */
+.jsb-ctx-tip td.tip-montant { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.jsb-ctx-tip .tip-fort { font-weight: 600; color: #fff; }
+/* Un saut de ligne du serveur reste un saut de ligne (aides du héros : paragraphes séparés). */
+.jsb-ctx-tip.est-survolable .tip-para { white-space: pre-line; }
+/* Les ÉTATS, en teintes lisibles sur le fond sombre (une couleur = un sens) : réglé, en attente,
+   à surveiller, information. Remplacent les couleurs posées en style par les anciennes bulles. */
+.jsb-ctx-tip .tip-ok { color: #4ade80; font-weight: 600; }
+.jsb-ctx-tip .tip-attente { color: #fbbf24; font-weight: 600; }
+.jsb-ctx-tip .tip-alerte { color: #f87171; font-weight: 600; }
+.jsb-ctx-tip .tip-info { color: #93c5fd; font-weight: 600; }
+/* Infobulle posée AU-DESSUS d'une surface déjà sombre (chat de l'assistant en
+   mode sombre) : son ombre portée noire n'y délimite plus rien. On lui rend un
+   contour perceptible, sans toucher au style partagé avec le tableau de bord.
+   Marqueur posé par le contrôleur `assistant-chat` (l'infobulle est attachée au
+   <body>, hors du sous-arbre du chat : la cascade du thème ne l'atteint pas). */
+.jsb-ctx-tip.is-sur-sombre { border: 1px solid #495057; }
+
+/* Variante « commit-tip » : ne sert plus qu'à l'infobulle du MICRO du chat de Ket (titre blanc +
+   texte explicatif), jusqu'à sa migration sur l'infobulle unique (chantier 3, commit 3c). Le
+   dernier commit, qui lui a donné son nom, passe par l'infobulle unique depuis le commit 3a. */
+.jsb-ctx-tip.commit-tip { max-width: 380px; }
+.jsb-ctx-tip.commit-tip .tip-section { color: #fff; }
+.jsb-ctx-tip.commit-tip .commit-tip-lead { color: #fff; font-weight: 600; white-space: normal; padding-top: 2px; padding-bottom: 3px; }
+.jsb-ctx-tip.commit-tip .commit-tip-para { color: #ced4da; font-style: normal; font-size: .7rem; line-height: 1.45; white-space: normal; padding-top: 2px; padding-bottom: 4px; }
+
+/* À l'impression (relevé de compte, aperçus) : aucune bulle restée ouverte. */
+@media print { .jsb-ctx-tip { display: none !important; } }

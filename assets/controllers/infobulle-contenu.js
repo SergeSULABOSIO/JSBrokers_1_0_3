@@ -7,11 +7,14 @@
  * `infobulle` pose les rangées par `textContent` : une donnée n'est JAMAIS du HTML.
  *
  * Défensif par construction : un JSON cassé n'affiche rien, une forme inattendue est écartée, une
- * classe hors de la famille `tip-*` (celles d'app.css) est ignorée — le serveur ne peut pas, par
+ * classe hors de la famille `tip-*` (celles de styles/infobulle.css) est ignorée — le serveur ne peut pas, par
  * mégarde, imposer une classe Bootstrap qui cacherait ou déformerait la bulle.
+ *
+ * ⚠ ES2017 : chargé aussi par le relevé PUBLIC (navigateurs anciens des clients) — ni `?.`, ni
+ * `??`, ni `catch` sans variable (infobulle-es2017.test.mjs).
  */
 
-/** Les seules classes qu'une cellule peut recevoir : la famille `.jsb-ctx-tip .tip-*` d'app.css. */
+/** Les seules classes qu'une cellule peut recevoir : la famille `.jsb-ctx-tip .tip-*` de styles/infobulle.css. */
 const CLASSE_PERMISE = /^tip-[a-z][a-z-]*$/;
 
 const texte = (v) => (typeof v === 'string' ? v : typeof v === 'number' || typeof v === 'boolean' ? String(v) : null);
@@ -28,7 +31,7 @@ function section(brute) {
     }
     const lignes = (Array.isArray(brute.lignes) ? brute.lignes : [])
         .filter((l) => Array.isArray(l) && texte(l[0]) !== null && (l[1] === null || l[1] === undefined || texte(l[1]) !== null))
-        .map((l) => [texte(l[0]), texte(l[1]) ?? '—', classe(l[2])]);
+        .map((l) => [texte(l[0]), texte(l[1]) !== null ? texte(l[1]) : '—', classe(l[2])]);
     const s = { titre: texte(brute.titre), lignes, texte: texte(brute.texte), classe: classe(brute.classe) };
 
     return s.titre || s.lignes.length || s.texte ? s : null;
@@ -41,8 +44,8 @@ function section(brute) {
 export function lireSections(brut) {
     let donnees;
     try {
-        donnees = JSON.parse(brut ?? '');
-    } catch {
+        donnees = JSON.parse(brut === undefined || brut === null ? '' : brut);
+    } catch (e) {
         return [];
     }
     if (typeof donnees === 'string') {
@@ -74,7 +77,7 @@ export function rangees(sections) {
             ] });
         }
         if (s.texte) {
-            resultat.push({ cellules: [{ texte: s.texte, classe: s.classe ?? 'tip-para', colspan: 2 }] });
+            resultat.push({ cellules: [{ texte: s.texte, classe: s.classe !== null ? s.classe : 'tip-para', colspan: 2 }] });
         }
     }
 

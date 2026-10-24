@@ -17,7 +17,7 @@
 {% set num = num + 1 %}
 <section aria-labelledby="soa-section-recap">
     <div class="soa-section-title d-flex align-items-center gap-2"
-         data-soa-tip="Synthèse financière consolidée du client : primes, commissions, taxes et indemnisations avec leurs soldes. Donne la position globale du compte en un coup d'œil.">
+         data-infobulle="{{ [{titre: "Récapitulatif Global", texte: "Synthèse financière consolidée du client : primes, commissions, taxes et indemnisations avec leurs soldes. Donne la position globale du compte en un coup d'œil."}]|json_encode|e('html_attr') }}" title="Synthèse financière consolidée du client : primes, commissions, taxes et indemnisations avec leurs soldes. Donne la position globale du compte en un coup d'œil.">
         <twig:UX:Icon name="{{ resolve_icon_name('dashboard') }}" width="16px" height="16px" aria-hidden="true" />
         <h2 id="soa-section-recap">{{ num }}. Récapitulatif Global</h2>
     </div>
@@ -61,7 +61,7 @@
 {% set num = num + 1 %}
 <section aria-labelledby="soa-section-contacts">
     <div class="soa-section-title d-flex align-items-center gap-2"
-         data-soa-tip="Personnes de référence chez le client (production, sinistre, administration). Facilite la communication et fluidifie le suivi de la relation.">
+         data-infobulle="{{ [{titre: "Contacts", texte: "Personnes de référence chez le client (production, sinistre, administration). Facilite la communication et fluidifie le suivi de la relation."}]|json_encode|e('html_attr') }}" title="Personnes de référence chez le client (production, sinistre, administration). Facilite la communication et fluidifie le suivi de la relation.">
         <twig:UX:Icon name="{{ resolve_icon_name('contact') }}" width="16px" height="16px" aria-hidden="true" />
         <h2 id="soa-section-contacts">{{ num }}. Contacts</h2>
     </div>
@@ -100,7 +100,7 @@
 {% set num = num + 1 %}
 <section aria-labelledby="soa-section-polices">
     <div class="soa-section-title d-flex align-items-center gap-2"
-         data-soa-tip="Polices en cours du client : assureur, période de couverture, prime et solde. C'est le cœur du chiffre d'affaires récurrent à protéger.">
+         data-infobulle="{{ [{titre: "Portefeuille de Polices Actives", texte: "Polices en cours du client : assureur, période de couverture, prime et solde. C'est le cœur du chiffre d'affaires récurrent à protéger."}]|json_encode|e('html_attr') }}" title="Polices en cours du client : assureur, période de couverture, prime et solde. C'est le cœur du chiffre d'affaires récurrent à protéger.">
         <twig:UX:Icon name="{{ resolve_icon_name('document') }}" width="16px" height="16px" aria-hidden="true" />
         <h2 id="soa-section-polices">{{ num }}. Portefeuille de Polices Actives</h2>
     </div>
@@ -178,7 +178,7 @@
 {% set num = num + 1 %}
 <section aria-labelledby="soa-section-pistes">
     <div class="soa-section-title d-flex align-items-center gap-2"
-         data-soa-tip="Opportunités commerciales en cours de prospection pour ce client. Mesure le potentiel de croissance à court terme du portefeuille.">
+         data-infobulle="{{ [{titre: "Pistes en Cours", texte: "Opportunités commerciales en cours de prospection pour ce client. Mesure le potentiel de croissance à court terme du portefeuille."}]|json_encode|e('html_attr') }}" title="Opportunités commerciales en cours de prospection pour ce client. Mesure le potentiel de croissance à court terme du portefeuille.">
         <twig:UX:Icon name="{{ resolve_icon_name('piste') }}" width="16px" height="16px" aria-hidden="true" />
         <h2 id="soa-section-pistes">{{ num }}. Pistes en Cours</h2>
     </div>
@@ -217,7 +217,7 @@
 {% set num = num + 1 %}
 <section aria-labelledby="soa-section-cotations">
     <div class="soa-section-title d-flex align-items-center gap-2"
-         data-soa-tip="Devis émis pour lesquels aucune police n'a encore été générée. Affaires en attente de concrétisation, à relancer activement.">
+         data-infobulle="{{ [{titre: "Cotations en Cours", texte: "Devis émis pour lesquels aucune police n'a encore été générée. Affaires en attente de concrétisation, à relancer activement."}]|json_encode|e('html_attr') }}" title="Devis émis pour lesquels aucune police n'a encore été générée. Affaires en attente de concrétisation, à relancer activement.">
         <twig:UX:Icon name="{{ resolve_icon_name('cotation') }}" width="16px" height="16px" aria-hidden="true" />
         <h2 id="soa-section-cotations">{{ num }}. Cotations en Cours</h2>
     </div>
@@ -257,7 +257,7 @@
 {% set num = num + 1 %}
 <section aria-labelledby="soa-section-echeancier">
     <div class="soa-section-title d-flex align-items-center gap-2"
-         data-soa-tip="Calendrier des tranches de prime à encaisser, avec les retards éventuels. Outil clé du suivi de trésorerie et du recouvrement.">
+         data-infobulle="{{ [{titre: "Échéancier des Primes", texte: "Calendrier des tranches de prime à encaisser, avec les retards éventuels. Outil clé du suivi de trésorerie et du recouvrement."}]|json_encode|e('html_attr') }}" title="Calendrier des tranches de prime à encaisser, avec les retards éventuels. Outil clé du suivi de trésorerie et du recouvrement.">
         <twig:UX:Icon name="{{ resolve_icon_name('tranche') }}" width="16px" height="16px" aria-hidden="true" />
         <h2 id="soa-section-echeancier">{{ num }}. Échéancier des Primes</h2>
     </div>
@@ -318,7 +318,7 @@
 {% set num = num + 1 %}
 <section aria-labelledby="soa-section-sinistres">
     <div class="soa-section-title d-flex align-items-center gap-2"
-         data-soa-tip="Sinistres déclarés par le client, leur évaluation et les indemnisations versées. Reflète la sinistralité et l'exposition au risque.">
+         data-infobulle="{{ [{titre: "Sinistres", texte: "Sinistres déclarés par le client, leur évaluation et les indemnisations versées. Reflète la sinistralité et l'exposition au risque."}]|json_encode|e('html_attr') }}" title="Sinistres déclarés par le client, leur évaluation et les indemnisations versées. Reflète la sinistralité et l'exposition au risque.">
         <twig:UX:Icon name="{{ resolve_icon_name('sinistre') }}" width="16px" height="16px" aria-hidden="true" />
         <h2 id="soa-section-sinistres">{{ num }}. Sinistres</h2>
     </div>
@@ -369,7 +369,7 @@
 {% set num = num + 1 %}
 <section aria-labelledby="soa-section-sp">
     <div class="soa-section-title d-flex align-items-center gap-2"
-         data-soa-tip="Part des primes encaissées absorbée par les sinistres. Indicateur de rentabilité technique : sous 70 % il est excellent, au-delà de 100 % le portefeuille est en perte.">
+         data-infobulle="{{ [{titre: "Ratio Sinistres / Primes (S/P)", texte: "Part des primes encaissées absorbée par les sinistres. Indicateur de rentabilité technique : sous 70 % il est excellent, au-delà de 100 % le portefeuille est en perte."}]|json_encode|e('html_attr') }}" title="Part des primes encaissées absorbée par les sinistres. Indicateur de rentabilité technique : sous 70 % il est excellent, au-delà de 100 % le portefeuille est en perte.">
         <twig:UX:Icon name="{{ resolve_icon_name('tranche') }}" width="16px" height="16px" aria-hidden="true" />
         <h2 id="soa-section-sp">{{ num }}. Ratio Sinistres / Primes (S/P)</h2>
     </div>
@@ -429,7 +429,7 @@
 {% set num = num + 1 %}
 <section aria-labelledby="soa-section-solvabilite">
     <div class="soa-section-title d-flex align-items-center gap-2"
-         data-soa-tip="Part des primes émises effectivement réglée par le client. Mesure sa fiabilité de paiement : sous 60 %, le risque d'impayés impose un suivi de recouvrement.">
+         data-infobulle="{{ [{titre: "Indice de Solvabilité", texte: "Part des primes émises effectivement réglée par le client. Mesure sa fiabilité de paiement : sous 60 %, le risque d'impayés impose un suivi de recouvrement."}]|json_encode|e('html_attr') }}" title="Part des primes émises effectivement réglée par le client. Mesure sa fiabilité de paiement : sous 60 %, le risque d'impayés impose un suivi de recouvrement.">
         <twig:UX:Icon name="{{ resolve_icon_name('paiement') }}" width="16px" height="16px" aria-hidden="true" />
         <h2 id="soa-section-solvabilite">{{ num }}. Indice de Solvabilité</h2>
     </div>
@@ -488,7 +488,7 @@
 {% set num = num + 1 %}
 <section aria-labelledby="soa-section-taches">
     <div class="soa-section-title d-flex align-items-center gap-2"
-         data-soa-tip="Actions de suivi liées au client, actives et clôturées, avec leur dernier feedback. Pilote la relation commerciale et les relances.">
+         data-infobulle="{{ [{titre: "Tâches", texte: "Actions de suivi liées au client, actives et clôturées, avec leur dernier feedback. Pilote la relation commerciale et les relances."}]|json_encode|e('html_attr') }}" title="Actions de suivi liées au client, actives et clôturées, avec leur dernier feedback. Pilote la relation commerciale et les relances.">
         <twig:UX:Icon name="{{ resolve_icon_name('tache') }}" width="16px" height="16px" aria-hidden="true" />
         <h2 id="soa-section-taches">{{ num }}. Tâches</h2>
     </div>

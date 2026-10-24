@@ -1,21 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 
 /**
- * Infobulle de section partagée (singleton au niveau module, comme #db-meta-tip
- * du tableau de bord). Posée sur document.body car .soa-container a overflow:hidden
- * et clipperait une bulle interne. Réutilisée par tous les onglets SOA.
- */
-let _soaTipEl = null;
-function getSoaTip() {
-    if (!_soaTipEl) {
-        _soaTipEl = document.createElement('div');
-        _soaTipEl.className = 'soa-section-tip';
-        document.body.appendChild(_soaTipEl);
-    }
-    return _soaTipEl;
-}
-
-/**
  * Configuration des menus contextuels par section du SOA.
  * Chaque clé correspond à un attribut data-soa-section posé dans le template
  * soa_client_workspace.html.twig. Les actions s'appuient sur les endpoints API
@@ -132,7 +117,7 @@ export default class extends Controller {
         // Accordéon des sections (un partial injecté dynamiquement n'exécute pas
         // les balises <script> : la logique doit vivre ici, dans le contrôleur Stimulus).
         this._initAccordion();
-        this._initTooltips();
+        // Les aides de section : l'infobulle unique (data-infobulle, chantier 3).
     }
 
     disconnect() {
@@ -141,12 +126,6 @@ export default class extends Controller {
         document.removeEventListener('cerveau:event', this._onCerveauEvent);
         document.removeEventListener('soa:context-menu.open', this._onOtherMenuOpen);
         this._removeTransientListeners();
-
-        // Infobulles : retire les écouteurs et masque la bulle partagée.
-        if (this._onTipOver) this.element.removeEventListener('mouseover', this._onTipOver);
-        if (this._onTipMove) this.element.removeEventListener('mousemove', this._onTipMove);
-        if (this._onTipOut) this.element.removeEventListener('mouseout', this._onTipOut);
-        if (_soaTipEl) _soaTipEl.style.display = 'none';
     }
 
     // ── Accordéon des sections ─────────────────────────────────────────────────
@@ -219,67 +198,6 @@ export default class extends Controller {
                 if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
             });
         });
-    }
-
-    // ── Infobulles de section ──────────────────────────────────────────────────
-
-    /**
-     * Affiche une infobulle (titre en gras + description) au survol de la barre
-     * de titre d'une section. Le titre est dérivé du <h2>, la description vient
-     * de l'attribut data-soa-tip. Délégation sur l'élément du contrôleur : la
-     * bulle suit le curseur et disparaît quand il quitte la barre.
-     */
-    _initTooltips() {
-        this._onTipOver = (event) => {
-            const title = event.target.closest('.soa-section-title[data-soa-tip]');
-            if (!title || !this.element.contains(title)) return;
-            const heading = title.querySelector('h2');
-            const titleText = heading ? heading.textContent.trim() : '';
-            const descText = title.dataset.soaTip || '';
-            const tip = getSoaTip();
-            tip.innerHTML = '';
-            if (titleText) {
-                const t = document.createElement('span');
-                t.className = 'soa-tip-title';
-                t.textContent = titleText;
-                tip.appendChild(t);
-            }
-            const d = document.createElement('span');
-            d.className = 'soa-tip-desc';
-            d.textContent = descText;
-            tip.appendChild(d);
-            tip.style.display = 'block';
-            this._positionTip(event.clientX, event.clientY);
-        };
-        this._onTipMove = (event) => {
-            if (_soaTipEl && _soaTipEl.style.display === 'block') {
-                this._positionTip(event.clientX, event.clientY);
-            }
-        };
-        this._onTipOut = (event) => {
-            const title = event.target.closest('.soa-section-title[data-soa-tip]');
-            if (!title) return;
-            if (!title.contains(event.relatedTarget) && _soaTipEl) {
-                _soaTipEl.style.display = 'none';
-            }
-        };
-
-        this.element.addEventListener('mouseover', this._onTipOver);
-        this.element.addEventListener('mousemove', this._onTipMove);
-        this.element.addEventListener('mouseout', this._onTipOut);
-    }
-
-    /** Positionne la bulle au-dessus du curseur, bornée au viewport. */
-    _positionTip(mx, my) {
-        const tip = _soaTipEl;
-        if (!tip) return;
-        const offset = 14;
-        let left = mx - tip.offsetWidth / 2;
-        let top = my - tip.offsetHeight - offset;
-        left = Math.max(8, Math.min(left, window.innerWidth - tip.offsetWidth - 8));
-        if (top < 8) top = my + offset; // pas de place au-dessus → sous le curseur
-        tip.style.left = `${left}px`;
-        tip.style.top = `${top}px`;
     }
 
     // ── Ouverture ────────────────────────────────────────────────────────────

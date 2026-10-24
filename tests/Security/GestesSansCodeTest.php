@@ -163,7 +163,9 @@ class GestesSansCodeTest extends TestCase
         $gabarits = iterator_to_array(self::gabarits());
         $ecarts = [];
         foreach ($gabarits as $chemin => $contenu) {
-            $autonome = str_contains($contenu, '<html') && !str_contains($contenu, 'importmap(');
+            // Stimulus vient de l'entrée « app » ; une importmap réduite à l'infobulle
+            // (importmap('infobulles-autonomes'), relevé de compte) laisse la page autonome.
+            $autonome = str_contains($contenu, '<html') && !preg_match('/importmap\(\s*[\'"]app[\'"]/', $contenu);
             $module = (bool) preg_match('/asset\(\s*[\'"]gestes-autonomes\.js[\'"]\s*\)/', $contenu);
             if ($module && !$autonome) {
                 $ecarts[] = "$chemin : gestes-autonomes.js chargé hors page autonome (geste en double)";

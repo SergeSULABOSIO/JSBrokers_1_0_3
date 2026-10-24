@@ -31,7 +31,7 @@ export const OUVERTS_DANS_LE_DIALOGUE = [
  * @param {{touche: string, enComposition?: boolean, dejaTraitee?: boolean,
  *          dessus?: 'formulaire'|'simple'|'confirmation'|'autre'|null, dansEditeurRiche?: boolean,
  *          sousElementOuvert?: boolean, repetee?: boolean, echapLocal?: boolean,
- *          infobulleOuverte?: boolean}} p
+ *          infobulleAffichee?: boolean}} p
  *   `dessus` : le dialogue au sommet de la pile — 'formulaire' (dialog-instance), 'simple'
  *   (dialogue applicatif sans saisie à protéger, ex. recherche avancée), 'confirmation' (la
  *   question « Abandonner… ? » : la fermer, c'est ANNULER, sans rien perdre), 'autre' (modale
@@ -40,7 +40,7 @@ export const OUVERTS_DANS_LE_DIALOGUE = [
  *   Bootstrap ne recevait pas l'Échap qui lui était destiné (constaté au navigateur).
  * @returns {'laisser'|'fermer-formulaire'|'fermer-simple'|'fermer-confirmation'}
  */
-export function decisionEchap({ touche, enComposition = false, dejaTraitee = false, repetee = false, echapLocal = false, dessus = null, dansEditeurRiche = false, sousElementOuvert = false, infobulleOuverte = false }) {
+export function decisionEchap({ touche, enComposition = false, dejaTraitee = false, repetee = false, echapLocal = false, dessus = null, dansEditeurRiche = false, sousElementOuvert = false, infobulleAffichee = false }) {
     if (touche !== 'Escape' && touche !== 'Esc') return 'laisser';
     // Une touche MAINTENUE se répète : sans ce filtre, elle fermait toute la pile, un
     // dialogue à chaque répétition. Un champ qui fait son propre usage d'Échap (« Aller à la
@@ -48,7 +48,7 @@ export function decisionEchap({ touche, enComposition = false, dejaTraitee = fal
     if (enComposition || dejaTraitee || repetee || echapLocal) return 'laisser';
     // L'INFOBULLE OUVERTE PREND LE PREMIER ÉCHAP (WCAG 1.4.13, chantier 3) : c'est la surface la
     // plus passagère ; le second Échap ferme le dialogue.
-    if (infobulleOuverte) return 'laisser';
+    if (infobulleAffichee) return 'laisser';
     if (dessus === 'confirmation') return 'fermer-confirmation';
     if (dessus !== 'formulaire' && dessus !== 'simple') return 'laisser';
     if (dansEditeurRiche || sousElementOuvert) return 'laisser';
