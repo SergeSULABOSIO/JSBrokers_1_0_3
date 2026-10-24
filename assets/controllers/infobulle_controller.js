@@ -48,6 +48,7 @@ const etat = {
     proprietaire: null,
     minuterie: null,
     parLeClavier: false,
+    observateur: null,
 };
 
 /**
@@ -84,10 +85,13 @@ function differerLaFermeture() {
 function fermer() {
     clearTimeout(etat.minuterie);
     const cible = etat.cible;
+    etat.observateur?.disconnect();
+    etat.observateur = null;
     if (cible) {
         cible.removeAttribute('aria-describedby');
         if (cible.dataset.infobulleTitre !== undefined) {
-            cible.setAttribute('title', cible.dataset.infobulleTitre);
+            // Un `title` posé entre-temps par le code (bouton désactivé, raison du refus) a priorité.
+            if (!cible.hasAttribute('title')) cible.setAttribute('title', cible.dataset.infobulleTitre);
             delete cible.dataset.infobulleTitre;
         }
     }
@@ -188,7 +192,7 @@ export default class extends Controller {
 
     _sections(cible) {
         if (this.sourceValue !== 'titre') return lireSections(cible.dataset.infobulle);
-        const libelle = cible.dataset.infobulleTitre ?? cible.getAttribute('title') ?? '';
+        const libelle = cible.getAttribute('title') ?? cible.dataset.infobulleTitre ?? '';
         return libelle.trim() === '' ? [] : [{ titre: null, lignes: [], texte: libelle, classe: null }];
     }
 
@@ -269,9 +273,25 @@ export default class extends Controller {
         fermer();
         const b = bulle();
         construire(b, sections);
-        if (this.sourceValue === 'titre' && cible.hasAttribute('title')) {
-            cible.dataset.infobulleTitre = cible.getAttribute('title');
-            cible.removeAttribute('title');
+        // Un texte seul (libellé d'un bouton) : bulle compacte.
+        b.classList.toggle('est-courte', sections.length === 1 && !sections[0].titre && sections[0].lignes.length === 0);
+        if (this.sourceValue === 'titre') {
+            if (cible.hasAttribute('title')) {
+                cible.dataset.infobulleTitre = cible.getAttribute('title');
+                cible.removeAttribute('title');
+            }
+            // Le code peut changer le `title` PENDANT l'affichage (un bouton se désactive dès qu'on
+            // tape dans le formulaire : « X — Enregistrez d'abord vos modifications. ») : la bulle
+            // suit, et le `title` natif reste mis de côté — jamais deux infobulles à la fois.
+            etat.observateur = new MutationObserver(() => {
+                const nouveau = cible.getAttribute('title');
+                if (nouveau === null) return;
+                cible.dataset.infobulleTitre = nouveau;
+                cible.removeAttribute('title');
+                const aJour = this._sections(cible);
+                if (aJour.length) construire(b, aJour);
+            });
+            etat.observateur.observe(cible, { attributes: true, attributeFilter: ['title'] });
         }
         b.hidden = false;
         etat.cible = cible;

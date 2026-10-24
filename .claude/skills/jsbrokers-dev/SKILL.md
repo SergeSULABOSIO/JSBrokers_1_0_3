@@ -514,3 +514,9 @@ Inscrits le 2026-10-22 (décisions de Serge) :
     cabinet, copie de pièce jointe et rapport de Ket dans `var/tmp/cabinets/<id>/` (8ᵉ
     emplacement), export envoyé puis effacé même coupé, purge par l'âge des exports et des
     fichiers de passage. Règles au §4 (« fichier de passage »).
+20. **Barre d'outils des listes : un bouton désactivé dit pourquoi** (accepté par Serge le
+    2026-10-24, après le chantier 3). `toolbar_controller.js` (`setButtonDisabled`, ~212) pose
+    `disabled` : Bootstrap lui retire le pointeur (`pointer-events: none`) et il ne prend pas le
+    focus — la raison du refus (son `title`, lu par l'infobulle unique) ne s'affiche jamais. Aligner
+    sur `barre-actions.js` (barre des dialogues) : `aria-disabled`, clic et Entrée/Espace bloqués à
+    la main, style désactivé conservé ; E2E souris + clavier.

@@ -46,7 +46,7 @@
     {% set sheets_data_json = sheets_data_json|merge({(sheet.sheetName): sheet.data}) %}
 {% endfor %}
 <body
-    data-controller="dialog-manager bordereau-analysis geste"
+    data-controller="dialog-manager bordereau-analysis geste infobulle"
     data-bordereau-analysis-sheets-data-value="{{ sheets_data_json|json_encode|e('html_attr') }}"
     data-bordereau-analysis-chargements-value="{{ viewData.chargements|json_encode|e('html_attr') }}"
     data-bordereau-analysis-mapping-options-value="{{ viewData.mapping_options|json_encode|e('html_attr') }}"

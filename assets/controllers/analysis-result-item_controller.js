@@ -25,33 +25,17 @@ export default class extends BaseController {
 
     connect() {
         this.isDetailsVisible = false;
-        this.tooltipElement = null;
-
-        // Lier les gestionnaires d'événements pour les infobulles
-        this.boundShowTooltip = this.showTooltip.bind(this);
-        this.boundHideTooltip = this.hideTooltip.bind(this);
+        // L'infobulle des boutons d'action est l'infobulle unique (data-infobulle, chantier 3).
 
         // NOUVEAU : Écouteur pour la réception du HTML de l'icône.
         this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
         document.addEventListener('analysis:icon.loaded', this.boundHandleIconLoaded);
 
-        this.actionButtonTargets.forEach(button => {
-            button.addEventListener('mouseenter', this.boundShowTooltip);
-            button.addEventListener('mouseleave', this.boundHideTooltip);
-        });
-
         this.loadActionIcons();
     }
 
     disconnect() {
-        this.actionButtonTargets.forEach(button => {
-            button.removeEventListener('mouseenter', this.boundShowTooltip);
-            button.removeEventListener('mouseleave', this.boundHideTooltip);
-        });
         document.removeEventListener('analysis:icon.loaded', this.boundHandleIconLoaded);
-        if (this.tooltipElement) {
-            this.tooltipElement.remove();
-        }
     }
 
     /**
@@ -64,7 +48,7 @@ export default class extends BaseController {
         };
 
         this.actionButtonTargets.forEach((button, index) => {
-            const label = button.dataset.tooltipText;
+            const label = button.dataset.originalLabel;
             const iconAlias = actionIconMap[label] || 'action:information';
             
             // NOUVEAU : On envoie un événement au contrôleur parent pour demander l'icône.
@@ -283,27 +267,5 @@ export default class extends BaseController {
         statut.className = classes;
         statut.textContent = texte;
         cible.replaceChildren(statut);
-    }
-
-    // Les méthodes showTooltip et hideTooltip sont copiées de collection_controller.js
-    // pour rendre ce composant autonome.
-    showTooltip(event) {
-        const target = event.currentTarget;
-        const tooltipText = target.dataset.tooltipText;
-        if (!tooltipText) return;
-        this.tooltipElement = document.createElement('div');
-        this.tooltipElement.className = 'canvas-tooltip is-visible'; // Directement visible
-        this.tooltipElement.textContent = tooltipText;
-        document.body.appendChild(this.tooltipElement);
-        const targetRect = target.getBoundingClientRect();
-        this.tooltipElement.style.left = `${targetRect.left + (targetRect.width / 2) - (this.tooltipElement.offsetWidth / 2)}px`;
-        this.tooltipElement.style.top = `${targetRect.top - this.tooltipElement.offsetHeight - 5}px`;
-    }
-
-    hideTooltip() {
-        if (this.tooltipElement) {
-            this.tooltipElement.remove();
-            this.tooltipElement = null;
-        }
     }
 }

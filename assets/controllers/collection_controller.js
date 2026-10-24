@@ -97,7 +97,6 @@ export default class extends Controller {
         this.boundRefresh = this.refresh.bind(this);
         // Écoute l'événement de sauvegarde pour se rafraîchir
         document.addEventListener('app:list.refresh-request', this.boundRefresh);
-        this.tooltipElement = null; // NOUVEAU : Propriété pour stocker l'infobulle
         // L'arbre des saisies en attente de CETTE collection. Il reste vide en mode
         // édition : là, chaque ajout part directement en base.
         this.groupe = creerGroupe(this.parentFieldNameValue);
@@ -139,10 +138,6 @@ export default class extends Controller {
     disconnect() {
         document.removeEventListener('app:list.refresh-request', this.boundRefresh);
         document.removeEventListener('app:collection.tampon-request', this.boundTampon);
-        // NOUVEAU : S'assurer que l'infobulle est retirée si le contrôleur est déconnecté
-        if (this.tooltipElement) {
-            this.tooltipElement.remove();
-        }
         // Nettoie le sélecteur de clients s'il est resté ouvert.
         this.closePicker();
         // Une requête de liste encore en vol écrirait dans un DOM qui n'est plus là.
@@ -275,46 +270,6 @@ export default class extends Controller {
             this.hideTimeouts[row.id] = setTimeout(() => {
                 actionsContainer.classList.remove('visible');
             }, 800);
-        }
-    }
-
-    /**
-     * NOUVEAU : Affiche une infobulle personnalisée lors du survol.
-     * @param {MouseEvent} event
-     */
-    showTooltip(event) {
-        const target = event.currentTarget;
-        const tooltipText = target.dataset.tooltipTextValue;
-
-        if (!tooltipText) return;
-
-        // Créer l'élément d'infobulle
-        this.tooltipElement = document.createElement('div');
-        this.tooltipElement.className = 'canvas-tooltip';
-        this.tooltipElement.textContent = tooltipText;
-        document.body.appendChild(this.tooltipElement);
-
-        // Positionner l'infobulle près du curseur
-        this.tooltipElement.style.left = `${event.pageX + 15}px`;
-        this.tooltipElement.style.top = `${event.pageY + 15}px`;
-
-        // Forcer un reflow pour que la transition CSS s'applique
-        void this.tooltipElement.offsetWidth;
-
-        // Rendre visible avec la classe qui déclenche l'animation
-        this.tooltipElement.classList.add('is-visible');
-    }
-
-    /**
-     * NOUVEAU : Masque et détruit l'infobulle.
-     */
-    hideTooltip() {
-        if (this.tooltipElement) {
-            // On retire simplement l'élément. La transition de sortie n'est pas gérée
-            // pour éviter les "race conditions" si l'utilisateur bouge la souris rapidement.
-            // L'animation d'entrée est conservée.
-            this.tooltipElement.remove();
-            this.tooltipElement = null;
         }
     }
 

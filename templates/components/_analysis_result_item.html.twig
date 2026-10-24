@@ -72,7 +72,7 @@
                                 'reference_police': result.bordereau_line_info.reference_police ?? null
                             })|json_encode|e('html_attr') }}"
                             data-analysis-result-item-target="actionButton"
-                            data-tooltip-text="{{ action.label }}"
+                            data-infobulle="{{ action.label|json_encode|e('html_attr') }}" data-infobulle-placement="bouton"
                             data-original-label="{{ action.label }}"
                             aria-label="{{ action.label }}"
                     >

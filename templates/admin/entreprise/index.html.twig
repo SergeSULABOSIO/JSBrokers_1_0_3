@@ -139,19 +139,6 @@
     .ent-owner-status--owner .ent-owner-icon { color: #0047AB; }
     .ent-owner-status:focus-visible { outline: 2px solid #0047AB; outline-offset: 2px; }
 
-    /* Infobulle flottante sombre — même pattern que le tableau de bord : élément
-       ajouté au <body> par le contrôleur owner-tip, en position fixe, qui suit
-       la souris. Fond #212529, titre blanc gras, contenu gris clair non gras. */
-    .ent-owner-floating-tip {
-        position: fixed; z-index: 1090; display: none;
-        min-width: 220px; max-width: 280px;
-        background-color: #212529; border-radius: 8px; padding: .65rem .8rem;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, .35);
-        pointer-events: none; text-align: left;
-    }
-    .ent-owner-tip-title { display: block; color: #ffffff; font-weight: 700; font-size: .85rem; margin-bottom: .25rem; }
-    .ent-owner-tip-body  { display: block; color: #adb5bd; font-weight: 400; font-size: .8rem; line-height: 1.4; }
-
     .ent-actions { display: flex; align-items: center; gap: .25rem; }
     .ent-actions form { margin: 0; }
     .ent-icon-btn {
@@ -329,12 +316,10 @@
                         <div class="ent-card-foot">
                             {% if entreprise.utilisateur == utilisateur %}
                                 {# Statut de propriété : l'utilisateur courant a créé cette entreprise.
-                                   Survol/focus → infobulle sombre qui suit la souris (pattern du tableau de bord). #}
+                                   Survol/focus → l'infobulle unique (chantier 3). #}
                                 <div class="ent-owner-status ent-owner-status--owner" tabindex="0"
                                      role="note" aria-label="{{ 'entreprise_owner_aria' | trans }}"
-                                     data-controller="owner-tip"
-                                     data-owner-tip-title-value="{{ 'entreprise_owner_tip_title' | trans }}"
-                                     data-owner-tip-body-value="{{ 'entreprise_owner_tip_body' | trans }}">
+                                     data-infobulle="{{ [{titre: 'entreprise_owner_tip_title'|trans, texte: 'entreprise_owner_tip_body'|trans}]|json_encode|e('html_attr') }}">
                                     {{ ux_icon(resolve_icon_name('action:role'), {height: '18px', width: '18px', class: 'ent-owner-icon'}) }}
                                     <span class="ent-owner-text">{{ 'entreprise_owner_label' | trans }}</span>
                                 </div>
@@ -387,9 +372,7 @@
                                 {# Statut de propriété : l'utilisateur courant a été invité sur cette entreprise. #}
                                 <div class="ent-owner-status ent-owner-status--guest" tabindex="0"
                                      role="note" aria-label="{{ 'entreprise_guest_aria'|trans({':owner': entreprise.utilisateur.nom}) }}"
-                                     data-controller="owner-tip"
-                                     data-owner-tip-title-value="{{ 'entreprise_guest_tip_title' | trans }}"
-                                     data-owner-tip-body-value="{{ 'entreprise_guest_tip_body'|trans({':owner': entreprise.utilisateur.nom}) }}">
+                                     data-infobulle="{{ [{titre: 'entreprise_guest_tip_title'|trans, texte: 'entreprise_guest_tip_body'|trans({':owner': entreprise.utilisateur.nom})}]|json_encode|e('html_attr') }}">
                                     {{ ux_icon(resolve_icon_name('partenaire'), {height: '18px', width: '18px', class: 'ent-owner-icon'}) }}
                                     <span class="ent-owner-text">{{ 'entreprise_guest_label' | trans }}</span>
                                 </div>

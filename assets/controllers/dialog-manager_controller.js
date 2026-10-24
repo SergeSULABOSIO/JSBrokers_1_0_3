@@ -51,7 +51,7 @@ export default class extends Controller {
                          barre que celle du workspace (.context-toolbar, barre-actions.js). -->
                     <div class="dialog-barre-actions" data-dialog-instance-target="barreActions" hidden>
                         <div class="context-toolbar" role="toolbar" aria-label="Actions sur la fiche"
-                             data-controller="dark-tooltip" data-dialog-instance-target="barreActionsContenu"></div>
+                             data-controller="infobulle" data-infobulle-source-value="titre" data-infobulle-placement-value="bouton" data-dialog-instance-target="barreActionsContenu"></div>
                     </div>
                     <!-- PAS de « p-0 » ici : son !important masquait la règle
                          .custom-modal-scroll .modal-body, seule source de la gouttière du

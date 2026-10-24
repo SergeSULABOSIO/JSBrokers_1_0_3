@@ -859,13 +859,10 @@ export default class extends Controller {
                 break;
         }
 
-        // NOUVEAU : Ajout conditionnel des attributs pour le TooltipManager
+        // L'infobulle unique (chantier 3) : la description venue du canevas, posée en texte —
+        // sur l'élément 'content' lui-même, un 'a' ou un 'ul'.
         if (attribute.description && contentValueElement) {
-            // contentValueElement peut être l'élément 'content' lui-même, un 'a', ou un 'ul'
-            contentValueElement.dataset.controller = "tooltip";
-            contentValueElement.dataset.tooltipContent = attribute.description;
-            // Optionnel: vous pouvez ajouter une classe pour indiquer que l'élément a un tooltip
-            contentValueElement.classList.add('has-tooltip');
+            contentValueElement.dataset.infobulle = JSON.stringify(String(attribute.description));
         }
 
         item.appendChild(title);

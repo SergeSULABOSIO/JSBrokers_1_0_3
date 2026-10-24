@@ -192,7 +192,8 @@ export class BarreActions {
     }
 
     /**
-     * Bouton d'une action simple : icône seule + infobulle (`title`, lu par dark-tooltip).
+     * Bouton d'une action simple : icône seule + infobulle (`title`, lu par l'infobulle unique,
+     * source « titre »).
      * @private
      */
     _creerBoutonAction(action) {
