@@ -79,22 +79,27 @@
                      style="width:26px;height:26px;background:#0047AB;flex-shrink:0;">
                     <twig:UX:Icon name="hugeicons:accident" style="width:13px;height:13px;" />
                 </div>
+                {# L'infobulle unique (chantier 3) : le contenu déclaré ici, posé en texte par le navigateur. #}
+                {% set _financier = []
+                    |merge(s.dommage ? [['Dommage', s.dommage|number_format(0, ',', ' ') ~ ' $', 'tip-montant tip-alerte']] : [])
+                    |merge(s.evaluationChiffree ? [['Évaluation', s.evaluationChiffree|number_format(0, ',', ' ') ~ ' $', 'tip-montant']] : [])
+                    |merge(compensationVersee > 0 ? [['Indemnisé', compensationVersee|number_format(0, ',', ' ') ~ ' $', 'tip-montant tip-ok']] : [])
+                    |merge(compensation > 0 ? [['Solde', soldeAVerser|number_format(0, ',', ' ') ~ ' $', soldeAVerser <= 0 ? 'tip-montant tip-ok' : 'tip-montant tip-alerte']] : []) %}
+                {% set _parties = []
+                    |merge(assureNom ? [['Assuré', assureNom]] : [])
+                    |merge(assureurNom ? [['Assureur', assureurNom]] : [])
+                    |merge(risqueNom ? [['Risque', risqueNom]] : []) %}
+                {% set infobulle = [
+                    {titre: 'Sinistre', lignes: [['Référence', refSin ~ (refPol ? ' / ' ~ refPol : '')]]
+                        |merge(s.notifiedAt ? [['Notifié le', s.notifiedAt|date('d/m/Y')]] : [])
+                        |merge(s.occuredAt ? [['Survenu le', s.occuredAt|date('d/m/Y')]] : [])},
+                    {titre: _parties ? 'Parties' : null, lignes: _parties},
+                    {texte: lieu ? lieu|slice(0, 50) : null, classe: 'tip-libelle'},
+                    {texte: description ? description|slice(0, 100) : null, classe: 'tip-libelle'},
+                    {titre: _financier ? 'Financier' : null, lignes: _financier},
+                ] %}
                 <span class="small fw-semibold flex-grow-1 text-truncate" style="color:#212529;"
-                      data-sin-tip
-                      data-sin-ref="{{ refSin|e }}"
-                      data-sin-pol="{{ refPol|e }}"
-                      data-sin-date-notif="{{ s.notifiedAt ? s.notifiedAt|date('d/m/Y') : '' }}"
-                      data-sin-date-occur="{{ s.occuredAt ? s.occuredAt|date('d/m/Y') : '' }}"
-                      data-sin-assure="{{ assureNom|e }}"
-                      data-sin-assureur="{{ assureurNom|e }}"
-                      data-sin-risque="{{ risqueNom|e }}"
-                      data-sin-lieu="{{ lieu|slice(0,50)|e }}"
-                      data-sin-desc="{{ description|slice(0,100)|e }}"
-                      data-sin-dommage="{{ s.dommage ? s.dommage|number_format(0, ',', ' ') ~ ' $' : '' }}"
-                      data-sin-eval="{{ s.evaluationChiffree ? s.evaluationChiffree|number_format(0, ',', ' ') ~ ' $' : '' }}"
-                      data-sin-indemnise="{{ compensationVersee > 0 ? compensationVersee|number_format(0, ',', ' ') ~ ' $' : '' }}"
-                      data-sin-solde="{{ compensation > 0 ? soldeAVerser|number_format(0, ',', ' ') ~ ' $' : '' }}"
-                      data-sin-solde-ok="{{ (compensation > 0 and soldeAVerser <= 0) ? 'true' : '' }}">
+                      data-infobulle="{{ infobulle|json_encode|e('html_attr') }}" data-infobulle-si-replie>
                     {{ refSin }}{% if refPol %}&nbsp;<span class="text-muted fw-normal" style="font-size:.7rem;">/ {{ refPol }}</span>{% endif %}
                 </span>
                 {% if assureurNom %}

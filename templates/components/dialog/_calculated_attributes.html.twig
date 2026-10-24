@@ -87,7 +87,7 @@
                         {# On affiche le couple intitulé / valeur pour l'attribut courant #}
                             <div
                                 class="calculated-attributes-item"
-                                data-meta-tip="{{ attr.description|default('Aucune description disponible.') }}"
+                                data-infobulle="{{ (attr.description|default('Aucune description disponible.'))|json_encode|e('html_attr') }}"
                             >
                                 <dt class="attr-label">{{ attr.intitule }}</dt>
                                 <dd class="attr-value">

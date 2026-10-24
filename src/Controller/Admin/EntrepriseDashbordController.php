@@ -289,8 +289,8 @@ class EntrepriseDashbordController extends AbstractController
             'exercice'          => $exercice,
             // KPIs comptables prêts à afficher : chacun porte son infobulle enrichie
             // (paragraphe 1 = ce que l'indicateur représente pour le courtier ;
-            // paragraphe 2 = comment il est calculé), rendue via le pattern des
-            // infobulles sombres du tableau de bord (data-meta-tip, séparateur \n\n).
+            // paragraphe 2 = comment il est calculé), rendue par l'infobulle unique
+            // (data-infobulle, chantier 3).
             'kpis'              => $this->buildComptaKpis($documents),
             'depensesPayees'    => $depensesPayees,
             'depensesEngagees'  => $depensesEngagees,
@@ -304,8 +304,8 @@ class EntrepriseDashbordController extends AbstractController
      * chacun avec sa valeur et son infobulle explicative en deux paragraphes :
      *  - `intro`  : ce que l'indicateur représente pour le courtier ;
      *  - `calcul` : comment il est calculé.
-     * L'infobulle suit le curseur (pattern data-compta-tip, calqué à 100 % sur
-     * l'infobulle « Renouvellements » data-renew-tip : fond sombre, flottante).
+     * L'infobulle est l'infobulle unique (data-infobulle, chantier 3), déclarée par
+     * _block_compta.html.twig.
      *
      * @param array $documents Structure de DocumentsComptablesBuilder (resultat + tft).
      *

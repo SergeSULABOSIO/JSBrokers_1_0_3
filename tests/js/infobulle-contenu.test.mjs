@@ -51,6 +51,13 @@ test('une classe hors de la famille tip-* est écartée (aucune classe imposée 
     assert.equal(section.classe, null);
 });
 
+test('plusieurs classes de la famille tip-* se combinent ; une intruse dans la liste est retirée', () => {
+    const [section] = lireSections(JSON.stringify([
+        { lignes: [['TTC', '12,00 $', 'tip-montant tip-alerte'], ['HT', '10,00 $', 'tip-montant d-none']] },
+    ]));
+    assert.deepEqual(section.lignes, [['TTC', '12,00 $', 'tip-montant tip-alerte'], ['HT', '10,00 $', 'tip-montant']]);
+});
+
 test('une valeur absente s’affiche « — », un nombre devient une chaîne', () => {
     const [section] = lireSections(JSON.stringify([{ lignes: [['Réserve', null], ['Pièces', 3]] }]));
     assert.deepEqual(section.lignes, [['Réserve', '—', null], ['Pièces', '3', null]]);

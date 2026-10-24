@@ -18,7 +18,7 @@
             {{ entreprise.invites|length }}
         </span>
         <button class="db-block-add-btn"
-                data-meta-tip="Inviter un nouveau collaborateur"
+                data-infobulle="{{ "Inviter un nouveau collaborateur"|json_encode|e('html_attr') }}" data-infobulle-placement="bouton"
                 data-entreprise-id="{{ entreprise.id }}"
                 data-invite-id="{{ currentInviteId }}"
                 data-action="click->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbBlockAdd" data-tableau-de-bord-arguments-param='["invite","Nouvel invité"]'
@@ -26,7 +26,7 @@
             <twig:UX:Icon name="gridicons:add" aria-hidden="true" style="width:15px;height:15px;color:#0047AB;" />
         </button>
         <button class="db-block-add-btn"
-                data-meta-tip="Voir tous les membres de l'équipe"
+                data-infobulle="{{ "Voir tous les membres de l'équipe"|json_encode|e('html_attr') }}" data-infobulle-placement="bouton"
                 data-action="click->geste#naviguer:stop" data-geste-component-param="_view_manager_administration.html.twig" data-geste-group-param="Administration" data-geste-entity-param="Invite"
                 aria-label="Voir tous les membres">
             <twig:UX:Icon name="hugeicons:view" aria-hidden="true" style="width:15px;height:15px;color:#0047AB;" />

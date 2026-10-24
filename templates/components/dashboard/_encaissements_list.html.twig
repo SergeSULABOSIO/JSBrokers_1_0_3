@@ -58,17 +58,22 @@
                      style="width:26px;height:26px;background:#0047AB;flex-shrink:0;">
                     <twig:UX:Icon name="mdi:cash" style="width:13px;height:13px;" />
                 </div>
+                {# L'infobulle unique (chantier 3) : le contenu déclaré ici, posé en texte par le navigateur. #}
+                {% set infobulle = [
+                    {titre: 'Encaissement', lignes: [
+                        ['Référence', ref],
+                        ['Montant', p.montant|number_format(0, ',', ' ') ~ ' $', 'tip-montant'],
+                        ['Encaissé le', p.paidAt|date('d/m/Y')],
+                    ], texte: libelle ? libelle|slice(0, 80) : null, classe: 'tip-libelle'},
+                    noteNom
+                        ? {titre: 'Note liée', lignes: [['Note', noteNom]]
+                            |merge(p.note ? [['Facturé', p.note.montantTotal|number_format(0, ',', ' ') ~ ' $', 'tip-montant']] : [])
+                            |merge(p.note ? [['Solde dû', p.note.solde|number_format(0, ',', ' ') ~ ' $', p.note.solde > 0 ? 'tip-montant tip-alerte' : 'tip-montant tip-ok']] : [])
+                            |merge((p.note and p.note.sentAt) ? [['Facturé le', p.note.sentAt|date('d/m/Y')]] : [])}
+                        : {titre: 'Note liée', texte: '✘ Paiement sinistre — aucune note', classe: 'tip-alerte'},
+                ] %}
                 <span class="small fw-semibold flex-grow-1 text-truncate" style="color:#212529;"
-                      data-cash-tip
-                      data-cash-ref="{{ ref|e }}"
-                      data-cash-montant="{{ p.montant|number_format(0, ',', ' ') ~ ' $' }}"
-                      data-cash-date="{{ p.paidAt|date('d/m/Y') }}"
-                      data-cash-libelle="{{ libelle|slice(0,80)|e }}"
-                      data-cash-note-nom="{{ noteNom|e }}"
-                      data-cash-facture="{{ p.note ? p.note.montantTotal|number_format(0,',', ' ') ~ ' $' : '' }}"
-                      data-cash-solde="{{ p.note ? p.note.solde|number_format(0,',', ' ') ~ ' $' : '' }}"
-                      data-cash-solde-negatif="{{ (p.note and p.note.solde > 0) ? 'true' : '' }}"
-                      data-cash-sent-at="{{ (p.note and p.note.sentAt) ? p.note.sentAt|date('d/m/Y') : '' }}">
+                      data-infobulle="{{ infobulle|json_encode|e('html_attr') }}" data-infobulle-si-replie>
                     {{ ref }}
                 </span>
                 <span class="text-muted" style="font-size:.62rem;flex-shrink:0;white-space:nowrap;">

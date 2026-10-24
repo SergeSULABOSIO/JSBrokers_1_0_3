@@ -17,7 +17,16 @@ import { lireSections, rangees } from './infobulle-contenu.js';
  * Placement (`placement`) : `curseur` (défaut, le contenu) — POSÉE au point d'entrée du pointeur
  * puis IMMOBILE tant qu'on reste sur l'élément (arbitrage du 2026-10-23 : une bulle qui suit le
  * curseur recule quand on va vers elle) ; `bouton` — centrée sous l'élément (barres d'actions).
- * Au clavier, toujours sous l'élément.
+ * Au clavier, toujours sous l'élément. Un élément peut choisir le sien :
+ * `data-infobulle-placement="bouton"` (un bouton « Créer… » au milieu du contenu).
+ *
+ * `data-infobulle-si-replie` : la bulle se tait quand le <details> qui contient l'élément est
+ * OUVERT — le détail est déjà à l'écran (lignes des listes du tableau de bord). Déclaratif, et
+ * pas une règle de tout <summary> : un bouton « Voir tous… » dans l'en-tête d'un bloc ouvert
+ * garde sa bulle.
+ *
+ * Posé sur le <body> (base.html.twig) : une seule instance sert toute l'application ; une
+ * instance plus proche (la vue Cartes) traite l'événement la première.
  *
  * WCAG 1.4.13 :
  *   - SURVOLABLE : quitter l'élément laisse un court délai pour entrer dans la bulle ; elle reste
@@ -131,6 +140,11 @@ export default class extends Controller {
                 e.stopPropagation();
             }
         };
+        this._surBascule = (e) => {
+            // On déplie la ligne dont la bulle se tait une fois dépliée.
+            if (etat.proprietaire === this && etat.cible?.hasAttribute('data-infobulle-si-replie')
+                && e.target.open && e.target.contains(etat.cible)) fermer();
+        };
         this._surMouvement = () => {
             // La liste a pu se rafraîchir sous le pointeur : l'élément n'existe plus, aucun
             // `mouseout` ne viendra.
@@ -141,6 +155,7 @@ export default class extends Controller {
         this.element.addEventListener('mouseout', this._surSortie);
         this.element.addEventListener('focusin', this._surFocus);
         this.element.addEventListener('focusout', this._surPerteDeFocus);
+        this.element.addEventListener('toggle', this._surBascule, true); // `toggle` ne remonte pas
         document.addEventListener('keydown', this._surTouche);
         document.addEventListener('mousemove', this._surMouvement, { passive: true });
     }
@@ -150,6 +165,7 @@ export default class extends Controller {
         this.element.removeEventListener('mouseout', this._surSortie);
         this.element.removeEventListener('focusin', this._surFocus);
         this.element.removeEventListener('focusout', this._surPerteDeFocus);
+        this.element.removeEventListener('toggle', this._surBascule, true);
         document.removeEventListener('keydown', this._surTouche);
         document.removeEventListener('mousemove', this._surMouvement);
         if (etat.proprietaire === this) fermer();
@@ -164,6 +180,10 @@ export default class extends Controller {
     _cibleDe(noeud) {
         const cible = noeud?.closest ? noeud.closest(this._selecteur()) : null;
         return cible && this.element.contains(cible) ? cible : null;
+    }
+
+    _placement(cible) {
+        return cible.dataset.infobullePlacement || this.placementValue;
     }
 
     _sections(cible) {
@@ -186,7 +206,7 @@ export default class extends Controller {
             return;
         }
         if (!this._montrer(cible)) return;
-        this._placer(this.placementValue === 'bouton'
+        this._placer(this._placement(cible) === 'bouton'
             ? positionCentreeSous(cible.getBoundingClientRect(), this._taille(), this._ecran())
             : positionAuCurseur({ x: event.clientX, y: event.clientY }, this._taille(), this._ecran()));
     }
@@ -219,7 +239,7 @@ export default class extends Controller {
         if (this._montrer(cible)) {
             etat.parLeClavier = true;
             const cadre = cible.getBoundingClientRect();
-            this._placer(this.placementValue === 'bouton'
+            this._placer(this._placement(cible) === 'bouton'
                 ? positionCentreeSous(cadre, this._taille(), this._ecran())
                 : positionSousLElement(cadre, this._taille(), this._ecran()));
         }
@@ -242,6 +262,7 @@ export default class extends Controller {
 
     /** @returns {boolean} vrai si une infobulle est affichée */
     _montrer(cible) {
+        if (cible.hasAttribute('data-infobulle-si-replie') && cible.closest('details')?.open) return false;
         const sections = this._sections(cible);
         if (sections.length === 0) return false;
 

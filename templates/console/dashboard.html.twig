@@ -202,7 +202,7 @@
                     <small id="cs-db-ventes-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                     <a href="{{ path('console.vente.index') }}" class="db-task-new-btn ms-auto"
                        data-action="click->geste#arreter click->top-progress#show"
-                       data-meta-tip="Voir toutes les ventes"
+                       data-infobulle="{{ "Voir toutes les ventes"|json_encode|e('html_attr') }}" data-infobulle-placement="bouton"
                        aria-label="Voir toutes les ventes">
                         {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
                     </a>
@@ -230,7 +230,7 @@
                     <small id="cs-db-depenses-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                     <a href="{{ path('console.depense.index') }}" class="db-task-new-btn ms-auto"
                        data-action="click->geste#arreter click->top-progress#show"
-                       data-meta-tip="Voir toutes les dépenses"
+                       data-infobulle="{{ "Voir toutes les dépenses"|json_encode|e('html_attr') }}" data-infobulle-placement="bouton"
                        aria-label="Voir toutes les dépenses">
                         {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
                     </a>
@@ -256,7 +256,7 @@
                     <small id="cs-db-entreprises-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                     <a href="{{ path('console.entreprise.index') }}" class="db-task-new-btn ms-auto"
                        data-action="click->geste#arreter click->top-progress#show"
-                       data-meta-tip="Voir toutes les entreprises"
+                       data-infobulle="{{ "Voir toutes les entreprises"|json_encode|e('html_attr') }}" data-infobulle-placement="bouton"
                        aria-label="Voir toutes les entreprises">
                         {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
                     </a>
@@ -282,7 +282,7 @@
                     <small id="cs-db-clients-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                     <a href="{{ path('console.client.index') }}" class="db-task-new-btn ms-auto"
                        data-action="click->geste#arreter click->top-progress#show"
-                       data-meta-tip="Voir tous les clients"
+                       data-infobulle="{{ "Voir tous les clients"|json_encode|e('html_attr') }}" data-infobulle-placement="bouton"
                        aria-label="Voir tous les clients">
                         {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
                     </a>
@@ -308,7 +308,7 @@
                     <small id="cs-db-utilisateurs-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                     <a href="{{ path('console.utilisateur.index') }}" class="db-task-new-btn ms-auto"
                        data-action="click->geste#arreter click->top-progress#show"
-                       data-meta-tip="Voir tous les utilisateurs"
+                       data-infobulle="{{ "Voir tous les utilisateurs"|json_encode|e('html_attr') }}" data-infobulle-placement="bouton"
                        aria-label="Voir tous les utilisateurs">
                         {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
                     </a>
@@ -334,7 +334,7 @@
                     <small id="cs-db-coupons-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                     <a href="{{ path('console.coupon.index') }}" class="db-task-new-btn ms-auto"
                        data-action="click->geste#arreter click->top-progress#show"
-                       data-meta-tip="Voir tous les coupons"
+                       data-infobulle="{{ "Voir tous les coupons"|json_encode|e('html_attr') }}" data-infobulle-placement="bouton"
                        aria-label="Voir tous les coupons">
                         {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
                     </a>
@@ -361,7 +361,7 @@
                     {% if is_granted('ROLE_SUPER_ADMIN') %}
                         <a href="{{ path('console.plan.index') }}" class="db-task-new-btn ms-auto"
                            data-action="click->geste#arreter click->top-progress#show"
-                           data-meta-tip="Éditer le plan tarifaire"
+                           data-infobulle="{{ "Éditer le plan tarifaire"|json_encode|e('html_attr') }}" data-infobulle-placement="bouton"
                            aria-label="Éditer le plan tarifaire">
                             {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
                         </a>
@@ -388,7 +388,7 @@
                     <small id="cs-db-taxes-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                     <a href="{{ path('console.taxe.index') }}" class="db-task-new-btn ms-auto"
                        data-action="click->geste#arreter click->top-progress#show"
-                       data-meta-tip="Gérer les taxes sur les ventes"
+                       data-infobulle="{{ "Gérer les taxes sur les ventes"|json_encode|e('html_attr') }}" data-infobulle-placement="bouton"
                        aria-label="Gérer les taxes sur les ventes">
                         {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
                     </a>
@@ -416,7 +416,7 @@
                     <small id="cs-db-supervision-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                     <a href="{{ path('console.supervision.index') }}" class="db-task-new-btn ms-auto"
                        data-action="click->geste#arreter click->top-progress#show"
-                       data-meta-tip="Voir tous les défauts"
+                       data-infobulle="{{ "Voir tous les défauts"|json_encode|e('html_attr') }}" data-infobulle-placement="bouton"
                        aria-label="Voir tous les défauts">
                         {{ ux_icon(resolve_icon_name('action:view'), {style: 'width:15px;height:15px;color:#0047AB;'}) }}
                     </a>

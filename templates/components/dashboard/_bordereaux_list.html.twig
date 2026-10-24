@@ -130,16 +130,24 @@
                      style="width:26px;height:26px;background:{{ ageColor }};flex-shrink:0;">
                     <twig:UX:Icon name="streamline-ultimate:notes-checklist-flip" style="width:13px;height:13px;" />
                 </div>
+                {# L'infobulle unique (chantier 3) : le contenu déclaré ici, posé en texte par le navigateur.
+                   Le statut prend la classe d'état de la bulle (une couleur = un sens), plus la couleur du badge. #}
+                {% set _classeStatut = {0: 'tip-attente', 1: 'tip-alerte', 2: 'tip-ok', 3: 'tip-info', 4: 'tip-attente'}[statutCode] ?? (statutCode >= 10 ? 'tip-info' : null) %}
+                {% set infobulle = [
+                    {titre: 'Bordereau', lignes: [
+                        ['Référence', b.reference ?: null, 'tip-fort'],
+                        ['Assureur', assureurNom ?: null],
+                        ['Statut', statutLabel ?: null, _classeStatut],
+                    ]},
+                    {titre: 'Période', lignes: [
+                        ['Couverture', periodeStr ?: null],
+                        ['Reçu le', b.receivedAt|date('d/m/Y')],
+                        ['Âge', _days|round(0, 'ceil') ~ ' jour(s)'],
+                    ]},
+                ] %}
                 <span class="small fw-semibold flex-grow-1 text-truncate"
                       style="color:#212529;"
-                      data-bord-tip
-                      data-bord-tip-ref="{{ b.reference|e }}"
-                      data-bord-tip-assureur="{{ assureurNom|e }}"
-                      data-bord-tip-statut="{{ statutLabel|e }}"
-                      data-bord-tip-statut-color="{{ statutColor }}"
-                      data-bord-tip-periode="{{ periodeStr|e }}"
-                      data-bord-tip-recu="{{ b.receivedAt|date('d/m/Y') }}"
-                      data-bord-tip-days="{{ _days|round(0, 'ceil') }}">{{ b.nom }}</span>
+                      data-infobulle="{{ infobulle|json_encode|e('html_attr') }}" data-infobulle-si-replie>{{ b.nom }}</span>
                 <span class="badge rounded-pill"
                       style="background:{{ statutColor }};color:#fff;font-size:.58rem;flex-shrink:0;white-space:nowrap;">
                     {{ statutLabel }}

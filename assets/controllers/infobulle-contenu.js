@@ -15,7 +15,12 @@
 const CLASSE_PERMISE = /^tip-[a-z][a-z-]*$/;
 
 const texte = (v) => (typeof v === 'string' ? v : typeof v === 'number' || typeof v === 'boolean' ? String(v) : null);
-const classe = (v) => (typeof v === 'string' && CLASSE_PERMISE.test(v) ? v : null);
+/** Une ou plusieurs classes (« tip-montant tip-alerte ») ; seules celles de la famille restent. */
+const classe = (v) => {
+    if (typeof v !== 'string') return null;
+    const permises = v.split(/\s+/).filter((c) => CLASSE_PERMISE.test(c));
+    return permises.length ? permises.join(' ') : null;
+};
 
 function section(brute) {
     if (brute === null || typeof brute !== 'object' || Array.isArray(brute)) {

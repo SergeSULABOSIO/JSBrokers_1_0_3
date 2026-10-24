@@ -39,7 +39,7 @@
             {# Ligne 1 : TTC / Réserve #}
             <div class="col-6">
                 <div class="db-hero-metric" tabindex="0" role="button"
-                     data-meta-tip="{{ revenusBreakdown.tipTTC|e }}">
+                     data-infobulle="{{ (revenusBreakdown.tipTTC)|json_encode|e('html_attr') }}">
                     <div class="d-flex align-items-start gap-2">
                         <span class="db-hero-metric-icon flex-shrink-0">
                             <twig:UX:Icon name="hugeicons:money-bag-02" style="width:14px;height:14px;" />
@@ -53,7 +53,7 @@
             </div>
             <div class="col-6">
                 <div class="db-hero-metric" tabindex="0" role="button"
-                     data-meta-tip="{{ revenusBreakdown.tipReserve|e }}">
+                     data-infobulle="{{ (revenusBreakdown.tipReserve)|json_encode|e('html_attr') }}">
                     <div class="d-flex align-items-start gap-2">
                         <span class="db-hero-metric-icon flex-shrink-0">
                             <twig:UX:Icon name="hugeicons:wallet-02" style="width:14px;height:14px;" />
@@ -69,7 +69,7 @@
             {# Ligne 2 : HT / Taxe courtier #}
             <div class="col-6">
                 <div class="db-hero-metric" tabindex="0" role="button"
-                     data-meta-tip="{{ revenusBreakdown.tipHT|e }}">
+                     data-infobulle="{{ (revenusBreakdown.tipHT)|json_encode|e('html_attr') }}">
                     <div class="d-flex align-items-start gap-2">
                         <span class="db-hero-metric-icon flex-shrink-0">
                             <twig:UX:Icon name="tdesign:bill-filled" style="width:14px;height:14px;" />
@@ -83,7 +83,7 @@
             </div>
             <div class="col-6">
                 <div class="db-hero-metric" tabindex="0" role="button"
-                     data-meta-tip="{{ revenusBreakdown.taxeCourtier.tip|e }}">
+                     data-infobulle="{{ (revenusBreakdown.taxeCourtier.tip)|json_encode|e('html_attr') }}">
                     <div class="d-flex align-items-start gap-2">
                         <span class="db-hero-metric-icon flex-shrink-0">
                             <twig:UX:Icon name="tabler:tax" style="width:14px;height:14px;" />
@@ -105,7 +105,7 @@
             {# Ligne 3 : Revenu Pur / Taxe assureur #}
             <div class="col-6">
                 <div class="db-hero-metric" tabindex="0" role="button"
-                     data-meta-tip="{{ revenusBreakdown.tipPur|e }}">
+                     data-infobulle="{{ (revenusBreakdown.tipPur)|json_encode|e('html_attr') }}">
                     <div class="d-flex align-items-start gap-2">
                         <span class="db-hero-metric-icon flex-shrink-0">
                             <twig:UX:Icon name="hugeicons:money-bag-01" style="width:14px;height:14px;" />
@@ -119,7 +119,7 @@
             </div>
             <div class="col-6">
                 <div class="db-hero-metric" tabindex="0" role="button"
-                     data-meta-tip="{{ revenusBreakdown.taxeAssureur.tip|e }}">
+                     data-infobulle="{{ (revenusBreakdown.taxeAssureur.tip)|json_encode|e('html_attr') }}">
                     <div class="d-flex align-items-start gap-2">
                         <span class="db-hero-metric-icon flex-shrink-0">
                             <twig:UX:Icon name="hugeicons:bank" style="width:14px;height:14px;" />
@@ -141,7 +141,7 @@
             {# Ligne 4 : Rétrocommission / Solde restant dû #}
             <div class="col-6">
                 <div class="db-hero-metric" tabindex="0" role="button"
-                     data-meta-tip="{{ revenusBreakdown.tipRetrocom|e }}">
+                     data-infobulle="{{ (revenusBreakdown.tipRetrocom)|json_encode|e('html_attr') }}">
                     <div class="d-flex align-items-start gap-2">
                         <span class="db-hero-metric-icon flex-shrink-0">
                             <twig:UX:Icon name="carbon:partnership" style="width:14px;height:14px;" />
@@ -155,7 +155,7 @@
             </div>
             <div class="col-6">
                 <div class="db-hero-metric db-hero-solde" tabindex="0" role="button"
-                     data-meta-tip="{{ revenusBreakdown.tipSolde|e }}">
+                     data-infobulle="{{ (revenusBreakdown.tipSolde)|json_encode|e('html_attr') }}">
                     <div class="d-flex align-items-start gap-2">
                         <span class="db-hero-metric-icon flex-shrink-0">
                             <twig:UX:Icon name="mdi:bank-outline" style="width:14px;height:14px;" />

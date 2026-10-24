@@ -293,7 +293,7 @@ class WorkspaceFournisseurTest extends WebTestCase
         $this->assertSame('', trim((string) $this->client->getResponse()->getContent()), 'Le bloc Comptabilité doit être vide pour un invité hors périmètre.');
 
         // Propriétaire : KPIs comptables rendus, avec infobulle qui suit le curseur
-        // (pattern data-compta-tip, calqué sur data-renew-tip) et ses deux paragraphes.
+        // (infobulle unique, chantier 3 : data-infobulle) et ses deux sections.
         $this->client->loginUser($this->user(self::OWNER_EMAIL));
         $this->client->request('GET', $url);
         $this->assertResponseIsSuccessful();
@@ -301,9 +301,12 @@ class WorkspaceFournisseurTest extends WebTestCase
         $this->assertStringContainsString('Commissions encaissées', $html);
         $this->assertStringContainsString('Résultat net', $html);
         $this->assertStringContainsString('fournisseur', $html, 'Le pouls des fournisseurs actifs doit être affiché.');
-        $this->assertStringContainsString('data-compta-tip', $html, "Les KPIs doivent porter l'infobulle qui suit le curseur.");
-        $this->assertStringContainsString('data-tip-intro', $html, "L'infobulle doit contenir le paragraphe de représentation.");
-        $this->assertStringContainsString('data-tip-calcul', $html, "L'infobulle doit contenir le paragraphe de mode de calcul.");
+        $bulles = (new \Symfony\Component\DomCrawler\Crawler($html))->filter('[data-infobulle]');
+        $this->assertGreaterThan(0, $bulles->count(), "Les KPIs doivent porter l'infobulle.");
+        $kpi = json_decode((string) $bulles->first()->attr('data-infobulle'), true, 512, \JSON_THROW_ON_ERROR);
+        $this->assertNotEmpty($kpi[0]['texte'] ?? null, "L'infobulle doit contenir le paragraphe de représentation.");
+        $this->assertSame('Calcul', $kpi[1]['titre'] ?? null);
+        $this->assertNotEmpty($kpi[1]['texte'] ?? null, "L'infobulle doit contenir le paragraphe de mode de calcul.");
 
         // Le tableau de bord du propriétaire embarque le bloc (gate Twig).
         $this->client->request('GET', sprintf('/admin/entreprise_dashbord/workspace/%d', $e->getId()));
@@ -345,7 +348,7 @@ class WorkspaceFournisseurTest extends WebTestCase
         $this->assertSame('', trim((string) $this->client->getResponse()->getContent()), 'Le bloc Dépenses doit être vide pour un invité hors périmètre.');
 
         // Propriétaire : la dépense remonte, avec le tiers et le montant en sortie,
-        // l'infobulle qui suit le curseur (data-dep-tip) et le menu contextuel
+        // l'infobulle unique (data-infobulle, chantier 3) et le menu contextuel
         // (clic droit → ajouter / modifier / supprimer).
         $this->client->loginUser($this->user(self::OWNER_EMAIL));
         $this->client->request('GET', $url);
@@ -354,7 +357,9 @@ class WorkspaceFournisseurTest extends WebTestCase
         $this->assertStringContainsString('GBS Internet', $html, 'La dépense doit afficher son fournisseur.');
         $this->assertStringContainsString('db-dep-list', $html, 'Le conteneur de liste (auto-refresh) doit être présent.');
         $this->assertStringContainsString('depenses-fragment', $html, "L'URL de rafraîchissement doit être déclarée.");
-        $this->assertStringContainsString('data-dep-tip', $html, "L'infobulle qui suit le curseur doit être posée sur chaque dépense.");
+        $depense = (new \Symfony\Component\DomCrawler\Crawler($html))->filter('.db-dep-item [data-infobulle]');
+        $this->assertGreaterThan(0, $depense->count(), "L'infobulle doit être posée sur chaque dépense.");
+        $this->assertSame('Dépense', json_decode((string) $depense->first()->attr('data-infobulle'), true, 512, \JSON_THROW_ON_ERROR)[0]['titre'] ?? null);
         // Sans code dans le HTML (politique de sécurité) : le contrôleur tableau-de-bord appelle dbDepCtxOpen(event, élément).
         $this->assertStringContainsString('data-action="contextmenu->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbDepCtxOpen"', $html, 'Le clic droit doit ouvrir le menu contextuel de la dépense.');
         $this->assertStringContainsString('id="dbDepCtxMenu"', $html, 'Le menu contextuel dépense doit être présent.');

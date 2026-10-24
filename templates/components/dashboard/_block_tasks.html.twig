@@ -45,7 +45,7 @@
             <twig:UX:Icon name="hugeicons:task-02" style="width:14px;height:14px;color:#0047AB;" />
             <span class="small fw-semibold" style="color:#0047AB;">Tâches</span>
             <button class="db-task-new-btn ms-auto"
-                    data-meta-tip="Créer une nouvelle tâche"
+                    data-infobulle="{{ "Créer une nouvelle tâche"|json_encode|e('html_attr') }}" data-infobulle-placement="bouton"
                     data-entreprise-id="{{ entreprise.id }}"
                     data-invite-id="{{ currentInviteId }}"
                     data-action="click->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbTaskNew"
@@ -53,7 +53,7 @@
                 <twig:UX:Icon name="gridicons:add" style="width:15px;height:15px;color:#0047AB;" />
             </button>
             <button class="db-task-new-btn"
-                    data-meta-tip="Voir toutes les tâches"
+                    data-infobulle="{{ "Voir toutes les tâches"|json_encode|e('html_attr') }}" data-infobulle-placement="bouton"
                     data-action="click->geste#naviguer:stop" data-geste-component-param="_view_manager_marketing.html.twig" data-geste-group-param="Marketing" data-geste-entity-param="Tache"
                     aria-label="Voir toutes les tâches">
                 <twig:UX:Icon name="hugeicons:view" style="width:15px;height:15px;color:#0047AB;" />
@@ -146,7 +146,7 @@
                         {% set statutLabel = (due is not null and due < now) ? 'En retard' : 'En cours' %}
                         <div class="d-flex gap-3 flex-wrap pt-1" style="border-top:1px solid #dee2e6;">
                             <span class="db-meta-chip"
-                                  data-meta-tip="{{ tache.executor ? tache.executor.nom|e : 'Aucun assignataire' }}"
+                                  data-infobulle="{{ (tache.executor ? tache.executor.nom : 'Aucun assignataire')|json_encode|e('html_attr') }}"
                                   style="color:#6c757d;">
                                 <twig:UX:Icon name="hugeicons:user-group" style="width:11px;height:11px;" class="me-1" />
                                 {{ tache.executor ? 1 : 0 }}
@@ -167,22 +167,20 @@
                                     {{ tache.toBeEndedAt|date('d/m/Y') }}
                                 </span>
                             {% endif %}
-                            {% set _fbTip = 'Aucun feedback' %}
+                            {# L'infobulle unique (chantier 3) : les cinq derniers retours, auteur et début du texte. #}
+                            {% set _fbInfobulle = [{texte: 'Aucun feedback'}] %}
                             {% if tache.feedbacks|length > 0 %}
-                                {% set _fbLines = [] %}
+                                {% set _fbLignes = [] %}
                                 {% for fb in tache.feedbacks|slice(0, 5) %}
                                     {% set _desc = fb.description|texte_lisible %}
-                                    {% set _fbLine = (fb.invite ? fb.invite.nom : 'Anonyme') ~ ': ' ~ (_desc|slice(0, 55)) ~ (_desc|length > 55 ? '…' : '') %}
-                                    {% set _fbLines = _fbLines|merge([_fbLine]) %}
+                                    {% set _fbLignes = _fbLignes|merge([[fb.invite ? fb.invite.nom : 'Anonyme', (_desc|slice(0, 55)) ~ (_desc|length > 55 ? '…' : '')]]) %}
                                 {% endfor %}
-                                {% set _fbTip = _fbLines|join("\n─────────────────────\n") %}
-                                {% if tache.feedbacks|length > 5 %}
-                                    {% set _fbTip = _fbTip ~ "\n─────────────────────\n[PLUS]" %}
-                                {% endif %}
+                                {% set _fbInfobulle = [{titre: 'Feedbacks', lignes: _fbLignes}]
+                                    |merge(tache.feedbacks|length > 5 ? [{texte: 'Pour plus d’infos, consultez la liste des feedbacks', classe: 'tip-fort'}] : []) %}
                             {% endif %}
                             <span data-fb-count="{{ tache.id }}"
                                   class="db-meta-chip"
-                                  data-meta-tip="{{ _fbTip|e }}"
+                                  data-infobulle="{{ _fbInfobulle|json_encode|e('html_attr') }}"
                                   style="color:#6c757d;">
                                 <twig:UX:Icon name="mdi:comment-text-multiple-outline" style="width:11px;height:11px;" class="me-1" />
                                 {{ tache.feedbacks|length }}

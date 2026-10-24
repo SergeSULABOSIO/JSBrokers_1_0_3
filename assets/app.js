@@ -28,8 +28,9 @@ import './bootstrap.js';
 // Correctif global des menus d'autocomplétion (champs relation) dans les dialogues.
 import './autocomplete-dropdown-global.js';
 import { Chart } from 'chart.js';
-// Les infobulles et tableaux du tableau de bord composent du HTML autour de valeurs lues
-// dans `dataset` (rendu DÉCODÉ : le |e du gabarit n'y protège de rien) : chacune passe ici.
+// Les tableaux du tableau de bord composent du HTML autour de valeurs lues dans `dataset`
+// (rendu DÉCODÉ : le |e du gabarit n'y protège de rien) : chacune passe ici. (Les infobulles,
+// elles, sont déclarées par le serveur et posées en texte : infobulle_controller, chantier 3.)
 import { echapper } from './controllers/echapper.js';
 console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
@@ -137,7 +138,6 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
                     b.classList.toggle('active', b.dataset.mode === _activeMode);
                 });
                 setTimeout(dbTaskApplyFilter, 30);
-                if (typeof window.initDbMetaTips === 'function') window.initDbMetaTips();
                 if (typeof window.initDbFeedbacks === 'function') window.initDbFeedbacks();
                 if (typeof window.initDbUsers === 'function') window.initDbUsers();
             })
@@ -167,7 +167,6 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
                     b.classList.toggle('active', b.dataset.mode === _activeMode);
                 });
                 setTimeout(dbTaskApplyFilter, 30);
-                if (typeof window.initDbMetaTips === 'function') window.initDbMetaTips();
                 if (typeof window.initDbFeedbacks === 'function') window.initDbFeedbacks();
                 if (typeof window.initDbUsers === 'function') window.initDbUsers();
             })
@@ -621,85 +620,6 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
     window.refreshDepenses = refreshDepenses;
 }());
 
-// ── Tooltip dépenses — data-dep-tip (suit la souris) — miroir data-cash-tip ──
-(function () {
-    var _tip = null;
-    var _active = false;
-
-    function getOrCreate() {
-        if (!_tip) {
-            _tip = document.createElement('div');
-            _tip.id = 'db-dep-tip';
-            document.body.appendChild(_tip);
-        }
-        return _tip;
-    }
-
-    function buildContent(el) {
-        var charge = echapper(el.dataset.depTipCharge || '—');
-        var tiers  = echapper(el.dataset.depTipTiers  || '');
-        var compte = echapper(el.dataset.depTipCompte || '');
-        var ttc    = echapper(el.dataset.depTipTtc    || '—');
-        var ht     = echapper(el.dataset.depTipHt     || '—');
-        var tva    = echapper(el.dataset.depTipTva    || '—');
-        var statut = echapper(el.dataset.depTipStatut || '—');
-        var sColor = echapper(el.dataset.depTipStatutColor || '#adb5bd');
-        var moyen  = echapper(el.dataset.depTipMoyen  || '—');
-        var date   = echapper(el.dataset.depTipDate   || '—');
-        var ref    = echapper(el.dataset.depTipRef    || '');
-
-        var rows = '<tr><td colspan="2" class="tip-section">Dépense</td></tr>' +
-            '<tr><td>Charge</td><td>' + charge + '</td></tr>';
-        if (tiers)  { rows += '<tr><td>Tiers</td><td>' + tiers + '</td></tr>'; }
-        if (compte) { rows += '<tr><td>Compte</td><td>' + compte + '</td></tr>'; }
-
-        rows += '<tr><td colspan="2" class="tip-section">Montants</td></tr>' +
-            '<tr><td>TTC</td><td class="tip-ttc">' + ttc + '</td></tr>' +
-            '<tr><td>HT</td><td>' + ht + '</td></tr>' +
-            '<tr><td>TVA déd.</td><td>' + tva + '</td></tr>' +
-            '<tr><td colspan="2" class="tip-section">Suivi</td></tr>' +
-            '<tr><td>Statut</td><td class="tip-statut" style="color:' + sColor + '">' + statut + '</td></tr>' +
-            '<tr><td>Moyen</td><td>' + moyen + '</td></tr>' +
-            '<tr><td>Date</td><td>' + date + '</td></tr>';
-        if (ref && ref !== '—') { rows += '<tr><td>Réf.</td><td>' + ref + '</td></tr>'; }
-
-        return '<table>' + rows + '</table>';
-    }
-
-    function positionTip(mx, my) {
-        var t = _tip;
-        if (!t) return;
-        var offset = 10;
-        var left = mx - t.offsetWidth - offset;
-        var top  = my - t.offsetHeight - offset;
-        if (left < 8) left = mx + offset;
-        if (top < 8) top = my + offset;
-        t.style.left = left + 'px';
-        t.style.top  = top  + 'px';
-    }
-
-    document.addEventListener('mouseover', function (e) {
-        var el = e.target.closest ? e.target.closest('[data-dep-tip]') : null;
-        if (!el) return;
-        var details = el.closest('details');
-        if (details && details.open) return;
-        var t = getOrCreate();
-        t.innerHTML = buildContent(el);
-        t.style.display = 'block';
-        _active = true;
-    });
-    document.addEventListener('mouseout', function (e) {
-        var el = e.target.closest ? e.target.closest('[data-dep-tip]') : null;
-        if (el && !el.contains(e.relatedTarget)) {
-            if (_tip) _tip.style.display = 'none';
-            _active = false;
-        }
-    });
-    document.addEventListener('mousemove', function (e) {
-        if (_active) positionTip(e.clientX, e.clientY);
-    });
-}());
-
 // ── Menu contextuel dépenses — dbDepCtxOpen (ajouter / modifier / supprimer) ──
 // Miroir strict du menu contextuel des notes (dbNoteCtxOpen).
 (function () {
@@ -857,189 +777,6 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
     });
 
     window.dbDepCtxOpen = dbDepCtxOpen;
-}());
-
-// ── Tooltip encaissements — data-cash-tip (suit la souris) ──────────────────
-(function () {
-    var _tip = null;
-    var _active = false;
-
-    function getOrCreate() {
-        if (!_tip) {
-            _tip = document.createElement('div');
-            _tip.id = 'db-cash-tip';
-            document.body.appendChild(_tip);
-        }
-        return _tip;
-    }
-
-    function buildContent(el) {
-        var ref      = echapper(el.dataset.cashRef      || '—');
-        var montant  = echapper(el.dataset.cashMontant  || '—');
-        var date     = echapper(el.dataset.cashDate     || '—');
-        var libelle  = echapper(el.dataset.cashLibelle  || '');
-        var noteNom  = echapper(el.dataset.cashNoteNom  || '');
-        var facture  = echapper(el.dataset.cashFacture  || '');
-        var solde    = echapper(el.dataset.cashSolde    || '');
-        var soldeDue = el.dataset.cashSoldeNegatif === 'true';
-        var sentAt   = echapper(el.dataset.cashSentAt   || '');
-
-        var rows = '<tr><td colspan="2" class="tip-section">Encaissement</td></tr>' +
-            '<tr><td>Référence</td><td>' + ref + '</td></tr>' +
-            '<tr><td>Montant</td><td>' + montant + '</td></tr>' +
-            '<tr><td>Encaissé le</td><td>' + date + '</td></tr>';
-
-        if (libelle) {
-            rows += '<tr><td colspan="2" class="tip-libelle">' + libelle + '</td></tr>';
-        }
-
-        if (noteNom) {
-            rows += '<tr><td colspan="2" class="tip-section">Note liée</td></tr>' +
-                '<tr><td>Note</td><td>' + noteNom + '</td></tr>';
-            if (facture) {
-                rows += '<tr><td>Facturé</td><td>' + facture + '</td></tr>';
-            }
-            if (solde) {
-                var soldeClass = soldeDue ? 'tip-solde-due' : 'tip-solde-ok';
-                rows += '<tr><td>Solde dû</td><td class="' + soldeClass + '">' + solde + '</td></tr>';
-            }
-            if (sentAt) {
-                rows += '<tr><td>Facturé le</td><td>' + sentAt + '</td></tr>';
-            }
-        } else {
-            rows += '<tr><td colspan="2" class="tip-section">Note liée</td></tr>' +
-                '<tr><td colspan="2" class="tip-note"><span class="tip-sinistre">✘ Paiement sinistre — aucune note</span></td></tr>';
-        }
-
-        return '<table>' + rows + '</table>';
-    }
-
-    function positionTip(mx, my) {
-        var t = _tip;
-        if (!t) return;
-        var offset = 10;
-        var left = mx - t.offsetWidth - offset;
-        var top  = my - t.offsetHeight - offset;
-        if (left < 8) left = mx + offset;
-        if (top < 8) top = my + offset;
-        t.style.left = left + 'px';
-        t.style.top  = top  + 'px';
-    }
-
-    document.addEventListener('mouseover', function (e) {
-        var el = e.target.closest ? e.target.closest('[data-cash-tip]') : null;
-        if (!el) return;
-        var details = el.closest('details');
-        if (details && details.open) return;
-        var t = getOrCreate();
-        t.innerHTML = buildContent(el);
-        t.style.display = 'block';
-        _active = true;
-    });
-    document.addEventListener('mouseout', function (e) {
-        var el = e.target.closest ? e.target.closest('[data-cash-tip]') : null;
-        if (el && !el.contains(e.relatedTarget)) {
-            if (_tip) _tip.style.display = 'none';
-            _active = false;
-        }
-    });
-    document.addEventListener('mousemove', function (e) {
-        if (_active) positionTip(e.clientX, e.clientY);
-    });
-}());
-
-// ── Tooltip sinistres — data-sin-tip (suit la souris) ───────────────────────
-(function () {
-    var _tip = null;
-    var _active = false;
-
-    function getOrCreate() {
-        if (!_tip) {
-            _tip = document.createElement('div');
-            _tip.id = 'db-sin-tip';
-            document.body.appendChild(_tip);
-        }
-        return _tip;
-    }
-
-    function buildContent(el) {
-        var ref       = echapper(el.dataset.sinRef       || '—');
-        var pol       = echapper(el.dataset.sinPol       || '');
-        var dateNotif = echapper(el.dataset.sinDateNotif || '');
-        var dateOccur = echapper(el.dataset.sinDateOccur || '');
-        var assure    = echapper(el.dataset.sinAssure    || '');
-        var assureur  = echapper(el.dataset.sinAssureur  || '');
-        var risque    = echapper(el.dataset.sinRisque    || '');
-        var lieu      = echapper(el.dataset.sinLieu      || '');
-        var desc      = echapper(el.dataset.sinDesc      || '');
-        var dommage   = echapper(el.dataset.sinDommage   || '');
-        var evalVal   = echapper(el.dataset.sinEval      || '');
-        var indemnise = echapper(el.dataset.sinIndemnise || '');
-        var solde     = echapper(el.dataset.sinSolde     || '');
-        var soldeOk   = el.dataset.sinSoldeOk   === 'true';
-
-        var rows = '<tr><td colspan="2" class="tip-section">Sinistre</td></tr>' +
-            '<tr><td>Référence</td><td>' + ref + (pol ? ' / ' + pol : '') + '</td></tr>';
-
-        if (dateNotif) rows += '<tr><td>Notifié le</td><td>' + dateNotif + '</td></tr>';
-        if (dateOccur) rows += '<tr><td>Survenu le</td><td>' + dateOccur + '</td></tr>';
-
-        if (assure || assureur || risque) {
-            rows += '<tr><td colspan="2" class="tip-section">Parties</td></tr>';
-            if (assure)   rows += '<tr><td>Assuré</td><td>' + assure + '</td></tr>';
-            if (assureur) rows += '<tr><td>Assureur</td><td>' + assureur + '</td></tr>';
-            if (risque)   rows += '<tr><td>Risque</td><td>' + risque + '</td></tr>';
-        }
-
-        if (lieu) rows += '<tr><td colspan="2" class="tip-libelle">' + lieu + '</td></tr>';
-        if (desc) rows += '<tr><td colspan="2" class="tip-libelle">' + desc + '</td></tr>';
-
-        if (dommage || evalVal || indemnise || solde) {
-            rows += '<tr><td colspan="2" class="tip-section">Financier</td></tr>';
-            if (dommage)   rows += '<tr><td>Dommage</td><td style="color:#f87171;">' + dommage + '</td></tr>';
-            if (evalVal)   rows += '<tr><td>Évaluation</td><td>' + evalVal + '</td></tr>';
-            if (indemnise) rows += '<tr><td>Indemnisé</td><td style="color:#4ade80;">' + indemnise + '</td></tr>';
-            if (solde) {
-                var soldeClass = soldeOk ? 'tip-solde-ok' : 'tip-solde-due';
-                rows += '<tr><td>Solde</td><td class="' + soldeClass + '">' + solde + '</td></tr>';
-            }
-        }
-
-        return '<table>' + rows + '</table>';
-    }
-
-    function positionTip(mx, my) {
-        var t = _tip;
-        if (!t) return;
-        var offset = 10;
-        var left = mx - t.offsetWidth - offset;
-        var top  = my - t.offsetHeight - offset;
-        if (left < 8) left = mx + offset;
-        if (top < 8)  top  = my + offset;
-        t.style.left = left + 'px';
-        t.style.top  = top  + 'px';
-    }
-
-    document.addEventListener('mouseover', function (e) {
-        var el = e.target.closest ? e.target.closest('[data-sin-tip]') : null;
-        if (!el) return;
-        var details = el.closest('details');
-        if (details && details.open) return;
-        var t = getOrCreate();
-        t.innerHTML = buildContent(el);
-        t.style.display = 'block';
-        _active = true;
-    });
-    document.addEventListener('mouseout', function (e) {
-        var el = e.target.closest ? e.target.closest('[data-sin-tip]') : null;
-        if (el && !el.contains(e.relatedTarget)) {
-            if (_tip) _tip.style.display = 'none';
-            _active = false;
-        }
-    });
-    document.addEventListener('mousemove', function (e) {
-        if (_active) positionTip(e.clientX, e.clientY);
-    });
 }());
 
 // ── Derniers sinistres (toggles + recherche) ─────────────────────────────
@@ -1569,8 +1306,9 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
             if (n.nodeType === Node.TEXT_NODE && n.textContent.trim() !== '') {
                 var current = parseInt(n.textContent.trim()) || 0;
                 n.textContent = ' ' + (current + 1) + ' ';
-                if (span.dataset.metaTip !== undefined) {
-                    span.dataset.metaTip = (current + 1) + ' feedback(s)';
+                // L'infobulle unique (chantier 3) : le nouveau compte, en attendant la relecture du bloc.
+                if (span.dataset.infobulle !== undefined) {
+                    span.dataset.infobulle = JSON.stringify((current + 1) + ' feedback(s)');
                 }
             }
         });
@@ -1676,203 +1414,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
     window.dbTaskCtxEdit     = dbTaskCtxEdit;
 }());
 
-// ── Infobulles flottantes — tout élément portant data-meta-tip (délégation document) ──
-(function () {
-    var _tip = null;
-
-    function getOrCreateTip() {
-        if (!_tip) {
-            _tip = document.createElement('div');
-            _tip.id = 'db-meta-tip';
-            document.body.appendChild(_tip);
-        }
-        return _tip;
-    }
-
-
-    function showDbMetaTip(chip) {
-        var txt = chip.dataset.metaTip;
-        if (!txt) return;
-        var tip = getOrCreateTip();
-        if (txt.indexOf('[PLUS]') !== -1) {
-            var parts = txt.split('[PLUS]');
-            tip.innerHTML = echapper(parts[0]) + '<b>Pour plus d\'infos, consultez la liste des feedbacks</b>';
-        } else {
-            tip.textContent = txt;
-        }
-        tip.style.display = 'block';
-        var r = chip.getBoundingClientRect();
-        tip.style.left = (r.left + r.width / 2) + 'px';
-        tip.style.top  = r.top + 'px';
-        tip.style.transform = 'translateX(-50%) translateY(-100%)';
-        tip.style.marginTop = '-6px';
-        var tr = tip.getBoundingClientRect();
-        if (tr.right > window.innerWidth - 8) tip.style.left = (window.innerWidth - tr.width - 8) + 'px';
-        if (tr.left < 8) tip.style.left = (tr.width / 2 + 8) + 'px';
-        if (tr.top < 8) {
-            tip.style.top = (r.bottom + 6) + 'px';
-            tip.style.transform = 'translateX(-50%)';
-            tip.style.marginTop = '0';
-        }
-    }
-
-    function hideDbMetaTip() {
-        if (_tip) _tip.style.display = 'none';
-    }
-
-    document.addEventListener('mouseover', function (e) {
-        var chip = e.target.closest ? e.target.closest('[data-meta-tip]') : null;
-        if (!chip) return;
-        showDbMetaTip(chip);
-    });
-
-    document.addEventListener('mouseout', function (e) {
-        var chip = e.target.closest ? e.target.closest('[data-meta-tip]') : null;
-        if (!chip) return;
-        if (!chip.contains(e.relatedTarget)) hideDbMetaTip();
-    });
-
-    window.initDbMetaTips = function () {};
-}());
-
-// ── Tooltip financier renouvellements — data-renew-tip (suit la souris) ──
-(function () {
-    var _tip = null;
-    var _active = false;
-
-    function getOrCreate() {
-        if (!_tip) {
-            _tip = document.createElement('div');
-            _tip.id = 'db-renew-tip';
-            document.body.appendChild(_tip);
-        }
-        return _tip;
-    }
-
-
-    function buildContent(el) {
-        var prime    = echapper(el.dataset.renewPrime    || '—');
-        var comm     = echapper(el.dataset.renewComm     || '—');
-        var retro    = echapper(el.dataset.renewRetro    || '—');
-        var reserve  = echapper(el.dataset.renewReserve  || '—');
-        var periode  = echapper(el.dataset.renewPeriode  || '—');
-        var risque   = echapper(el.dataset.renewRisque   || '—');
-        var assureur = echapper(el.dataset.renewAssureur || '—');
-        var piste    = el.dataset.renewPiste ? echapper(el.dataset.renewPiste) : '';
-        var pisteHtml = piste
-            ? '<span class="tip-ok">✔ ' + piste + '</span>'
-            : '<span class="tip-nok">✘ Aucune piste en cours</span>';
-        return '<table>' +
-            '<tr><td colspan="2" class="tip-section">Couverture</td></tr>' +
-            '<tr><td>Période</td><td>' + periode + '</td></tr>' +
-            '<tr><td>Risque</td><td class="tip-risque">' + risque + '</td></tr>' +
-            '<tr><td>Assureur</td><td>' + assureur + '</td></tr>' +
-            '<tr><td colspan="2" class="tip-section">Indicateurs</td></tr>' +
-            '<tr><td>Prime</td><td>' + prime + '</td></tr>' +
-            '<tr><td>Commission</td><td>' + comm + '</td></tr>' +
-            '<tr><td>Rétrocommission</td><td>' + retro + '</td></tr>' +
-            '<tr><td>Réserve</td><td>' + reserve + '</td></tr>' +
-            '<tr><td colspan="2" class="tip-section">Renouvellement</td></tr>' +
-            '<tr><td colspan="2" class="tip-piste">' + pisteHtml + '</td></tr>' +
-            '</table>';
-    }
-
-    function positionTip(mx, my) {
-        var t = _tip;
-        if (!t) return;
-        var offset = 10;
-        var left = mx - t.offsetWidth - offset;
-        var top  = my - t.offsetHeight - offset;
-        if (left < 8) left = mx + offset;
-        if (top < 8) top = my + offset;
-        t.style.left = left + 'px';
-        t.style.top  = top  + 'px';
-    }
-
-    document.addEventListener('mouseover', function (e) {
-        var el = e.target.closest ? e.target.closest('[data-renew-tip]') : null;
-        if (!el) return;
-        var details = el.closest('details');
-        if (details && details.open) return;
-        var t = getOrCreate();
-        t.innerHTML = buildContent(el);
-        t.style.display = 'block';
-        _active = true;
-    });
-    document.addEventListener('mouseout', function (e) {
-        var el = e.target.closest ? e.target.closest('[data-renew-tip]') : null;
-        if (el && !el.contains(e.relatedTarget)) {
-            if (_tip) _tip.style.display = 'none';
-            _active = false;
-        }
-    });
-    document.addEventListener('mousemove', function (e) {
-        if (_active) positionTip(e.clientX, e.clientY);
-    });
-}());
-
-// ── Tooltip KPIs comptables — data-compta-tip (suit la souris) ──────────────
-// Calqué à 100 % sur l'infobulle « Renouvellements » (data-renew-tip) : élément
-// sombre flottant ajouté au <body>, positionné au curseur via mousemove. Contenu :
-// deux paragraphes — ce que l'indicateur représente (intro) puis son mode de
-// calcul (section « Calcul »).
-(function () {
-    var _tip = null;
-    var _active = false;
-
-    function getOrCreate() {
-        if (!_tip) {
-            _tip = document.createElement('div');
-            _tip.id = 'db-compta-tip';
-            document.body.appendChild(_tip);
-        }
-        return _tip;
-    }
-
-
-    function buildContent(el) {
-        var label  = el.dataset.tipLabel  || '';
-        var intro  = el.dataset.tipIntro  || '';
-        var calcul = el.dataset.tipCalcul || '';
-        return (label ? '<div class="tip-title">' + echapper(label) + '</div>' : '') +
-            '<p class="tip-intro">' + echapper(intro) + '</p>' +
-            '<div class="tip-section">Calcul</div>' +
-            '<p class="tip-calcul">' + echapper(calcul) + '</p>';
-    }
-
-    function positionTip(mx, my) {
-        var t = _tip;
-        if (!t) return;
-        var offset = 10;
-        var left = mx - t.offsetWidth - offset;
-        var top  = my - t.offsetHeight - offset;
-        if (left < 8) left = mx + offset;
-        if (top < 8) top = my + offset;
-        t.style.left = left + 'px';
-        t.style.top  = top  + 'px';
-    }
-
-    document.addEventListener('mouseover', function (e) {
-        var el = e.target.closest ? e.target.closest('[data-compta-tip]') : null;
-        if (!el) return;
-        var t = getOrCreate();
-        t.innerHTML = buildContent(el);
-        t.style.display = 'block';
-        _active = true;
-    });
-    document.addEventListener('mouseout', function (e) {
-        var el = e.target.closest ? e.target.closest('[data-compta-tip]') : null;
-        if (el && !el.contains(e.relatedTarget)) {
-            if (_tip) _tip.style.display = 'none';
-            _active = false;
-        }
-    });
-    document.addEventListener('mousemove', function (e) {
-        if (_active) positionTip(e.clientX, e.clientY);
-    });
-}());
-
-// ── Pistes en cours : toggles, recherche, tooltip, menu contextuel, auto-refresh ──
+// ── Pistes en cours : toggles, recherche, menu contextuel, auto-refresh ──
 (function () {
     var _activePisteMode  = 'j30';
     var _pisteTimer       = null;
@@ -1882,8 +1424,6 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
     var _eid = null;
     var _iid = null;
     var _pendingDeleteEl  = null;
-    var _tipEl = null;
-    var _tipActive = false;
 
     // ── Filtrage (mode + recherche) ──────────────────────────────────────────
     function dbPisteApplyFilter() {
@@ -1965,79 +1505,6 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
         _pisteObserver.observe(document.body, { childList: true, subtree: true });
     }
     _pisteObserve();
-
-    // ── Tooltip data-piste-tip (suit la souris) ──────────────────────────────
-    function _getOrCreateTip() {
-        if (!_tipEl) {
-            _tipEl = document.createElement('div');
-            _tipEl.id = 'db-piste-tip';
-            document.body.appendChild(_tipEl);
-        }
-        return _tipEl;
-    }
-
-
-    function _buildTipContent(details) {
-        var nom         = echapper(details.dataset.pisteNom         || '—');
-        var client      = echapper(details.dataset.pisteClient      || '—');
-        var risque      = echapper(details.dataset.pisteRisque      || '—');
-        var description = echapper(details.dataset.pisteDescription || '');
-        var statut      = echapper(details.dataset.pisteStatut      || '—');
-        var days        = echapper(details.dataset.pisteDays        || '—');
-        var invite      = echapper(details.dataset.pisteInvite      || '—');
-        var prime       = echapper(details.dataset.pistePrime       || '—');
-        var commission  = echapper(details.dataset.pisteCommission  || '—');
-
-        var rows = '<tr><td colspan="2" class="tip-section">Piste</td></tr>' +
-            '<tr><td>Nom</td><td><strong>' + nom + '</strong></td></tr>' +
-            '<tr><td>Client</td><td>' + client + '</td></tr>' +
-            '<tr><td>Risque</td><td class="tip-risque">' + risque + '</td></tr>' +
-            '<tr><td>Type</td><td>' + statut + '</td></tr>' +
-            '<tr><td>Âge</td><td>' + days + ' jour(s)</td></tr>';
-        if (description) {
-            rows += '<tr><td colspan="2" class="tip-libelle">' + description + '</td></tr>';
-        }
-        rows += '<tr><td colspan="2" class="tip-section">Potentiel</td></tr>' +
-            '<tr><td>Prime</td><td>' + prime + '</td></tr>' +
-            '<tr><td>Commission</td><td>' + commission + '</td></tr>' +
-            '<tr><td colspan="2" class="tip-section">Gestion</td></tr>' +
-            '<tr><td>Gestionnaire</td><td>' + invite + '</td></tr>';
-        return '<table>' + rows + '</table>';
-    }
-
-    function _positionTip(mx, my) {
-        var t = _tipEl;
-        if (!t) return;
-        var offset = 10;
-        var left = mx - t.offsetWidth - offset;
-        var top  = my - t.offsetHeight - offset;
-        if (left < 8) left = mx + offset;
-        if (top < 8) top = my + offset;
-        t.style.left = left + 'px';
-        t.style.top  = top  + 'px';
-    }
-
-    document.addEventListener('mouseover', function (e) {
-        var el = e.target.closest ? e.target.closest('[data-piste-tip]') : null;
-        if (!el) return;
-        var details = el.closest('details');
-        if (details && details.open) return;
-        if (!details) return;
-        var t = _getOrCreateTip();
-        t.innerHTML = _buildTipContent(details);
-        t.style.display = 'block';
-        _tipActive = true;
-    });
-    document.addEventListener('mouseout', function (e) {
-        var el = e.target.closest ? e.target.closest('[data-piste-tip]') : null;
-        if (el && !el.contains(e.relatedTarget)) {
-            if (_tipEl) _tipEl.style.display = 'none';
-            _tipActive = false;
-        }
-    });
-    document.addEventListener('mousemove', function (e) {
-        if (_tipActive) _positionTip(e.clientX, e.clientY);
-    });
 
     // ── Menu contextuel ───────────────────────────────────────────────────────
     function dbPisteCtxOpen(event, el) {
@@ -2282,8 +1749,6 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
     var _bid             = null;  // bordereau id
     var _beid            = null;  // entreprise id
     var _biid            = null;  // invite id
-    var _bordTipEl       = null;
-    var _bordTipActive   = false;
     var _bordPendingDel  = null;
     var _bordTimer       = null;
     var _bordObserver    = null;
@@ -2377,70 +1842,6 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
     _bordObserve();
 
     window.refreshBordereaux = refreshBordereaux;
-
-    // ── Tooltip data-bord-tip (suit la souris) ────────────────────────────────
-    function _getOrCreateBordTip() {
-        if (!_bordTipEl) {
-            _bordTipEl = document.createElement('div');
-            _bordTipEl.id = 'db-bord-tip';
-            document.body.appendChild(_bordTipEl);
-        }
-        return _bordTipEl;
-    }
-
-    function _buildBordTipContent(span) {
-        var ref     = echapper(span.dataset.bordTipRef      || '—');
-        var assur   = echapper(span.dataset.bordTipAssureur || '—');
-        var statut  = echapper(span.dataset.bordTipStatut   || '—');
-        var sColor  = echapper(span.dataset.bordTipStatutColor || '#adb5bd');
-        var periode = echapper(span.dataset.bordTipPeriode  || '—');
-        var recu    = echapper(span.dataset.bordTipRecu     || '—');
-        var days    = echapper(span.dataset.bordTipDays     || '—');
-
-        return '<table>' +
-            '<tr><td colspan="2" class="tip-section">Bordereau</td></tr>' +
-            '<tr><td>Référence</td><td><strong>' + ref + '</strong></td></tr>' +
-            '<tr><td>Assureur</td><td>' + assur + '</td></tr>' +
-            '<tr><td>Statut</td><td class="tip-statut" style="color:' + sColor + '">' + statut + '</td></tr>' +
-            '<tr><td colspan="2" class="tip-section">Période</td></tr>' +
-            '<tr><td>Couverture</td><td>' + periode + '</td></tr>' +
-            '<tr><td>Reçu le</td><td>' + recu + '</td></tr>' +
-            '<tr><td>Âge</td><td>' + days + ' jour(s)</td></tr>' +
-            '</table>';
-    }
-
-    function _positionBordTip(mx, my) {
-        var t = _bordTipEl;
-        if (!t) return;
-        var offset = 10;
-        var left = mx - t.offsetWidth - offset;
-        var top  = my - t.offsetHeight - offset;
-        if (left < 8) left = mx + offset;
-        if (top < 8) top = my + offset;
-        t.style.left = left + 'px';
-        t.style.top  = top  + 'px';
-    }
-
-    document.addEventListener('mouseover', function (e) {
-        var el = e.target.closest ? e.target.closest('[data-bord-tip]') : null;
-        if (!el) return;
-        var details = el.closest('details');
-        if (details && details.open) return;
-        var t = _getOrCreateBordTip();
-        t.innerHTML = _buildBordTipContent(el);
-        t.style.display = 'block';
-        _bordTipActive = true;
-    });
-    document.addEventListener('mouseout', function (e) {
-        var el = e.target.closest ? e.target.closest('[data-bord-tip]') : null;
-        if (el && !el.contains(e.relatedTarget)) {
-            if (_bordTipEl) _bordTipEl.style.display = 'none';
-            _bordTipActive = false;
-        }
-    });
-    document.addEventListener('mousemove', function (e) {
-        if (_bordTipActive) _positionBordTip(e.clientX, e.clientY);
-    });
 
     // ── Menu contextuel ────────────────────────────────────────────────────────
     function dbBordCtxOpen(event, el) {
@@ -2662,8 +2063,6 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
     var _nid            = null;  // note id
     var _neid           = null;  // entreprise id
     var _niid           = null;  // invite id
-    var _noteTipEl      = null;
-    var _noteTipActive  = false;
     var _notePendingDel = null;
     var _noteTimer      = null;
     var _noteObserver   = null;
@@ -2691,75 +2090,6 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
     }
 
     function dbNoteSearch() { dbNoteApplyFilter(); }
-
-    // ── Tooltip data-note-tip ─────────────────────────────────────────────────
-    function _getOrCreateNoteTip() {
-        if (!_noteTipEl) {
-            _noteTipEl = document.createElement('div');
-            _noteTipEl.id = 'db-note-tip';
-            document.body.appendChild(_noteTipEl);
-        }
-        return _noteTipEl;
-    }
-
-    function _buildNoteTipContent(span) {
-        var ref    = echapper(span.dataset.noteTipRef    || '—');
-        var dest   = echapper(span.dataset.noteTipDest   || '—');
-        var type   = echapper(span.dataset.noteTipType   || '—');
-        var statut = echapper(span.dataset.noteTipStatut || '—');
-        var sColor = echapper(span.dataset.noteTipStatutColor || '#adb5bd');
-        var mnt    = echapper(span.dataset.noteTipMontant || '—');
-        var solde  = echapper(span.dataset.noteTipSolde  || '—');
-        var date   = echapper(span.dataset.noteTipDate   || '—');
-        var days   = echapper(span.dataset.noteTipDays   || '—');
-
-        return '<table>' +
-            '<tr><td colspan="2" class="tip-section">Note</td></tr>' +
-            '<tr><td>Référence</td><td><strong>' + ref + '</strong></td></tr>' +
-            '<tr><td>Type</td><td>' + type + '</td></tr>' +
-            '<tr><td>Destinataire</td><td>' + dest + '</td></tr>' +
-            '<tr><td>Statut</td><td class="tip-statut" style="color:' + sColor + '">' + statut + '</td></tr>' +
-            '<tr><td colspan="2" class="tip-section">Finances</td></tr>' +
-            '<tr><td>Total</td><td><strong>' + mnt + '</strong></td></tr>' +
-            '<tr><td>Solde</td><td>' + solde + '</td></tr>' +
-            '<tr><td colspan="2" class="tip-section">Date</td></tr>' +
-            '<tr><td>Date</td><td>' + date + '</td></tr>' +
-            '<tr><td>Âge</td><td>' + days + ' jour(s)</td></tr>' +
-            '</table>';
-    }
-
-    function _positionNoteTip(mx, my) {
-        var t = _noteTipEl;
-        if (!t) return;
-        var offset = 10;
-        var left = mx - t.offsetWidth - offset;
-        var top  = my - t.offsetHeight - offset;
-        if (left < 8) left = mx + offset;
-        if (top < 8) top = my + offset;
-        t.style.left = left + 'px';
-        t.style.top  = top  + 'px';
-    }
-
-    document.addEventListener('mouseover', function (e) {
-        var el = e.target.closest ? e.target.closest('[data-note-tip]') : null;
-        if (!el) return;
-        var details = el.closest('details');
-        if (details && details.open) return;
-        var t = _getOrCreateNoteTip();
-        t.innerHTML = _buildNoteTipContent(el);
-        t.style.display = 'block';
-        _noteTipActive = true;
-    });
-    document.addEventListener('mouseout', function (e) {
-        var el = e.target.closest ? e.target.closest('[data-note-tip]') : null;
-        if (el && !el.contains(e.relatedTarget)) {
-            if (_noteTipEl) _noteTipEl.style.display = 'none';
-            _noteTipActive = false;
-        }
-    });
-    document.addEventListener('mousemove', function (e) {
-        if (_noteTipActive) _positionNoteTip(e.clientX, e.clientY);
-    });
 
     // ── Menu contextuel ────────────────────────────────────────────────────────
     function dbNoteCtxOpen(event, el) {

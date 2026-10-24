@@ -120,18 +120,26 @@
                      style="width:26px;height:26px;background:{{ ageColor }};flex-shrink:0;">
                     <twig:UX:Icon name="mdi:file-document-outline" style="width:13px;height:13px;" />
                 </div>
+                {# L'infobulle unique (chantier 3) : le contenu déclaré ici, posé en texte par le navigateur. #}
+                {% set infobulle = [
+                    {titre: 'Note', lignes: [
+                        ['Référence', noteRef ?: null, 'tip-fort'],
+                        ['Type', typeLabel ?: null],
+                        ['Destinataire', destNom ?: null],
+                        ['Statut', statutLabel, statutLabel == 'Soldée' ? 'tip-ok' : (statutLabel == 'Partielle' ? 'tip-attente' : 'tip-info')],
+                    ]},
+                    {titre: 'Finances', lignes: [
+                        ['Total', note.montantTotal is not null ? note.montantTotal|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : null, 'tip-montant tip-fort'],
+                        ['Solde', note.solde is not null ? note.solde|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : null, 'tip-montant'],
+                    ]},
+                    {titre: 'Date', lignes: [
+                        ['Date', _baseDate|date('d/m/Y')],
+                        ['Âge', _days|round(0, 'ceil') ~ ' jour(s)'],
+                    ]},
+                ] %}
                 <span class="small fw-semibold flex-grow-1 text-truncate"
                       style="color:#212529;"
-                      data-note-tip
-                      data-note-tip-ref="{{ noteRef|e }}"
-                      data-note-tip-dest="{{ destNom|e }}"
-                      data-note-tip-type="{{ typeLabel }}"
-                      data-note-tip-statut="{{ statutLabel }}"
-                      data-note-tip-statut-color="{{ statutColor }}"
-                      data-note-tip-montant="{{ note.montantTotal is not null ? note.montantTotal|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
-                      data-note-tip-solde="{{ note.solde is not null ? note.solde|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
-                      data-note-tip-date="{{ _baseDate|date('d/m/Y') }}"
-                      data-note-tip-days="{{ _days|round(0, 'ceil') }}">{{ noteNom }}</span>
+                      data-infobulle="{{ infobulle|json_encode|e('html_attr') }}" data-infobulle-si-replie>{{ noteNom }}</span>
                 <span class="text-truncate" style="color:#6c757d;font-size:.65rem;flex-shrink:0;max-width:80px;">{{ destNom }}</span>
                 <span class="badge rounded-pill"
                       style="background:{{ statutColor }};color:#fff;font-size:.58rem;flex-shrink:0;white-space:nowrap;">

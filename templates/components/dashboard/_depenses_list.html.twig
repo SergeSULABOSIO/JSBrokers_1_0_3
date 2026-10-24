@@ -78,19 +78,24 @@
                      style="width:26px;height:26px;background:#0047AB;flex-shrink:0;">
                     <twig:UX:Icon name="hugeicons:dollar-send-02" style="width:13px;height:13px;" />
                 </div>
+                {# L'infobulle unique (chantier 3) : le contenu déclaré ici, posé en texte par le navigateur. #}
+                {% set infobulle = [
+                    {titre: 'Dépense', lignes: [['Charge', chargeLib]]
+                        |merge(tiers ? [['Tiers', tiers]] : [])
+                        |merge(d.charge ? [['Compte', d.charge.compteOhada ~ ' — ' ~ d.charge.compteOhadaLabel]] : [])},
+                    {titre: 'Montants', lignes: [
+                        ['TTC', d.montantFloat|number_format(2, ',', ' ') ~ ' ' ~ deviseCode, 'tip-montant tip-alerte'],
+                        ['HT', d.montantHtFloat|number_format(2, ',', ' ') ~ ' ' ~ deviseCode, 'tip-montant'],
+                        ['TVA déd.', d.tvaDeductibleFloat|number_format(2, ',', ' ') ~ ' ' ~ deviseCode, 'tip-montant'],
+                    ]},
+                    {titre: 'Suivi', lignes: [
+                        ['Statut', d.statutLabel, d.statut == 'payee' ? 'tip-ok' : 'tip-attente'],
+                        ['Moyen', d.moyenPaiementLabel],
+                        ['Date', d.dateDepense|date('d/m/Y')],
+                    ]|merge((ref and ref != '—') ? [['Réf.', ref]] : [])},
+                ] %}
                 <span class="small fw-semibold flex-grow-1 text-truncate" style="color:#212529;"
-                      data-dep-tip
-                      data-dep-tip-charge="{{ chargeLib|e }}"
-                      data-dep-tip-tiers="{{ tiers|e }}"
-                      data-dep-tip-compte="{{ d.charge ? (d.charge.compteOhada ~ ' — ' ~ d.charge.compteOhadaLabel)|e : '' }}"
-                      data-dep-tip-ttc="{{ d.montantFloat|number_format(2, ',', ' ') ~ ' ' ~ deviseCode }}"
-                      data-dep-tip-ht="{{ d.montantHtFloat|number_format(2, ',', ' ') ~ ' ' ~ deviseCode }}"
-                      data-dep-tip-tva="{{ d.tvaDeductibleFloat|number_format(2, ',', ' ') ~ ' ' ~ deviseCode }}"
-                      data-dep-tip-statut="{{ d.statutLabel|e }}"
-                      data-dep-tip-statut-color="{{ statutCouleur }}"
-                      data-dep-tip-moyen="{{ d.moyenPaiementLabel|e }}"
-                      data-dep-tip-date="{{ d.dateDepense|date('d/m/Y') }}"
-                      data-dep-tip-ref="{{ ref|e }}">
+                      data-infobulle="{{ infobulle|json_encode|e('html_attr') }}" data-infobulle-si-replie>
                     {{ chargeLib }}{% if tiers %} — {{ tiers }}{% endif %}
                 </span>
                 <span class="text-muted" style="font-size:.62rem;flex-shrink:0;white-space:nowrap;">

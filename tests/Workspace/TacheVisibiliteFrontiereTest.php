@@ -271,6 +271,35 @@ final class TacheVisibiliteFrontiereTest extends WebTestCase
         self::assertStringNotContainsString('TVF-retour-invisible', $html, 'les derniers retours aussi');
     }
 
+    /**
+     * CHANTIER 3, AJOUT 1 DE SERGE : aucune INFOBULLE du tableau de bord ne montre une tâche, un
+     * retour ou une pièce hors du cercle du lecteur — elles se lisent sur les mêmes requêtes
+     * filtrées que les listes. On décode TOUTES les infobulles de TOUS les blocs ; le témoin (le
+     * retour visible y figure) prouve que la recherche ne passe pas à vide.
+     */
+    public function testAucuneInfobulleDuTableauDeBordNeMontreLInvisible(): void
+    {
+        $s = $this->semer();
+        $this->connecter('moi');
+
+        $contenus = [];
+        foreach (['conges', 'kpis', 'compta', 'renewals', 'encaissements', 'depenses', 'sinistres', 'tasks', 'users', 'top-lists', 'pistes', 'bordereaux', 'notes', 'production'] as $bloc) {
+            $crawler = $this->navigateur->request('GET', sprintf('/admin/entreprise_dashbord/block/%s/%d', $bloc, $s['e']->getId()));
+            if (!str_contains((string) $this->navigateur->getResponse()->headers->get('Content-Type'), 'html')) {
+                continue;
+            }
+            foreach ($crawler->filter('[data-infobulle]') as $noeud) {
+                $contenus[] = json_encode(json_decode($noeud->getAttribute('data-infobulle'), true, 512, \JSON_THROW_ON_ERROR), \JSON_UNESCAPED_UNICODE);
+            }
+        }
+        $tout = implode("\n", $contenus);
+
+        self::assertStringContainsString('TVF-retour-visible', $tout, 'Témoin : l’infobulle des retours d’une tâche visible porte leur texte.');
+        foreach (['TVF-duCollegue', 'TVF-automatiqueAutre', 'TVF-retour-invisible', 'TVF-doc-seulSurInvisible'] as $invisible) {
+            self::assertStringNotContainsString($invisible, $tout, "« $invisible » est hors du cercle de « moi » : aucune infobulle ne le montre.");
+        }
+    }
+
     public function testRetoursEtDocumentsHeritentDeLaTache(): void
     {
         $s = $this->semer();

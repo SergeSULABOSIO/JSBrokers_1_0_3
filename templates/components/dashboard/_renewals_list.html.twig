@@ -112,19 +112,26 @@
                     <twig:UX:Icon name="fluent:document-edit-16-regular" style="width:13px;height:13px;" />
                 </div>
                 <div class="d-flex flex-column flex-grow-1" style="min-width:0;">
+                    {# L'infobulle unique (chantier 3) : le contenu déclaré ici, posé en texte par le navigateur. #}
+                    {% set infobulle = [
+                        {titre: 'Couverture', lignes: [
+                            ['Période', avenant.startingAt|date('d/m/Y') ~ ' – ' ~ avenant.endingAt|date('d/m/Y')],
+                            ['Risque', risqueNom ?: null, 'tip-risque'],
+                            ['Assureur', assureurNom ?: null],
+                        ]},
+                        {titre: 'Indicateurs', lignes: [
+                            ['Prime', avenant.primeTotale is not null ? avenant.primeTotale|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : null, 'tip-montant'],
+                            ['Commission', avenant.montantTTC is not null ? avenant.montantTTC|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : null, 'tip-montant'],
+                            ['Rétrocommission', avenant.retroCommission is not null ? avenant.retroCommission|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : null, 'tip-montant'],
+                            ['Réserve', avenant.reserve is not null ? avenant.reserve|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : null, 'tip-montant'],
+                        ]},
+                        (avenant.pisteDeRenouvellement and avenant.pisteDeRenouvellement.nom)
+                            ? {titre: 'Renouvellement', texte: '✔ ' ~ avenant.pisteDeRenouvellement.nom, classe: 'tip-ok'}
+                            : {titre: 'Renouvellement', texte: '✘ Aucune piste en cours', classe: 'tip-alerte'},
+                    ] %}
                     <span class="small fw-semibold text-truncate"
                           style="color:#212529;"
-                          data-renew-tip
-                          data-renew-prime="{{ avenant.primeTotale is not null ? avenant.primeTotale|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
-                          data-renew-comm="{{ avenant.montantTTC is not null ? avenant.montantTTC|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
-                          data-renew-retro="{{ avenant.retroCommission is not null ? avenant.retroCommission|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
-                          data-renew-reserve="{{ avenant.reserve is not null ? avenant.reserve|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
-                          data-renew-periode="{{ avenant.startingAt|date('d/m/Y') }} – {{ avenant.endingAt|date('d/m/Y') }}"
-                          data-renew-risque="{{ risqueNom }}"
-                          data-renew-assureur="{{ assureurNom }}"
-                          data-renew-portefeuille="{{ portefeuille ? portefeuille.nom : 'Sans portefeuille' }}"
-                          data-renew-gestionnaire="{{ gestionnaireNom }}"
-                          data-renew-piste="{{ avenant.pisteDeRenouvellement ? avenant.pisteDeRenouvellement.nom : '' }}">{{ clientNom }}</span>
+                          data-infobulle="{{ infobulle|json_encode|e('html_attr') }}" data-infobulle-si-replie>{{ clientNom }}</span>
                     {% if portefeuille %}
                         <span class="text-truncate" style="font-size:.62rem;color:#0047AB;" title="Portefeuille : {{ portefeuille.nom }}{% if gestionnaireNom %} — Gestionnaire : {{ gestionnaireNom }}{% endif %}">
                             <twig:UX:Icon name="mdi:briefcase-account" style="width:10px;height:10px;" class="me-1" />

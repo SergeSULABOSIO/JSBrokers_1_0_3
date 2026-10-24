@@ -1,8 +1,8 @@
 /**
  * OÙ POSER L'INFOBULLE SOMBRE — règles pures (testées en node).
  *
- * AU CURSEUR, la règle des infobulles du tableau de bord (#db-piste-tip, #db-renew-tip,
- * commit-tip) : en haut à gauche du pointeur, tout contre lui, et de l'autre côté du pointeur
+ * AU CURSEUR, la règle reprise des anciennes infobulles du tableau de bord : en haut à
+ * gauche du pointeur, tout contre lui, et de l'autre côté du pointeur
  * quand le bord manque. Calculée au POINT D'ENTRÉE du pointeur, une fois : l'infobulle unique
  * ne suit plus la souris (chantier 3 — elle doit pouvoir être survolée, WCAG 1.4.13).
  *
