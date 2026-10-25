@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { MenuContextuel } from './menu-contextuel.js';
 
 /**
  * @class ConsoleContextMenuController
@@ -18,18 +19,17 @@ import { Controller } from '@hotwired/stimulus';
  * Accessibilité (WCAG 2.1.1) : les lignes concernées sont rendues focusables et le
  * menu s'ouvre aussi au clavier (touche Menu / Maj+F10, ou Entrée/Espace sur la
  * ligne focalisée). Navigation flèches, activation Entrée, fermeture Échap avec
- * retour du focus sur la ligne déclencheuse.
+ * retour du focus sur la ligne déclencheuse — la coquille commune (menu-contextuel.js,
+ * chantier 3).
  */
 export default class extends Controller {
     static targets = ['menu'];
 
     connect() {
-        this.originRow = null;
+        this.coquille = new MenuContextuel(this.menuTarget);
 
         this.boundOnContextMenu = this.onContextMenu.bind(this);
         this.boundOnRowKeydown = this.onRowKeydown.bind(this);
-        this.boundOnDocPointer = this.onDocumentPointer.bind(this);
-        this.boundOnMenuKeydown = this.onMenuKeydown.bind(this);
 
         // Dès que la souris est utilisée dans le menu, on retire le focus clavier
         // éventuel : seul l'item réellement survolé (:hover) reste surligné, ce qui
@@ -44,21 +44,15 @@ export default class extends Controller {
         this.element.addEventListener('contextmenu', this.boundOnContextMenu);
         this.element.addEventListener('keydown', this.boundOnRowKeydown);
         this.menuTarget.addEventListener('mousemove', this.boundClearKeyboardFocus);
-        document.addEventListener('pointerdown', this.boundOnDocPointer, true);
-        document.addEventListener('scroll', this.boundHideOnScroll = () => this.hide(), true);
-        window.addEventListener('resize', this.boundHideOnResize = () => this.hide());
 
         this.prepareRows();
-        this.hide();
     }
 
     disconnect() {
         this.element.removeEventListener('contextmenu', this.boundOnContextMenu);
         this.element.removeEventListener('keydown', this.boundOnRowKeydown);
         this.menuTarget.removeEventListener('mousemove', this.boundClearKeyboardFocus);
-        document.removeEventListener('pointerdown', this.boundOnDocPointer, true);
-        document.removeEventListener('scroll', this.boundHideOnScroll, true);
-        window.removeEventListener('resize', this.boundHideOnResize);
+        this.hide();
     }
 
     /**
@@ -84,7 +78,7 @@ export default class extends Controller {
 
         const items = this.collectActions(row);
         event.preventDefault();
-        this.open(row, items, { x: event.clientX, y: event.clientY }, false);
+        this.open(row, items, { point: { x: event.clientX, y: event.clientY } });
     }
 
     onRowKeydown(event) {
@@ -96,8 +90,8 @@ export default class extends Controller {
 
         event.preventDefault();
         const items = this.collectActions(row);
-        const rect = row.getBoundingClientRect();
-        this.open(row, items, { x: rect.left + 24, y: rect.top + rect.height - 4 }, true);
+        // Sous la ligne, à gauche ; le focus va à la première action.
+        this.open(row, items, { ancre: row.getBoundingClientRect(), alignement: 'gauche', viaClavier: true });
     }
 
     /**
@@ -126,9 +120,9 @@ export default class extends Controller {
         return items;
     }
 
-    open(row, items, position, viaKeyboard = false) {
-        this.originRow = row;
+    open(row, items, geste) {
         const menu = this.menuTarget;
+        this.hide();
         menu.innerHTML = '';
 
         if (items.length === 0) {
@@ -141,14 +135,8 @@ export default class extends Controller {
             items.forEach((item) => menu.appendChild(this.buildItem(item)));
         }
 
-        this.display(position);
-
-        // Focus initial UNIQUEMENT à l'ouverture clavier. À la souris, on laisse
-        // le seul :hover surligner l'item réellement sous le curseur.
-        if (viaKeyboard) {
-            const first = menu.querySelector('[role="menuitem"]');
-            if (first) first.focus();
-        }
+        // Le focus revient à la ligne à la fermeture (Échap, action jouée).
+        this.coquille.ouvrir({ ...geste, retour: row });
     }
 
     buildItem(item) {
@@ -184,73 +172,7 @@ export default class extends Controller {
         return li;
     }
 
-    display(position) {
-        const menu = this.menuTarget;
-        menu.style.visibility = 'hidden';
-        menu.style.display = 'block';
-
-        const w = menu.offsetWidth;
-        const h = menu.offsetHeight;
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
-        const left = position.x + w > vw ? Math.max(5, vw - w - 5) : position.x;
-        const top = position.y + h > vh ? Math.max(5, vh - h - 5) : position.y;
-
-        menu.style.left = `${left}px`;
-        menu.style.top = `${top}px`;
-        menu.style.visibility = 'visible';
-
-        document.addEventListener('keydown', this.boundOnMenuKeydown, true);
-    }
-
     hide() {
-        if (this.hasMenuTarget) {
-            this.menuTarget.style.display = 'none';
-        }
-        document.removeEventListener('keydown', this.boundOnMenuKeydown, true);
-    }
-
-    onDocumentPointer(event) {
-        if (this.hasMenuTarget
-            && this.menuTarget.style.display === 'block'
-            && !this.menuTarget.contains(event.target)) {
-            this.hide();
-        }
-    }
-
-    onMenuKeydown(event) {
-        if (this.menuTarget.style.display !== 'block') return;
-        const items = Array.from(this.menuTarget.querySelectorAll('[role="menuitem"]'));
-        if (items.length === 0 && event.key !== 'Escape') return;
-        const current = items.indexOf(document.activeElement);
-
-        switch (event.key) {
-            case 'Escape':
-                event.preventDefault();
-                this.hide();
-                if (this.originRow) this.originRow.focus();
-                break;
-            case 'ArrowDown':
-                event.preventDefault();
-                items[(current + 1) % items.length]?.focus();
-                break;
-            case 'ArrowUp':
-                event.preventDefault();
-                items[(current - 1 + items.length) % items.length]?.focus();
-                break;
-            case 'Home':
-                event.preventDefault();
-                items[0]?.focus();
-                break;
-            case 'End':
-                event.preventDefault();
-                items[items.length - 1]?.focus();
-                break;
-            case 'Enter':
-            case ' ':
-                event.preventDefault();
-                document.activeElement?.click();
-                break;
-        }
+        if (this.coquille) this.coquille.fermer();
     }
 }

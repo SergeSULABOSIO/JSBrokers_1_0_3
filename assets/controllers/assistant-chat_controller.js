@@ -12,6 +12,7 @@ import {
 } from './assistant-theme.js';
 import { positionnerMenu, indexApresTouche } from './menu-flottant.js';
 import { fermerInfobulle } from './infobulle-moteur.js';
+import { MenuContextuel } from './menu-contextuel.js';
 import { fusionnerTranscripts } from './dictee-transcript.js';
 import { DEBIT, HAUTEUR, choisirVoix, decouperEnPhrases, texteAPrononcer } from './assistant-lecture-vocale.js';
 import {
@@ -3469,8 +3470,8 @@ export default class extends Controller {
 
     // ═══ Actions d'une bulle (répondre, exporter, envoyer) ════════════════════
     // Un seul menu, deux ouvertures équivalentes : le bouton ⋮ et le CLIC DROIT.
-    // La géométrie est partagée parce que `positionnerMenu` raisonne sur un
-    // rectangle d'ancre — un curseur n'est qu'un rectangle de 0×0.
+    // Ouverture, clavier, fermetures : la coquille commune (menu-contextuel.js,
+    // chantier 3) — un curseur n'y est qu'un rectangle de 0×0.
     //
     // Aucun markup n'est fabriqué ici : le bouton et la citation sont clonés
     // depuis les <template> rendus par Twig, ce qui garde les libellés et les
@@ -3481,13 +3482,12 @@ export default class extends Controller {
         this._menuOuvertSur = null;
         this._bulleActive = null;
         this._onClicDroit = this.ouvrirMenuAuCurseur.bind(this);
-        this._onFermerMenu = () => this.fermerMenuBulle();
-        this._onPointerHorsMenu = (event) => {
-            if (!this._menuOuvertSur) return;
-            if (this.hasMenuBulleTarget && this.menuBulleTarget.contains(event.target)) return;
-            if (this._menuOuvertSur.contains(event.target)) return;
-            this.fermerMenuBulle();
-        };
+        this._coquilleBulle = this.hasMenuBulleTarget
+            ? new MenuContextuel(this.menuBulleTarget, {
+                affichage: 'hidden',
+                surFermeture: () => { this._menuOuvertSur = null; },
+            })
+            : null;
         if (this.hasMessagesTarget) {
             this.messagesTarget.addEventListener('contextmenu', this._onClicDroit);
         }
@@ -3498,7 +3498,7 @@ export default class extends Controller {
         if (this.hasMessagesTarget && this._onClicDroit) {
             this.messagesTarget.removeEventListener('contextmenu', this._onClicDroit);
         }
-        this._retirerEcouteursMenu();
+        this.fermerMenuBulle();
         clearTimeout(this._timerCible);
     }
 
@@ -3532,7 +3532,9 @@ export default class extends Controller {
     /** Ouverture par le bouton ⋮ : l'ancre est le bouton lui-même. */
     ouvrirMenuBulle(event) {
         const bouton = event.currentTarget;
-        this._ouvrirMenu(bouton.closest('.aic-msg'), bouton.getBoundingClientRect(), bouton);
+        // Entrée ou Espace sur le ⋮ (un clic sans pointeur : detail 0) : le focus va à la
+        // première entrée, comme ↓ (WAI-ARIA menu button).
+        this._ouvrirMenu(bouton.closest('.aic-msg'), { ancre: bouton.getBoundingClientRect() }, bouton, event.detail === 0);
     }
 
     /**
@@ -3545,66 +3547,37 @@ export default class extends Controller {
         const bulle = event.target.closest?.('.aic-msg[data-message-id]');
         if (!bulle || !this.hasMenuBulleTarget) return;
         event.preventDefault();
-        const curseur = {
-            left: event.clientX, right: event.clientX,
-            top: event.clientY, bottom: event.clientY,
-        };
-        this._ouvrirMenu(bulle, curseur, bulle.querySelector('.aic-msg-menu-btn'));
+        this._ouvrirMenu(bulle, { point: { x: event.clientX, y: event.clientY } }, bulle.querySelector('.aic-msg-menu-btn'));
     }
 
-    /** Chemin d'ouverture UNIQUE des deux gestes. */
-    _ouvrirMenu(bulle, ancre, boutonAncre) {
-        if (!bulle || !this.hasMenuBulleTarget) return;
+    /**
+     * Chemin d'ouverture UNIQUE des deux gestes. Le défilement du fil (y compris
+     * scrollToBottom), le clic dehors, le redimensionnement ferment : la coquille.
+     */
+    _ouvrirMenu(bulle, geste, boutonAncre, viaClavier = false) {
+        if (!bulle || !this._coquilleBulle) return;
         // Second geste sur la même bulle = bascule.
         if (this._menuOuvertSur && this._bulleActive === bulle) {
             this.fermerMenuBulle();
             return;
         }
         this.fermerMenuBulle();
-        fermerInfobulle(); // ne pas superposer deux surfaces flottantes
 
         this._bulleActive = bulle;
-        this._menuOuvertSur = boutonAncre ?? bulle;
         this._filtrerItemsMenu(bulle);
-
-        const menu = this.menuBulleTarget;
-        menu.hidden = false;
-        menu.style.visibility = 'hidden'; // mesurable sans être visible
-        const { left, top } = positionnerMenu({
-            ancre,
-            menu: { largeur: menu.offsetWidth, hauteur: menu.offsetHeight },
-            viewport: { largeur: window.innerWidth, hauteur: window.innerHeight },
+        this._coquilleBulle.ouvrir({
+            ...geste,
+            viaClavier,
+            declencheur: boutonAncre,
+            // Le focus revient au ⋮ (Échap, action jouée) ; sans ⋮, là où il était.
+            retour: boutonAncre || null,
         });
-        menu.style.left = `${left}px`;
-        menu.style.top = `${top}px`;
-        menu.style.visibility = 'visible';
-
-        boutonAncre?.setAttribute('aria-expanded', 'true');
-
-        document.addEventListener('pointerdown', this._onPointerHorsMenu, true);
-        window.addEventListener('resize', this._onFermerMenu);
-        if (this.hasMessagesTarget) {
-            // Le fil défile (y compris via scrollToBottom) : l'ancre bouge, on ferme.
-            this.messagesTarget.addEventListener('scroll', this._onFermerMenu, { passive: true });
-        }
+        this._menuOuvertSur = boutonAncre ?? bulle;
     }
 
     fermerMenuBulle() {
-        if (this.hasMenuBulleTarget) {
-            this.menuBulleTarget.hidden = true;
-        }
-        this._menuOuvertSur?.setAttribute?.('aria-expanded', 'false');
+        this._coquilleBulle?.fermer();
         this._menuOuvertSur = null;
-        this._retirerEcouteursMenu();
-    }
-
-    _retirerEcouteursMenu() {
-        if (!this._onPointerHorsMenu) return;
-        document.removeEventListener('pointerdown', this._onPointerHorsMenu, true);
-        window.removeEventListener('resize', this._onFermerMenu);
-        if (this.hasMessagesTarget) {
-            this.messagesTarget.removeEventListener('scroll', this._onFermerMenu);
-        }
     }
 
     /** Un item porteur de data-menu-roles ne s'affiche que pour ces rôles. */
@@ -3622,40 +3595,15 @@ export default class extends Controller {
         }
     }
 
-    /** Items navigables : ceux que le filtrage laisse visibles. */
-    _itemsMenu() {
-        if (!this.hasMenuBulleTarget) return [];
-        return Array.from(this.menuBulleTarget.querySelectorAll('[role="menuitem"]:not([hidden])'));
-    }
-
-    /** Flèches / Home / End dans le menu ; Échap ferme et rend le focus. */
-    naviguerMenu(event) {
-        if (event.key === 'Escape') {
-            event.preventDefault();
-            const bouton = this._menuOuvertSur;
-            this.fermerMenuBulle();
-            bouton?.focus?.();
-            return;
-        }
-        const items = this._itemsMenu();
-        const suivant = indexApresTouche(event.key, items.indexOf(document.activeElement), items.length);
-        if (suivant === null) return;
-        event.preventDefault();
-        items[suivant].focus();
-    }
-
-    /** Sur le bouton ⋮ : ↓ ouvre et entre dans le menu, Échap referme. */
+    /**
+     * Sur le bouton ⋮ : ↓ ouvre et entre dans le menu (WAI-ARIA menu button). Une
+     * fois ouvert, flèches, Échap et Tab sont ceux de la coquille.
+     */
     toucheKebab(event) {
-        if (event.key === 'ArrowDown') {
-            event.preventDefault();
-            this.ouvrirMenuBulle(event);
-            this._itemsMenu()[0]?.focus();
-            return;
-        }
-        if (event.key === 'Escape' && this._menuOuvertSur) {
-            event.preventDefault();
-            this.fermerMenuBulle();
-        }
+        if (event.key !== 'ArrowDown' || this._menuOuvertSur) return;
+        event.preventDefault();
+        const bouton = event.currentTarget;
+        this._ouvrirMenu(bouton.closest('.aic-msg'), { ancre: bouton.getBoundingClientRect() }, bouton, true);
     }
 
     /** Contrat UNIQUE offert aux actions du menu. */

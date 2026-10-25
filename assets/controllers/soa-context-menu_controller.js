@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { MenuContextuel } from './menu-contextuel.js';
 
 /**
  * Configuration des menus contextuels par section du SOA.
@@ -85,6 +86,8 @@ const SECTIONS = {
  * Une instance par onglet SOA (le contrôleur est posé sur .soa-preview-workspace).
  * Réutilise le design sombre .context-menu du tableau de bord et la plomberie
  * événementielle existante (boîte de dialogue, boîte de confirmation, reload d'onglet).
+ * Ouverture, clavier, fermetures et « un seul menu ouvert » (plusieurs onglets SOA) : la
+ * coquille commune (menu-contextuel.js, chantier 3).
  */
 export default class extends Controller {
     static targets = ['menu', 'createLabel', 'editLabel'];
@@ -101,18 +104,13 @@ export default class extends Controller {
         // Identifiant d'instance : garde anti double-traitement quand plusieurs onglets SOA sont ouverts.
         this.instanceId = `soa-ctx-${Date.now()}-${Math.random().toString(36).slice(2)}`;
         this.current = null;
-        this._previousFocus = null;
+        this.coquille = new MenuContextuel(this.menuTarget);
 
         this._onContextMenu = this._onContextMenu.bind(this);
-        this._onDocPointerDown = this._onDocPointerDown.bind(this);
-        this._onKeydown = this._onKeydown.bind(this);
-        this._onScrollOrResize = this._onScrollOrResize.bind(this);
         this._onCerveauEvent = this._onCerveauEvent.bind(this);
-        this._onOtherMenuOpen = this._onOtherMenuOpen.bind(this);
 
         this.element.addEventListener('contextmenu', this._onContextMenu);
         document.addEventListener('cerveau:event', this._onCerveauEvent);
-        document.addEventListener('soa:context-menu.open', this._onOtherMenuOpen);
 
         // Accordéon des sections (un partial injecté dynamiquement n'exécute pas
         // les balises <script> : la logique doit vivre ici, dans le contrôleur Stimulus).
@@ -124,8 +122,6 @@ export default class extends Controller {
         this._close();
         this.element.removeEventListener('contextmenu', this._onContextMenu);
         document.removeEventListener('cerveau:event', this._onCerveauEvent);
-        document.removeEventListener('soa:context-menu.open', this._onOtherMenuOpen);
-        this._removeTransientListeners();
     }
 
     // ── Accordéon des sections ─────────────────────────────────────────────────
@@ -247,110 +243,13 @@ export default class extends Controller {
         const sepDanger = menu.querySelector('[data-menu-key="sep-danger"]');
         if (sepDanger) sepDanger.style.display = visible.includes('delete') ? '' : 'none';
 
-        // Un seul menu SOA ouvert à la fois (multi-onglets).
-        document.dispatchEvent(new CustomEvent('soa:context-menu.open', {
-            detail: { ownerId: this.instanceId },
-        }));
-
-        // Positionnement mesuré, borné au viewport.
-        menu.style.visibility = 'hidden';
-        menu.style.display = 'block';
-        const left = Math.max(6, Math.min(event.clientX, window.innerWidth - menu.offsetWidth - 6));
-        const top = Math.max(6, Math.min(event.clientY, window.innerHeight - menu.offsetHeight - 6));
-        menu.style.left = `${left}px`;
-        menu.style.top = `${top}px`;
-        menu.style.visibility = '';
-
-        // Focus sur le conteneur (pas sur un item) : aucune option ne doit
-        // apparaître présélectionnée à l'ouverture. Les flèches atteignent
-        // ensuite le premier/dernier item via _onKeydown.
-        this._previousFocus = document.activeElement;
-        menu.focus();
-
-        this._addTransientListeners();
+        this.coquille.ouvrir({ point: { x: event.clientX, y: event.clientY } });
     }
 
     // ── Fermeture ────────────────────────────────────────────────────────────
 
     _close() {
-        if (!this.hasMenuTarget) return;
-        const wasOpen = this.menuTarget.style.display !== 'none';
-        this.menuTarget.style.display = 'none';
-        this._removeTransientListeners();
-        if (wasOpen && this._previousFocus && document.contains(this._previousFocus)) {
-            this._previousFocus.focus();
-        }
-        this._previousFocus = null;
-    }
-
-    _addTransientListeners() {
-        document.addEventListener('pointerdown', this._onDocPointerDown, true);
-        document.addEventListener('keydown', this._onKeydown, true);
-        window.addEventListener('scroll', this._onScrollOrResize, true);
-        window.addEventListener('resize', this._onScrollOrResize);
-    }
-
-    _removeTransientListeners() {
-        document.removeEventListener('pointerdown', this._onDocPointerDown, true);
-        document.removeEventListener('keydown', this._onKeydown, true);
-        window.removeEventListener('scroll', this._onScrollOrResize, true);
-        window.removeEventListener('resize', this._onScrollOrResize);
-    }
-
-    _onDocPointerDown(event) {
-        if (this.hasMenuTarget && this.menuTarget.contains(event.target)) return;
-        this._close();
-    }
-
-    _onScrollOrResize() {
-        this._close();
-    }
-
-    // ── Navigation clavier (WCAG : Escape, flèches, Home/End, Enter/Espace) ──
-
-    _onKeydown(event) {
-        if (event.key === 'Escape') {
-            event.preventDefault();
-            event.stopPropagation();
-            this._close();
-            return;
-        }
-
-        const items = this._visibleItems();
-        if (!items.length) return;
-        const currentIndex = items.indexOf(document.activeElement);
-
-        switch (event.key) {
-            case 'ArrowDown':
-                event.preventDefault();
-                items[(currentIndex + 1) % items.length].focus();
-                break;
-            case 'ArrowUp':
-                event.preventDefault();
-                items[currentIndex <= 0 ? items.length - 1 : currentIndex - 1].focus();
-                break;
-            case 'Home':
-                event.preventDefault();
-                items[0].focus();
-                break;
-            case 'End':
-                event.preventDefault();
-                items[items.length - 1].focus();
-                break;
-            case 'Enter':
-            case ' ':
-                if (currentIndex >= 0) {
-                    event.preventDefault();
-                    items[currentIndex].click();
-                }
-                break;
-        }
-    }
-
-    _visibleItems() {
-        if (!this.hasMenuTarget) return [];
-        return Array.from(this.menuTarget.querySelectorAll('[role="menuitem"]'))
-            .filter((li) => li.style.display !== 'none');
+        if (this.coquille) this.coquille.fermer();
     }
 
     // ── Actions ──────────────────────────────────────────────────────────────
@@ -492,9 +391,4 @@ export default class extends Controller {
             });
     }
 
-    _onOtherMenuOpen(event) {
-        if (event.detail?.ownerId !== this.instanceId) {
-            this._close();
-        }
-    }
 }

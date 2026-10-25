@@ -95,3 +95,44 @@ export function indexApresTouche(touche, indexCourant, nombre) {
             return null;
     }
 }
+
+/**
+ * Le curseur d'un clic droit, en ancre : un rectangle de 0×0. Avec `alignement: 'gauche'`, le
+ * menu s'ouvre à droite et sous le curseur (basculé au-dessus faute de place).
+ *
+ * @param {{x: number, y: number}} point
+ * @returns {{left: number, right: number, top: number, bottom: number}}
+ */
+export function ancreAuPoint({ x, y }) {
+    return { left: x, right: x, top: y, bottom: y };
+}
+
+/**
+ * Ce que fait une touche dans un menu OUVERT (coquille commune, menu-contextuel.js) :
+ *   - `aller` : focaliser l'entrée `index` (flèches, Début/Fin — indexApresTouche) ;
+ *   - `activer` : cliquer l'entrée focalisée (Entrée, Espace) ;
+ *   - `fermer` : Échap — le focus revient à l'élément d'origine ;
+ *   - `sortir` : Tab — le menu se ferme, le focus suit son cours ;
+ *   - `null` : pas une touche du menu (les raccourcis propres à un écran restent à l'écran).
+ *
+ * @param {string} touche `event.key`
+ * @param {number} indexCourant index de l'entrée focalisée, ou -1
+ * @param {number} nombre nombre d'entrées navigables
+ * @returns {{type: 'aller'|'activer', index: number}|{type: 'fermer'|'sortir'}|null}
+ */
+export function toucheDuMenu(touche, indexCourant, nombre) {
+    if (touche === 'Escape' || touche === 'Esc') {
+        return { type: 'fermer' };
+    }
+    if (touche === 'Tab') {
+        return { type: 'sortir' };
+    }
+    if (touche === 'Enter' || touche === ' ') {
+        return Number.isInteger(indexCourant) && indexCourant >= 0 && indexCourant < nombre
+            ? { type: 'activer', index: indexCourant }
+            : null;
+    }
+    const index = indexApresTouche(touche, indexCourant, nombre);
+
+    return index === null ? null : { type: 'aller', index };
+}

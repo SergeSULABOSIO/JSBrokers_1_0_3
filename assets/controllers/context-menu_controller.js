@@ -1,12 +1,15 @@
 import { Controller } from '@hotwired/stimulus';
 import { actionsVisibles, grouperActions, urlAction } from './actions-groupees.js';
 import { CircuitIcones } from './circuit-icones.js';
+import { MenuContextuel } from './menu-contextuel.js';
 
 /**
  * @class ContextMenuController
  * @extends Controller
  * @description Gère l'affichage, le positionnement et les actions d'un menu contextuel.
- * Le menu s'adapte en fonction de la sélection actuelle dans la liste.
+ * Le menu s'adapte en fonction de la sélection actuelle dans la liste. Ouverture, flèches,
+ * Échap, fermetures : la coquille commune (menu-contextuel.js, chantier 3) ; les raccourcis
+ * à une lettre (A, M, O, S, R, Q) restent ici, propres à cet écran.
  */
 export default class extends Controller {
     /**
@@ -50,11 +53,12 @@ export default class extends Controller {
         });
 
         this.boundHandleContextUpdate = this.handleContextUpdate.bind(this);
-        this.boundHideContextMenu = this.hideContextMenu.bind(this);
         this.boundHandleKeyboardShortcuts = this.handleKeyboardShortcuts.bind(this);
 
         this.menuTarget.style.display = 'none';
-        document.addEventListener('click', this.boundHideContextMenu, false);
+        this.coquille = new MenuContextuel(this.menuTarget, {
+            surFermeture: () => document.removeEventListener('keydown', this.boundHandleKeyboardShortcuts),
+        });
         document.addEventListener('app:context.changed', this.boundHandleContextUpdate);
 
     }
@@ -64,10 +68,9 @@ export default class extends Controller {
      * Nettoie les écouteurs pour éviter les fuites de mémoire.
      */
     disconnect() {
-        document.removeEventListener('click', this.boundHideContextMenu, false);
         document.removeEventListener('app:context.changed', this.boundHandleContextUpdate);
+        this.hideContextMenu();
         this.icones.detruire();
-        document.removeEventListener('keydown', this.boundHandleKeyboardShortcuts);
     }
 
     /**
@@ -85,10 +88,11 @@ export default class extends Controller {
         this.entities = selectos;
         this.entityFormCanvas = formCanvas; // On utilise le formCanvas global
 
-        // Si le payload contient la position du menu, on l'affiche.
+        // Si le payload contient la position du menu, on l'affiche — entrées triées AVANT la
+        // mesure : la taille du menu est celle de la sélection courante.
         if (contextMenuPosition) {
-            this._displayMenu(contextMenuPosition);
             this.organizeButtons(this.entities);
+            this._displayMenu(contextMenuPosition);
         } else {
             // S'il n'y a pas de position, on s'assure que le menu est caché (cas d'un clic gauche).
             this.hideContextMenu();
@@ -101,19 +105,7 @@ export default class extends Controller {
      * @private
      */
     _displayMenu(position) {
-        const { menuX, menuY } = position;
-        const menuWidth = this.menuTarget.offsetWidth;
-        const menuHeight = this.menuTarget.offsetHeight;
-        const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight;
-
-        let left = (menuX + menuWidth > windowWidth) ? windowWidth - menuWidth - 5 : menuX;
-        let top = (menuY + menuHeight > windowHeight) ? windowHeight - menuHeight - 5 : menuY;
-
-        this.menuTarget.style.left = `${left}px`;
-        this.menuTarget.style.top = `${top}px`;
-        this.menuTarget.style.display = 'block';
-
+        this.coquille.ouvrir({ point: { x: position.menuX, y: position.menuY } });
         document.addEventListener('keydown', this.boundHandleKeyboardShortcuts);
     }
 
@@ -193,11 +185,8 @@ export default class extends Controller {
      * Masque le menu contextuel.
      */
     hideContextMenu() {
-        if (this.hasMenuTarget) {
-            this.menuTarget.style.display = 'none';
-            // Désactive l'écoute des raccourcis clavier quand le menu est caché
-            document.removeEventListener('keydown', this.boundHandleKeyboardShortcuts);
-        }
+        // La coquille retire aussi l'écoute des raccourcis (surFermeture).
+        if (this.coquille) this.coquille.fermer();
     }
 
     /**
@@ -205,7 +194,9 @@ export default class extends Controller {
      * @param {MouseEvent} event - L'événement de clic.
      */
     handleKeyboardShortcuts(event) {
-        if (this.menuTarget.style.display !== 'block') return;
+        if (!this.coquille.estOuvert()) return;
+        // Une lettre tapée avec Ctrl/Alt/Cmd n'est pas un raccourci du menu.
+        if (event.ctrlKey || event.altKey || event.metaKey) return;
 
         const key = event.key.toUpperCase();
         let targetButton = null;
@@ -231,6 +222,9 @@ export default class extends Controller {
                 break;
         }
 
+        // Une entrée inactive (« Ajouter » quand la création est interdite) ne se joue pas plus
+        // par sa lettre que par Entrée : le <li> n'a pas de `disabled` qui l'en empêcherait.
+        if (targetButton && targetButton.getAttribute('aria-disabled') === 'true') return;
         if (targetButton && targetButton.style.display !== 'none') {
             event.preventDefault();
             targetButton.click();

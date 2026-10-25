@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { MenuContextuel } from './menu-contextuel.js';
 
 /**
  * @class EntrepriseContextMenuController
@@ -14,6 +15,8 @@ import { Controller } from '@hotwired/stimulus';
  *                 contrôleur confirm-action (boîte de confirmation + mot de passe).
  *
  * En dehors d'une carte actionnable, le menu natif du navigateur reste disponible.
+ *
+ * Ouverture, clavier et fermetures : la coquille commune (menu-contextuel.js, chantier 3).
  */
 export default class extends Controller {
     static targets = ['menu', 'editLabel', 'deleteLabel'];
@@ -23,20 +26,15 @@ export default class extends Controller {
 
     connect() {
         this.current = null;
-        this._previousFocus = null;
+        this.coquille = new MenuContextuel(this.menuTarget, { surFermeture: () => { this.current = null; } });
 
         this._onContextMenu = this._onContextMenu.bind(this);
-        this._onDocPointerDown = this._onDocPointerDown.bind(this);
-        this._onKeydown = this._onKeydown.bind(this);
-        this._onScrollOrResize = this._onScrollOrResize.bind(this);
-
         this.element.addEventListener('contextmenu', this._onContextMenu);
     }
 
     disconnect() {
         this._close();
         this.element.removeEventListener('contextmenu', this._onContextMenu);
-        this._removeTransientListeners();
     }
 
     // ── Ouverture ──────────────────────────────────────────────────────────────
@@ -68,7 +66,6 @@ export default class extends Controller {
         event.preventDefault();
 
         const nom = card.dataset.ecNom || "l'entreprise";
-        this.current = { workspaceLink, demarrageLink, editLink, archiveLink, deleteForm };
 
         if (this.hasEditLabelTarget) this.editLabelTarget.textContent = this._labelFor('edit', nom);
         if (this.hasDeleteLabelTarget) this.deleteLabelTarget.textContent = this._labelFor('delete', nom);
@@ -89,20 +86,9 @@ export default class extends Controller {
         const sep = menu.querySelector('[data-menu-key="sep"]');
         if (sep) sep.style.display = (deleteForm && (workspaceLink || demarrageLink || editLink)) ? '' : 'none';
 
-        // Positionnement mesuré, borné au viewport.
-        menu.style.visibility = 'hidden';
-        menu.style.display = 'block';
-        const left = Math.max(6, Math.min(event.clientX, window.innerWidth - menu.offsetWidth - 6));
-        const top = Math.max(6, Math.min(event.clientY, window.innerHeight - menu.offsetHeight - 6));
-        menu.style.left = `${left}px`;
-        menu.style.top = `${top}px`;
-        menu.style.visibility = '';
-
-        // Focus sur le conteneur : aucune option présélectionnée à l'ouverture.
-        this._previousFocus = document.activeElement;
-        menu.focus();
-
-        this._addTransientListeners();
+        this.coquille.ouvrir({ point: { x: event.clientX, y: event.clientY } });
+        // Après l'ouverture : la coquille vide `current` à chaque fermeture.
+        this.current = { workspaceLink, demarrageLink, editLink, archiveLink, deleteForm };
     }
 
     // Libellé localisé « Éditer/Supprimer {nom} » : on injecte le nom dans le
@@ -149,84 +135,6 @@ export default class extends Controller {
     // ── Fermeture ────────────────────────────────────────────────────────────
 
     _close() {
-        if (!this.hasMenuTarget) return;
-        const wasOpen = this.menuTarget.style.display !== 'none';
-        this.menuTarget.style.display = 'none';
-        this._removeTransientListeners();
-        if (wasOpen && this._previousFocus && document.contains(this._previousFocus)) {
-            this._previousFocus.focus();
-        }
-        this._previousFocus = null;
-        this.current = null;
-    }
-
-    _addTransientListeners() {
-        document.addEventListener('pointerdown', this._onDocPointerDown, true);
-        document.addEventListener('keydown', this._onKeydown, true);
-        window.addEventListener('scroll', this._onScrollOrResize, true);
-        window.addEventListener('resize', this._onScrollOrResize);
-    }
-
-    _removeTransientListeners() {
-        document.removeEventListener('pointerdown', this._onDocPointerDown, true);
-        document.removeEventListener('keydown', this._onKeydown, true);
-        window.removeEventListener('scroll', this._onScrollOrResize, true);
-        window.removeEventListener('resize', this._onScrollOrResize);
-    }
-
-    _onDocPointerDown(event) {
-        if (this.hasMenuTarget && this.menuTarget.contains(event.target)) return;
-        this._close();
-    }
-
-    _onScrollOrResize() {
-        this._close();
-    }
-
-    // ── Navigation clavier (Escape, flèches, Home/End, Enter/Espace) ──────────
-
-    _onKeydown(event) {
-        if (event.key === 'Escape') {
-            event.preventDefault();
-            event.stopPropagation();
-            this._close();
-            return;
-        }
-
-        const items = this._visibleItems();
-        if (!items.length) return;
-        const currentIndex = items.indexOf(document.activeElement);
-
-        switch (event.key) {
-            case 'ArrowDown':
-                event.preventDefault();
-                items[(currentIndex + 1) % items.length].focus();
-                break;
-            case 'ArrowUp':
-                event.preventDefault();
-                items[currentIndex <= 0 ? items.length - 1 : currentIndex - 1].focus();
-                break;
-            case 'Home':
-                event.preventDefault();
-                items[0].focus();
-                break;
-            case 'End':
-                event.preventDefault();
-                items[items.length - 1].focus();
-                break;
-            case 'Enter':
-            case ' ':
-                if (currentIndex >= 0) {
-                    event.preventDefault();
-                    items[currentIndex].click();
-                }
-                break;
-        }
-    }
-
-    _visibleItems() {
-        if (!this.hasMenuTarget) return [];
-        return Array.from(this.menuTarget.querySelectorAll('[role="menuitem"]'))
-            .filter((item) => item.style.display !== 'none');
+        if (this.coquille) this.coquille.fermer();
     }
 }

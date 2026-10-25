@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { MARGE_VIEWPORT, positionnerMenu, indexApresTouche } from '../../assets/controllers/menu-flottant.js';
+import { MARGE_VIEWPORT, ancreAuPoint, indexApresTouche, positionnerMenu, toucheDuMenu } from '../../assets/controllers/menu-flottant.js';
 
 /** Viewport de référence : colonne 4 du workspace sur un écran courant. */
 const VIEWPORT = { largeur: 1440, hauteur: 900 };
@@ -142,4 +142,39 @@ test('l\'écrêtage l\'emporte aussi sur l\'alignement à gauche', () => {
 
     assert.equal(left, VIEWPORT.largeur - MENU.largeur - MARGE_VIEWPORT);
     assert.ok(left + MENU.largeur <= VIEWPORT.largeur);
+});
+
+// ── La coquille commune des menus (chantier 3, commit 4) ─────────────────────
+
+test('ancreAuPoint : un clic droit est une ancre de 0×0, le menu s’ouvre à droite et sous le curseur', () => {
+    const ancre = ancreAuPoint({ x: 300, y: 200 });
+    assert.deepEqual(ancre, { left: 300, right: 300, top: 200, bottom: 200 });
+    const { left, top } = positionnerMenu({ ancre, menu: MENU, viewport: VIEWPORT, alignement: 'gauche' });
+    assert.equal(left, 300);
+    assert.equal(top, 204);
+});
+
+test('toucheDuMenu : flèches, Début/Fin déplacent le focus (en boucle)', () => {
+    assert.deepEqual(toucheDuMenu('ArrowDown', -1, 3), { type: 'aller', index: 0 });
+    assert.deepEqual(toucheDuMenu('ArrowDown', 2, 3), { type: 'aller', index: 0 });
+    assert.deepEqual(toucheDuMenu('ArrowUp', 0, 3), { type: 'aller', index: 2 });
+    assert.deepEqual(toucheDuMenu('Home', 1, 3), { type: 'aller', index: 0 });
+    assert.deepEqual(toucheDuMenu('End', 1, 3), { type: 'aller', index: 2 });
+});
+
+test('toucheDuMenu : Entrée et Espace activent l’entrée focalisée, et rien sans entrée focalisée', () => {
+    assert.deepEqual(toucheDuMenu('Enter', 1, 3), { type: 'activer', index: 1 });
+    assert.deepEqual(toucheDuMenu(' ', 0, 3), { type: 'activer', index: 0 });
+    assert.equal(toucheDuMenu('Enter', -1, 3), null);
+});
+
+test('toucheDuMenu : Échap ferme (même sans entrée), Tab ferme et laisse le focus suivre', () => {
+    assert.deepEqual(toucheDuMenu('Escape', -1, 0), { type: 'fermer' });
+    assert.deepEqual(toucheDuMenu('Esc', 2, 3), { type: 'fermer' });
+    assert.deepEqual(toucheDuMenu('Tab', 1, 3), { type: 'sortir' });
+});
+
+test('toucheDuMenu : une autre touche n’est pas celle du menu (raccourcis A, M, S… de l’écran)', () => {
+    assert.equal(toucheDuMenu('a', 0, 3), null);
+    assert.equal(toucheDuMenu('ArrowDown', -1, 0), null);
 });
