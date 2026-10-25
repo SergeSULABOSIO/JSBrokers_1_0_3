@@ -13,7 +13,9 @@
  *  2. coupure RÉSEAU (`TypeError: Failed to fetch`), jamais une réponse du serveur — un
  *     404, un 500 sont des réponses, pas des coupures, et ne se retentent pas ;
  *  3. requête non annulée par l'appelant (`AbortError`, ou signal déjà levé) ;
- *  4. destination chez nous (même origine).
+ *  4. destination chez nous (même origine) ;
+ *  5. le navigateur ne se sait pas HORS LIGNE : sinon la nouvelle tentative échouerait à
+ *     coup sûr (signalé par Serge, 2026-10-25 — console remplie de tentatives vaines).
  *
  * Une seule nouvelle tentative, après un court délai. Couvert par
  * tests/js/reprise-reseau.test.mjs ; installé par assets/reprise-reseau.js.
@@ -48,10 +50,10 @@ export function signalDe(entree, options) {
 }
 
 /**
- * @param {{ methode: string, erreur: unknown, signal: AbortSignal|null, adresse: string, origine: string }} appel
+ * @param {{ methode: string, erreur: unknown, signal: AbortSignal|null, adresse: string, origine: string, enLigne?: boolean }} appel
  */
-export function doitReprendre({ methode, erreur, signal, adresse, origine }) {
-    if (!METHODES_DE_LECTURE.includes(methode)) {
+export function doitReprendre({ methode, erreur, signal, adresse, origine, enLigne }) {
+    if (!METHODES_DE_LECTURE.includes(methode) || enLigne === false) {
         return false;
     }
     // `fetch` lève une TypeError pour une coupure réseau ; une annulation lève une

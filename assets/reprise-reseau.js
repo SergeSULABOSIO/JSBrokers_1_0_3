@@ -12,6 +12,7 @@
  * rejouer demanderait de reconstruire l'objet de l'appelant.
  */
 import { adresseDe, DELAI_AVANT_REPRISE_MS, doitReprendre, methodeDe, signalDe } from './reprise-reseau-regles.js';
+import { noterCoupureConfirmee, noterReponseRecue } from './controllers/rafraichissement-de-fond.js';
 
 if (!window.__repriseReseauInstallee && typeof window.fetch === 'function') {
     window.__repriseReseauInstallee = true;
@@ -19,11 +20,18 @@ if (!window.__repriseReseauInstallee && typeof window.fetch === 'function') {
     const fetchOriginal = window.fetch;
     window.fetch = async function (entree, options) {
         try {
-            return await fetchOriginal.call(this, entree, options);
+            const reponse = await fetchOriginal.call(this, entree, options);
+            // Une réponse — quelle qu'elle soit — prouve que le réseau répond : la pause des mises
+            // à jour automatiques est levée (rafraichissement-de-fond.js).
+            noterReponseRecue();
+
+            return reponse;
         } catch (erreur) {
             const signal = signalDe(entree, options);
             const adresse = adresseDe(entree);
-            if (!doitReprendre({ methode: methodeDe(entree, options), erreur, signal, adresse, origine: window.location.origin })) {
+            // L'état du réseau, s'il est connu (un environnement sans `navigator` : inconnu).
+            const enLigne = typeof navigator !== 'undefined' && 'onLine' in navigator ? navigator.onLine : undefined;
+            if (!doitReprendre({ methode: methodeDe(entree, options), erreur, signal, adresse, origine: window.location.origin, enLigne })) {
                 throw erreur;
             }
             console.warn('Connexion coupée — nouvelle tentative :', adresse);
@@ -32,7 +40,17 @@ if (!window.__repriseReseauInstallee && typeof window.fetch === 'function') {
                 throw erreur;
             }
 
-            return fetchOriginal.call(this, entree, options);
+            try {
+                const reponse = await fetchOriginal.call(this, entree, options);
+                noterReponseRecue();
+
+                return reponse;
+            } catch (erreurDeReprise) {
+                // Coupée DEUX fois : le réseau est muet (Wi-Fi connecté, Internet absent) — les
+                // mises à jour automatiques se mettent en pause, plus longue à chaque coupure.
+                if (erreurDeReprise instanceof TypeError) noterCoupureConfirmee();
+                throw erreurDeReprise;
+            }
         }
     };
 }

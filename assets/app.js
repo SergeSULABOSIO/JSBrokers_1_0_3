@@ -34,6 +34,8 @@ import { Chart } from 'chart.js';
 import { echapper } from './controllers/echapper.js';
 import { afficherInfobulle, fermerInfobulle } from './controllers/infobulle-moteur.js';
 import { MenuContextuel, gesteDOuverture } from './controllers/menu-contextuel.js';
+// Les mises à jour automatiques attendent le réseau et la page, puis se rattrapent.
+import { aChaqueIntervalle } from './controllers/rafraichissement-de-fond.js';
 console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
 // LA CHAÎNE D'ICÔNES PAR COOKIE (defineIcone, setIcone, downloadIcone, updatTabIcones,
@@ -425,7 +427,7 @@ function fermerMenuDuTableauDeBord(menu) {
         var now = new Date();
         _renewSetStatus('Dernière mise à jour à ' + _renewPad(now.getHours()) + ':' + _renewPad(now.getMinutes()));
         if (_renewTimer) clearInterval(_renewTimer);
-        _renewTimer = setInterval(refreshRenouvellements, 180000);
+        _renewTimer = setInterval(aChaqueIntervalle(refreshRenouvellements), 180000);
     }
 
     function _renewObserve() {
@@ -519,7 +521,7 @@ function fermerMenuDuTableauDeBord(menu) {
         var now = new Date();
         _cashSetStatus('Dernière mise à jour à ' + _cashPad(now.getHours()) + ':' + _cashPad(now.getMinutes()));
         if (_cashTimer) clearInterval(_cashTimer);
-        _cashTimer = setInterval(refreshEncaissements, 180000);
+        _cashTimer = setInterval(aChaqueIntervalle(refreshEncaissements), 180000);
     }
 
     function _cashObserve() {
@@ -613,7 +615,7 @@ function fermerMenuDuTableauDeBord(menu) {
         var now = new Date();
         _depSetStatus('Dernière mise à jour à ' + _depPad(now.getHours()) + ':' + _depPad(now.getMinutes()));
         if (_depTimer) clearInterval(_depTimer);
-        _depTimer = setInterval(refreshDepenses, 180000);
+        _depTimer = setInterval(aChaqueIntervalle(refreshDepenses), 180000);
     }
 
     function _depObserve() {
@@ -877,7 +879,7 @@ function fermerMenuDuTableauDeBord(menu) {
         var now = new Date();
         _sinSetStatus('Dernière mise à jour à ' + _sinPad(now.getHours()) + ':' + _sinPad(now.getMinutes()));
         if (_sinTimer) clearInterval(_sinTimer);
-        _sinTimer = setInterval(refreshSinistres, 180000);
+        _sinTimer = setInterval(aChaqueIntervalle(refreshSinistres), 180000);
     }
 
     function _sinObserve() {
@@ -1069,7 +1071,7 @@ function fermerMenuDuTableauDeBord(menu) {
         var now = new Date();
         _fbSetStatus('Dernière mise à jour à ' + _fbPad(now.getHours()) + ':' + _fbPad(now.getMinutes()));
         if (_fbTimer) { clearInterval(_fbTimer); }
-        _fbTimer = setInterval(refreshFeedbacks, 60000);
+        _fbTimer = setInterval(aChaqueIntervalle(refreshFeedbacks), 60000);
         _fbInitSelection(list);
     }
 
@@ -1470,7 +1472,7 @@ function fermerMenuDuTableauDeBord(menu) {
         var now = new Date();
         _pisteSetStatus('Dernière mise à jour à ' + _pistePad(now.getHours()) + ':' + _pistePad(now.getMinutes()));
         if (_pisteTimer) clearInterval(_pisteTimer);
-        _pisteTimer = setInterval(refreshPistes, 180000);
+        _pisteTimer = setInterval(aChaqueIntervalle(refreshPistes), 180000);
     }
 
     function _pisteObserve() {
@@ -1791,7 +1793,7 @@ function fermerMenuDuTableauDeBord(menu) {
         var now = new Date();
         _bordSetStatus('Dernière mise à jour à ' + _bordPad(now.getHours()) + ':' + _bordPad(now.getMinutes()));
         if (_bordTimer) { clearInterval(_bordTimer); }
-        _bordTimer = setInterval(refreshBordereaux, 180000);
+        _bordTimer = setInterval(aChaqueIntervalle(refreshBordereaux), 180000);
         dbBordApplyFilter();
     }
 
@@ -2286,7 +2288,7 @@ function fermerMenuDuTableauDeBord(menu) {
         var now = new Date();
         _noteSetStatus('Dernière mise à jour à ' + _notePad(now.getHours()) + ':' + _notePad(now.getMinutes()));
         if (_noteTimer) { clearInterval(_noteTimer); }
-        _noteTimer = setInterval(refreshNotes, 300000);
+        _noteTimer = setInterval(aChaqueIntervalle(refreshNotes), 300000);
         dbNoteApplyFilter();
     }
 
@@ -2453,7 +2455,7 @@ function fermerMenuDuTableauDeBord(menu) {
         _prodSetStatus('Dernière mise à jour à ' + _prodPad(now.getHours()) + ':' + _prodPad(now.getMinutes()));
 
         if (_prodTimer) clearInterval(_prodTimer);
-        _prodTimer = setInterval(refreshProduction, 180000);
+        _prodTimer = setInterval(aChaqueIntervalle(refreshProduction), 180000);
     }
 
     function refreshProduction() {
@@ -3222,7 +3224,7 @@ function fermerMenuDuTableauDeBord(menu) {
         var now = new Date();
         _usersSetStatus('Dernière mise à jour à ' + _usersPad(now.getHours()) + ':' + _usersPad(now.getMinutes()));
         if (_usersTimer) clearInterval(_usersTimer);
-        _usersTimer = setInterval(refreshUsers, 180000);
+        _usersTimer = setInterval(aChaqueIntervalle(refreshUsers), 180000);
     }
 
     function _usersObserve() {

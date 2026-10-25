@@ -1,4 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
+import { rafraichissementPermis } from './rafraichissement-regles.js';
+import { etatDuPoste } from './rafraichissement-de-fond.js';
 import { formatInstant } from '../datetime-format.js';
 import { formatNombre } from '../number-format.js';
 
@@ -25,7 +27,11 @@ export default class extends Controller {
         this.renewalAt = null;
         this.onFocus = () => this.refresh();
         window.addEventListener('focus', this.onFocus);
-        this.timer = window.setInterval(() => this.refresh(), this.intervalValue);
+        // Le tic attend le réseau et la page (rafraichissement-regles.js) ; le retour de focus,
+        // geste de l'utilisateur, interroge toujours.
+        this.timer = window.setInterval(() => {
+            if (rafraichissementPermis(etatDuPoste())) this.refresh();
+        }, this.intervalValue);
         // Échéance déjà connue du rendu serveur : on l'arme sans attendre un tick.
         if (this.hasRenewalTarget) {
             this.scheduleRenewalRefresh(this.renewalTarget.getAttribute('datetime'));

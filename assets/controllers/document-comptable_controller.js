@@ -1,4 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
+import { rafraichissementPermis } from './rafraichissement-regles.js';
+import { etatDuPoste } from './rafraichissement-de-fond.js';
 
 /**
  * Contrôleur du composant « Documents comptables » (espace courtier).
@@ -65,7 +67,9 @@ export default class extends Controller {
      * visible — onglet workspace actif ET onglet navigateur au premier plan.
      */
     #autoRefresh() {
-        if (document.hidden || this.element.offsetParent === null) return;
+        // Hors ligne, page cachée ou réseau en pause : rien ne part — sinon, toutes les cinq
+        // minutes, un toast « Impossible de charger le document » (rafraichissement-regles.js).
+        if (!rafraichissementPermis(etatDuPoste()) || this.element.offsetParent === null) return;
         this.#reload();
     }
 

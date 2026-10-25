@@ -102,3 +102,21 @@ test('installé : un POST coupé n\'est PAS rejoué', async () => {
     await assert.rejects(() => window.fetch('/admin/enregistrer', { method: 'POST', body: '{}' }), TypeError);
     assert.equal(appels.length, 1);
 });
+
+test('hors ligne, le navigateur le SAIT : aucune nouvelle tentative (elle échouerait à coup sûr)', () => {
+    assert.equal(doitReprendre(appel({ enLigne: false })), false);
+    assert.equal(doitReprendre(appel({ enLigne: true })), true, 'coupure passagère en ligne : on retente');
+    assert.equal(doitReprendre(appel()), true, 'état du réseau inconnu : comme avant');
+});
+
+test('installé : coupé deux fois, le réseau est muet — les mises à jour de fond se mettent en pause ; une réponse la lève', async () => {
+    const { etatDuPoste } = await import('../../assets/controllers/rafraichissement-de-fond.js');
+    await installer([coupure(), coupure(), { status: 200, ok: true }]);
+    const avertissement = console.warn;
+    console.warn = () => {};
+    await assert.rejects(() => window.fetch('/admin/entreprise_dashbord/feedbacks-fragment/1'), TypeError);
+    console.warn = avertissement;
+    assert.equal(etatDuPoste().enPause, true, 'Wi-Fi connecté, Internet muet : pause');
+    await window.fetch('/admin/entreprise_dashbord/feedbacks-fragment/1');
+    assert.equal(etatDuPoste().enPause, false, 'le réseau répond : pause levée');
+});

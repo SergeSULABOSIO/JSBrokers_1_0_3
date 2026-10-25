@@ -1,4 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
+import { rafraichissementPermis } from './rafraichissement-regles.js';
+import { etatDuPoste } from './rafraichissement-de-fond.js';
 
 /**
  * Demande à TOUS les blocs de se recharger avec de nouveaux paramètres de requête.
@@ -46,6 +48,11 @@ export default class extends Controller {
 
     disconnect() {
         this._stopTimer();
+        if (this._rattrapage) {
+            window.removeEventListener('online', this._rattrapage);
+            document.removeEventListener('visibilitychange', this._rattrapage);
+            this._rattrapage = null;
+        }
         if (this._details && this._toggleHandler) {
             this._details.removeEventListener('toggle', this._toggleHandler);
         }
@@ -128,11 +135,31 @@ export default class extends Controller {
     _startTimer() {
         if (this._timer || this.intervalValue <= 0) return;
         if (this._details && !this._details.open) return;
-        this._timer = setInterval(() => this._load(false), this.intervalValue);
+        // Hors ligne ou page cachée : la mise à jour silencieuse attend, puis se rattrape une
+        // fois au retour du réseau ou de la page (rafraichissement-regles.js).
+        this._timer = setInterval(() => {
+            if (!rafraichissementPermis(etatDuPoste())) {
+                this._enRetard = true;
+                return;
+            }
+            this._enRetard = false;
+            this._load(false);
+        }, this.intervalValue);
+        if (!this._rattrapage) {
+            this._rattrapage = () => {
+                if (!this._enRetard || !this._timer || !rafraichissementPermis(etatDuPoste())) return;
+                this._enRetard = false;
+                this._load(false);
+            };
+            window.addEventListener('online', this._rattrapage);
+            document.addEventListener('visibilitychange', this._rattrapage);
+        }
     }
 
     _stopTimer() {
         if (this._timer) { clearInterval(this._timer); this._timer = null; }
+        // Un retard noté avant la fermeture du bloc ne doit pas le recharger plus tard.
+        this._enRetard = false;
     }
 
     _pad(n) { return n < 10 ? '0' + n : '' + n; }

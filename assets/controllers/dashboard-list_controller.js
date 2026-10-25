@@ -1,4 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
+import { rafraichissementPermis } from './rafraichissement-regles.js';
+import { etatDuPoste } from './rafraichissement-de-fond.js';
 
 /**
  * Bloc « liste » du tableau de bord console, calqué sur les blocs liste du
@@ -48,7 +50,10 @@ export default class extends Controller {
     _startTimer() {
         if (this._timer || this.intervalValue <= 0) return;
         if (this._details && !this._details.open) return;
-        this._timer = setInterval(() => this.refresh(), this.intervalValue);
+        // Hors ligne, page cachée ou réseau en pause : le tic attend (rafraichissement-regles.js).
+        this._timer = setInterval(() => {
+            if (rafraichissementPermis(etatDuPoste())) this.refresh();
+        }, this.intervalValue);
     }
 
     _stopTimer() {
