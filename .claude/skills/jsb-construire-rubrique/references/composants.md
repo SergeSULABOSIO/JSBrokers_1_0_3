@@ -74,8 +74,13 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
 - JS : `barre-actions.js` (workspace ET dialogue), `toolbar_controller.js`,
   `actions-groupees.js` (`actionsVisibles` :39, `grouperActions` :72, `urlAction` :132),
   `circuit-icones.js` (`CircuitIcones` :25), `context-menu_controller.js` (écoute
-  `app:context.changed`, :58).
-- CSS : `.context-menu` (`app.css:1139`).
+  `app:context.changed`).
+- Le menu contextuel d'un écran nouveau : son `<nav class="context-menu">` rendu par le serveur
+  (`role="menu"`, entrées `role="menuitem"`, refus en `aria-disabled`), ouvert par la COQUILLE
+  `menu-contextuel.js` : `new MenuContextuel(menu).ouvrir(gesteDOuverture(event, ligne))`. La
+  ligne se focalise (touche Menu, Maj+F10). Rien d'autre à écrire : placement, clavier,
+  fermetures, un seul menu ouvert. Le déclarer dans `ComposantsUniquesTest::MENUS`.
+- CSS : `.context-menu` (`app.css`).
 - Workspace : 4 actions puis « Autres actions », icônes seules ; dialogue : libellés.
 - Toute action d'écran a son entrée au manifeste `CouvertureDesEcrans` (`PariteEcranKetTest`).
 
@@ -128,10 +133,14 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
   `role="alert"` réservé aux erreurs. Aujourd'hui `role="alert"` partout (:40) — chantier 2.
 
 ### Infobulle — partagé
-- Contrôleur générique `infobulle_controller.js`, style `.jsb-ctx-tip` (`app.css:5398`),
-  placement `infobulle-position.js` (toujours dans l'écran) ; contenu JSON `data-infobulle`
-  construit par `textContent`. Clavier : focus et Échap.
-- C'est la SEULE à utiliser dans un écran nouveau (voir les doublons au §3).
+- L'infobulle UNIQUE : moteur `infobulle-moteur.js` (posé sur `<body>` par
+  `infobulle_controller.js`), styles `styles/infobulle.css`, placement `infobulle-position.js`.
+- Le serveur DÉCLARE le contenu : `data-infobulle="{{ sections|json_encode|e('html_attr') }}"`,
+  sections `{titre, lignes: [[libellé, valeur, 'tip-montant tip-fort']], texte}` (classes `tip-*`
+  seules). Style « Pistes » : titres de section, montants à droite, états `tip-ok/attente/alerte/info`.
+- Posée au curseur, immobile ; `data-infobulle-placement="bouton"` sous un bouton. Survolable,
+  Échap, persistante au focus clavier (WCAG 1.4.13).
+- C'est la SEULE : `ComposantsUniquesTest` refuse toute autre bulle.
 
 ### États vides — partagé
 - `templates/components/_empty_state.html.twig`, CSS `.empty-state-*` (`app.css:2515-2548`),
@@ -153,10 +162,10 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
   (`cookies.js:4-14`).
 - **Infobulles du tableau de bord non échappées** : valeurs injectées en HTML, un nom de piste
   piégé s'exécutait au survol (`300ed88a`).
-- **Composants dupliqués encore présents** (chantier 3 de `jsbrokers-dev`) : quatre infobulles
-  (`infobulle` / `.jsb-ctx-tip` ; `#db-meta-tip` et `data-renew-tip` dans `assets/app.js` ;
-  `soa-section-tip` dans `soa-context-menu_controller.js`) et quatre menus contextuels
-  (`context-menu`, `console-context-menu`, `entreprise-context-menu`, `soa-context-menu`).
+- **Composants dupliqués** (chantier 3 de `jsbrokers-dev`, FAIT 2026-10-25) : dix-neuf
+  infobulles et treize menus contextuels écrits chacun à sa façon, dont les 8 du tableau de bord
+  inaccessibles au clavier. Une infobulle, une coquille de menu ; `ComposantsUniquesTest` refuse
+  leur retour.
 - **Treize échappements écrits à la main**, dont certains oubliaient `"` et `'` : fusionnés
   dans `echapper.js` (chantier 1, C2/C4) ; un garde-fou node refuse leur retour.
 - **Texte riche réaffiché tel quel** : `<img onerror>` collé dans une description s'exécutait

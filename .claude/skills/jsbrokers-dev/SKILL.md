@@ -31,8 +31,10 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   serveur refusera : on le cache, ou on dit pourquoi (ex. le « + » des Avenants qui explique).
 - **Une couleur = un sens.** Couleurs de la charte uniquement (skill `charte-couleurs`) ; jetons CSS.
 - **Rien ne bouge sans action de l'utilisateur.** Et rien du tout pour `prefers-reduced-motion`.
-- **Pièces standard.** Réutiliser les composants `.jsb-*` d'`app.css`, l'infobulle du tableau de
-  bord, la barre d'actions partagée… avant d'en écrire un. Zéro dépendance nouvelle sans raison.
+- **Pièces standard.** Réutiliser les composants `.jsb-*` d'`app.css`, l'INFOBULLE UNIQUE
+  (`infobulle-moteur.js`), la COQUILLE DE MENU (`menu-contextuel.js`), la barre d'actions
+  partagée… avant d'en écrire un. Zéro dépendance nouvelle sans raison. Une infobulle ou un menu
+  fabriqué à côté fait échouer `ComposantsUniquesTest` (chantier 3).
 - **Partout utilisable** : souris, clavier, tactile (skill `ergonomie-web`).
 
 ## 2. Cloisonnement entre cabinets
@@ -118,11 +120,12 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   `compte-onglet.js`) couverts par `tests/js/*.test.mjs`.
 - **Tout contenu dynamique est échappé.** Twig échappe par défaut : jamais `|raw` sur une donnée
   saisie. En JS, une donnée se pose par `textContent`, jamais par `innerHTML` ni par une chaîne
-  HTML — infobulles comprises (modèle : `infobulle_controller.js`, contenu construit par
-  `textContent`). Incident (`300ed88a`) : les infobulles « pistes » et « renouvellements » du
+  HTML — infobulles comprises (infobulle unique : contenu DÉCLARÉ par le serveur,
+  `data-infobulle="{{ sections|json_encode|e('html_attr') }}"`, posé par `textContent`).
+  Incident (`300ed88a`) : les infobulles « pistes » et « renouvellements » du
   tableau de bord injectaient leurs valeurs en HTML (`dataset` décode l'attribut) ; un nom de
-  piste piégé s'exécutait au survol, malgré le `|e` du gabarit (corrigé `assets/app.js:1744`
-  et `:1979`).
+  piste piégé s'exécutait au survol, malgré le `|e` du gabarit (corrigé `300ed88a`, puis
+  remplacé par l'infobulle unique, `b7a23d34`).
 - **Les sources uniques de l'échappement** (chantier 1, 2026-10-17) — on les appelle, on n'en
   écrit pas d'autre :
   - `assets/controllers/echapper.js` : la SEULE fonction d'échappement JS, pour un HTML qu'on
@@ -360,10 +363,38 @@ Inscrits le 2026-10-16 (décisions de Serge), après l'inventaire fait pour la s
    C6 texte riche assaini, C7 caches du `localStorage` et infobulle d'attribut. Les règles qui en
    restent sont au §4. Production vérifiée : aucune trace d'exploitation.
 2. ✅ **FAIT (2026-10-21) — Dialogues et toasts.** Règles au §4 (« Échap » et « Messages »).
-3. **Composants dupliqués.** Quatre infobulles (`infobulle`/`.jsb-ctx-tip`, `#db-meta-tip` et
-   `data-renew-tip` dans `assets/app.js`, `soa-section-tip`) et quatre menus contextuels
-   (`context-menu`, `console-context-menu`, `entreprise-context-menu`, `soa-context-menu`) :
-   un seul de chaque.
+3. ✅ **FAIT (2026-10-25) — Une infobulle, une coquille de menu** (commits `872357f5` moteur,
+   `b7a23d34` tableau de bord, `454e2d0a` barres d'actions, `695af5b7` relevé public, `9322ee36`
+   chat de Ket et graphique, `b6ebbb88` coquille de menu, `411b4da6` menus du tableau de bord
+   et clavier, puis le garde-fou). Les règles :
+   - **Infobulle** : `infobulle-moteur.js` (ES2017 : le relevé PUBLIC charge le même module par
+     `infobulles-autonomes.js`), styles `styles/infobulle.css`. Le serveur DÉCLARE le contenu
+     (`data-infobulle`, sections `{titre, lignes:[[libellé, valeur, 'tip-montant']], texte}`,
+     classes `tip-*` seules) ; une barre d'actions pose un `title` (source « titre »). Options
+     déclaratives : `data-infobulle-placement="bouton"`, `data-infobulle-si-replie`,
+     `data-infobulle-taire` (× d'une puce), `data-infobulle-sur-sombre` (zone sombre). Une bulle
+     posée PAR LE CODE (infobulle « externe » de Chart.js, graphique de production) :
+     `afficherInfobulle()` ; `fermerInfobulle(zone)` ne ferme que celle de sa zone. WCAG 1.4.13 :
+     survolable, Échap, persistante, `aria-describedby`.
+   - **Exception** : l'infobulle NATIVE de Chart.js, DESSINÉE dans le canevas (aucun élément,
+     aucun HTML) — graphiques des groupes et des risques (`assets/app.js`), graphiques du chat
+     (`assistant-chart-render.js`). Hors du chantier 3 : une bulle externe en DOM y passerait par
+     `afficherInfobulle()`.
+   - **Frontière** : une infobulle qui montre des tâches ou leur nombre lit les mêmes requêtes
+     filtrées que les listes (`TacheVisibiliteScope`).
+   - **Menu contextuel** : `menu-contextuel.js` (classe `MenuContextuel`) ouvre au curseur ou sous
+     la ligne, gère flèches, Début/Fin, Entrée/Espace, Échap (focus rendu), Tab, clic dehors,
+     défilement, et UN SEUL menu ouvert. L'écran garde son menu (rendu serveur, `role="menu"` /
+     `menuitem`, une entrée refusée en `aria-disabled`) et ses actions.
+   - **Clavier** : toute ligne qui porte un menu se focalise ; touche Menu et Maj+F10 l'ouvrent
+     sous la ligne, sur la première entrée (`gesteDOuverture(event, ligne)` — Chromium marque ce
+     `contextmenu` `button = -1`).
+   - **Garde-fou** `tests/Frontend/ComposantsUniquesTest.php` : seul le moteur fabrique une bulle ;
+     tout clic droit ouvre par la coquille (ou se déclare relais motivé) ; tout `role="menu"` se
+     déclare. Plus fins : `InfobulleUniqueTest`, `MenuContextuelUniqueTest`,
+     `MenusDuTableauDeBordTest`. Une bulle « maison » (élément en `position: fixed`) échappe à un
+     test statique : à voir en revue. Restent hors coquille, motivés : menus-boutons de `barre-actions.js` (ils ne
+     participent pas encore à « un seul menu ouvert ») et menu d'entête de Ket (plein écran).
 4. **Totaliseur.** Le chiffre est calculé et formaté par le serveur, plus par le navigateur
    (`list-summary_controller.js:148-154`, `Intl.NumberFormat('fr-FR')` :230).
 5. **Valeurs en dur.** Replis `'USD'` (`TrancheType.php:82`, `_list_summary.html.twig:3`,
