@@ -82,6 +82,17 @@ export default class extends Controller {
         // Le contexte d'un onglet EN ARRIÈRE-PLAN (réponse lente arrivée après un changement
         // d'onglet) ne concerne pas l'écran : il n'efface ni la sélection retenue ni le menu ouvert.
         if (event.detail?.arrierePlan) return;
+        // UN MENU PAR RUBRIQUE OUVERTE, et chacun reçoit les contextes de toutes : seul celui de
+        // la rubrique concernée répond. Sans cela, le menu d'un onglet CACHÉ s'ouvrait aussi —
+        // et, la coquille n'en gardant qu'un ouvert, il pouvait fermer le bon (Serge, 2026-10-25).
+        // Une autre rubrique passe au premier plan : ce menu-ci se ferme s'il était ouvert (ses
+        // raccourcis A, M, S… joueraient sinon sur sa sélection depuis l'autre onglet) — fermer
+        // son propre menu ne ferme jamais celui d'un autre.
+        const onglet = this.element.closest('[data-tab-id]')?.dataset.tabId;
+        if (onglet && event.detail?.workspaceTabId && event.detail.workspaceTabId !== onglet) {
+            this.hideContextMenu();
+            return;
+        }
         // REFACTORING : On récupère maintenant le formCanvas depuis le niveau supérieur de l'événement,
         // car c'est un contexte partagé, et non plus spécifique à un élément sélectionné.
         const { selection: selectos, contextMenuPosition, formCanvas } = event.detail;
