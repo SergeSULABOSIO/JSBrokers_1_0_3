@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { MenuContextuel } from './menu-contextuel.js';
+import { MenuContextuel, gesteDOuverture } from './menu-contextuel.js';
 
 /**
  * @class ConsoleContextMenuController
@@ -78,7 +78,8 @@ export default class extends Controller {
 
         const items = this.collectActions(row);
         event.preventDefault();
-        this.open(row, items, { point: { x: event.clientX, y: event.clientY } });
+        // Touche Menu / Maj+F10 sur la ligne focalisée : sous la ligne, première entrée.
+        this.open(row, items, gesteDOuverture(event, row));
     }
 
     onRowKeydown(event) {

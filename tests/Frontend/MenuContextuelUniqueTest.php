@@ -31,7 +31,7 @@ class MenuContextuelUniqueTest extends TestCase
     public function testChaqueMenuPasseParLaCoquille(): void
     {
         foreach (self::MIGRES as $fichier) {
-            self::assertMatchesRegularExpression("#import \\{ MenuContextuel \\} from './menu-contextuel\\.js';#", self::source($fichier), "$fichier : la coquille commune.");
+            self::assertMatchesRegularExpression("#import \\{[^}]*\\bMenuContextuel\\b[^}]*\\} from './menu-contextuel\\.js';#", self::source($fichier), "$fichier : la coquille commune.");
         }
     }
 

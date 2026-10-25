@@ -197,7 +197,7 @@
 
 {# ── Menu contextuel tâches ── #}
 <meta id="db-task-csrf" content="{{ csrf_token('db-task-close') }}">
-<nav id="dbTaskCtxMenu" class="context-menu" style="display:none;"
+<nav id="dbTaskCtxMenu" class="context-menu" aria-label="Menu contextuel tâche" style="display:none;"
      data-action="mousedown->geste#arreter">
     <ul role="menu" class="list-unstyled mb-0">
         <li role="menuitem" tabindex="-1" id="dbTaskCtxEditItem"

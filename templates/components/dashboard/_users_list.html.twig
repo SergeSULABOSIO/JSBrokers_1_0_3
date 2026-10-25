@@ -35,7 +35,8 @@
 </style>
 
 {# ── Section : utilisateur connecté ── #}
-<div class="d-flex flex-column align-items-center py-3 px-2 mb-2 rounded db-users-current"
+<div class="d-flex flex-column align-items-center py-3 px-2 mb-2 rounded db-users-current" tabindex="0"
+     role="group" aria-label="{{ displayName }} — actions : touche Menu ou Maj+F10"
      data-invite-id="{{ currentInviteId }}"
      data-entreprise-id="{{ entreprise.id }}"
      data-current-invite-id="{{ currentInviteId }}"
@@ -79,7 +80,8 @@
 {% if otherInvites|length > 0 %}
     <div class="d-flex flex-column gap-1 px-1">
         {% for inv in otherInvites|slice(0, 4) %}
-            <div class="d-flex align-items-center gap-2 py-1 px-1 db-users-member"
+            <div class="d-flex align-items-center gap-2 py-1 px-1 db-users-member" tabindex="0"
+                 role="group" aria-label="{{ inv.nom ?? (inv.utilisateur ? inv.utilisateur.email : '—') }} — actions : touche Menu ou Maj+F10"
                  data-invite-id="{{ inv.id }}"
                  data-entreprise-id="{{ entreprise.id }}"
                  data-current-invite-id="{{ currentInviteId }}"

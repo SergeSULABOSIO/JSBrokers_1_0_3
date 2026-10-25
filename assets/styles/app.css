@@ -5273,7 +5273,9 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 .db-ass-details > summary::-webkit-details-marker { display: none; }
 .db-ass-details > summary:hover { background: #f8f9fa; }
 .db-ass-details[open] > summary { border-radius: .375rem .375rem 0 0; background: #f8f9fa; border-bottom: 1px solid #dee2e6; }
-.db-ass-details > summary:focus-visible { outline: 2px solid rgba(0,71,171,.35); outline-offset: 2px; }
+.db-ass-details > summary:focus-visible { outline: 2px solid var(--cobalt); outline-offset: 2px; }
+/* Les lignes d'invités portent un menu (touche Menu, Maj+F10) : focalisables, focus visible. */
+.db-users-current:focus-visible, .db-users-member:focus-visible { outline: 2px solid var(--cobalt); outline-offset: 2px; }
 .db-ass-chevron { transition: transform .25s ease; flex-shrink: 0; }
 .db-ass-details[open] > summary .db-ass-chevron { transform: rotate(180deg); }
 .db-ass-details[open] > summary .db-ass-avatar  { background: #003380 !important; }

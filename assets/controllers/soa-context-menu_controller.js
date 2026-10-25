@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { MenuContextuel } from './menu-contextuel.js';
+import { MenuContextuel, gesteDOuverture } from './menu-contextuel.js';
 
 /**
  * Configuration des menus contextuels par section du SOA.
@@ -243,7 +243,8 @@ export default class extends Controller {
         const sepDanger = menu.querySelector('[data-menu-key="sep-danger"]');
         if (sepDanger) sepDanger.style.display = visible.includes('delete') ? '' : 'none';
 
-        this.coquille.ouvrir({ point: { x: event.clientX, y: event.clientY } });
+        // Touche Menu / Maj+F10 : sous la ligne (ou la section), première entrée.
+        this.coquille.ouvrir(gesteDOuverture(event, row || zone));
     }
 
     // ── Fermeture ────────────────────────────────────────────────────────────

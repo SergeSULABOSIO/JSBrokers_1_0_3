@@ -630,7 +630,7 @@ export default class extends BaseController {
      * @param {CustomEvent} event
      */
     handleContextMenuRequest(event) {
-        const { selecto, menuX, menuY } = event.detail;
+        const { selecto, menuX, menuY, geste } = event.detail;
 
         // 1. On s'assure que la ligne cliquée est bien sélectionnée.
         const checkbox = this.element.querySelector(`#check_${selecto.id}`);
@@ -641,7 +641,7 @@ export default class extends BaseController {
         }
 
         // 2. On notifie le cerveau avec la sélection complète ET la position de la souris.
-        this._notifySelectionChange({ contextMenuPosition: { menuX, menuY } });
+        this._notifySelectionChange({ contextMenuPosition: { menuX, menuY, geste } });
     }
 
     /**

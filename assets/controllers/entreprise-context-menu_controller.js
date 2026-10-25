@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { MenuContextuel } from './menu-contextuel.js';
+import { MenuContextuel, gesteDOuverture } from './menu-contextuel.js';
 
 /**
  * @class EntrepriseContextMenuController
@@ -86,7 +86,8 @@ export default class extends Controller {
         const sep = menu.querySelector('[data-menu-key="sep"]');
         if (sep) sep.style.display = (deleteForm && (workspaceLink || demarrageLink || editLink)) ? '' : 'none';
 
-        this.coquille.ouvrir({ point: { x: event.clientX, y: event.clientY } });
+        // Touche Menu / Maj+F10 sur la carte (son lien focalisé) : sous la carte, première entrée.
+        this.coquille.ouvrir(gesteDOuverture(event, card));
         // Après l'ouverture : la coquille vide `current` à chaque fermeture.
         this.current = { workspaceLink, demarrageLink, editLink, archiveLink, deleteForm };
     }

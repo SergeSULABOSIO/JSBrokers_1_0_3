@@ -105,7 +105,8 @@ export default class extends Controller {
      * @private
      */
     _displayMenu(position) {
-        this.coquille.ouvrir({ point: { x: position.menuX, y: position.menuY } });
+        // Le geste de la ligne (clavier : sous la ligne, première entrée) ; à défaut, le point.
+        this.coquille.ouvrir(position.geste || { point: { x: position.menuX, y: position.menuY } });
         document.addEventListener('keydown', this.boundHandleKeyboardShortcuts);
     }
 

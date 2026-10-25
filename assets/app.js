@@ -33,12 +33,36 @@ import { Chart } from 'chart.js';
 // elles, sont déclarées par le serveur et posées en texte : infobulle_controller, chantier 3.)
 import { echapper } from './controllers/echapper.js';
 import { afficherInfobulle, fermerInfobulle } from './controllers/infobulle-moteur.js';
+import { MenuContextuel, gesteDOuverture } from './controllers/menu-contextuel.js';
 console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
 // LA CHAÎNE D'ICÔNES PAR COOKIE (defineIcone, setIcone, downloadIcone, updatTabIcones,
 // getCookies, getIconeUrl, getIconeLocale, saveCookie) a été retirée le 2026-10-14 : plus
 // aucun appelant, et `saveCookie` préfixait la valeur et posait une expiration invalide. Les
 // cookies s'écrivent et se lisent désormais par controllers/cookies.js.
+
+// ── Les menus contextuels du tableau de bord : la coquille commune (chantier 3, commit 5) ──
+// Chaque bloc garde son menu (rendu par le serveur) et ses actions ; la coquille ouvre au curseur
+// — ou, au clavier (touche Menu, Maj+F10), sous la ligne focalisée sur la première entrée —,
+// gère flèches, Échap et retour du focus, ferme au clic dehors. Un bloc rechargé rend un nouveau
+// <nav> : une coquille par élément (WeakMap), jamais une coquille périmée.
+var _coquillesDuTableauDeBord = new WeakMap();
+
+function ouvrirMenuDuTableauDeBord(menu, event, ligne) {
+    var coquille = _coquillesDuTableauDeBord.get(menu);
+    if (!coquille) {
+        coquille = new MenuContextuel(menu);
+        _coquillesDuTableauDeBord.set(menu, coquille);
+    }
+    coquille.ouvrir(gesteDOuverture(event, ligne));
+}
+
+function fermerMenuDuTableauDeBord(menu) {
+    if (!menu) return;
+    var coquille = _coquillesDuTableauDeBord.get(menu);
+    if (coquille) coquille.fermer();
+    else menu.style.display = 'none';
+}
 
 // ── Filtrage des tâches du tableau de bord (toggles Urgentes/Prioritaires/Futures) ──
 (function () {
@@ -241,12 +265,6 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
         var menu = document.getElementById('dbRenewCtxMenu');
         if (!menu) return;
-        var mw = 220, mh = 80;
-        var left = (event.clientX + mw > window.innerWidth)  ? window.innerWidth  - mw - 6 : event.clientX;
-        var top  = (event.clientY + mh > window.innerHeight) ? window.innerHeight - mh - 6 : event.clientY;
-        menu.style.left    = left + 'px';
-        menu.style.top     = top  + 'px';
-        menu.style.display = 'block';
 
         var pisteLabel = document.getElementById('dbRenewCtxPisteLabel');
         if (pisteLabel) {
@@ -260,18 +278,12 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
                 : 'Signaler : à ne pas renouveler';
         }
 
-        setTimeout(function () {
-            document.addEventListener('click', function hide() {
-                var m = document.getElementById('dbRenewCtxMenu');
-                if (m) m.style.display = 'none';
-                document.removeEventListener('click', hide);
-            }, { once: true });
-        }, 0);
+        ouvrirMenuDuTableauDeBord(menu, event, el);
     }
 
     function dbRenewCtxPiste() {
         var menu = document.getElementById('dbRenewCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
 
         var hasPiste = !!_pid;
         document.dispatchEvent(new CustomEvent('app:loading.start'));
@@ -316,7 +328,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
      */
     function dbRenewCtxNoRenewal() {
         var menu = document.getElementById('dbRenewCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_aid) return;
 
         // Le mode suit l'état réel de la ligne : marquer une police qui ne l'est pas,
@@ -640,12 +652,6 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
         var menu = document.getElementById('dbDepCtxMenu');
         if (!menu) return;
-        var mw = 220, mh = 150;
-        var left = (event.clientX + mw > window.innerWidth)  ? window.innerWidth  - mw - 6 : event.clientX;
-        var top  = (event.clientY + mh > window.innerHeight) ? window.innerHeight - mh - 6 : event.clientY;
-        menu.style.left    = left + 'px';
-        menu.style.top     = top  + 'px';
-        menu.style.display = 'block';
 
         var addItem    = document.getElementById('dbDepCtxAddItem');
         var editItem   = document.getElementById('dbDepCtxEditItem');
@@ -655,18 +661,12 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
         if (editItem)   editItem.onclick   = dbDepCtxEdit;
         if (deleteItem) deleteItem.onclick = dbDepCtxDelete;
 
-        setTimeout(function () {
-            document.addEventListener('click', function hide() {
-                var m = document.getElementById('dbDepCtxMenu');
-                if (m) m.style.display = 'none';
-                document.removeEventListener('click', hide);
-            }, { once: true });
-        }, 0);
+        ouvrirMenuDuTableauDeBord(menu, event, el);
     }
 
     function dbDepCtxAdd() {
         var menu = document.getElementById('dbDepCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         // Contexte pris sur l'item d'ajout (entreprise/invité courants), robuste même
         // si aucune ligne n'a encore été survolée.
         var addItem = document.getElementById('dbDepCtxAddItem');
@@ -695,7 +695,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
     function dbDepCtxEdit() {
         var menu = document.getElementById('dbDepCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_did) return;
         document.dispatchEvent(new CustomEvent('app:loading.start'));
         document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
@@ -721,7 +721,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
     function dbDepCtxDelete() {
         var menu = document.getElementById('dbDepCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_depEl || !_did) return;
 
         var nom = (_depEl.dataset.depNom || ('Dépense #' + _did));
@@ -915,30 +915,18 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
         var menu = document.getElementById('dbSinCtxMenu');
         if (!menu) return;
-        var mw = 220, mh = 120;
-        var left = (event.clientX + mw > window.innerWidth)  ? window.innerWidth  - mw - 6 : event.clientX;
-        var top  = (event.clientY + mh > window.innerHeight) ? window.innerHeight - mh - 6 : event.clientY;
-        menu.style.left    = left + 'px';
-        menu.style.top     = top  + 'px';
-        menu.style.display = 'block';
 
         var editItem   = document.getElementById('dbSinCtxEditItem');
         var deleteItem = document.getElementById('dbSinCtxDeleteItem');
         if (editItem)   editItem.onclick   = dbSinCtxEdit;
         if (deleteItem) deleteItem.onclick = dbSinCtxDelete;
 
-        setTimeout(function () {
-            document.addEventListener('click', function hide() {
-                var m = document.getElementById('dbSinCtxMenu');
-                if (m) m.style.display = 'none';
-                document.removeEventListener('click', hide);
-            }, { once: true });
-        }, 0);
+        ouvrirMenuDuTableauDeBord(menu, event, el);
     };
 
     function dbSinCtxEdit() {
         var menu = document.getElementById('dbSinCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_sid) return;
         document.dispatchEvent(new CustomEvent('app:loading.start'));
         document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
@@ -964,7 +952,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
     function dbSinCtxDelete() {
         var menu = document.getElementById('dbSinCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_sinEl || !_sid) return;
 
         var ref    = _sinEl.dataset.sinRef    || ('Sinistre #' + _sid);
@@ -1173,12 +1161,6 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
         var menu = document.getElementById('dbTaskCtxMenu');
         if (!menu) return;
-        var mw = 220, mh = 90;
-        var left = (event.clientX + mw > window.innerWidth)  ? window.innerWidth  - mw - 6 : event.clientX;
-        var top  = (event.clientY + mh > window.innerHeight) ? window.innerHeight - mh - 6 : event.clientY;
-        menu.style.left    = left + 'px';
-        menu.style.top     = top  + 'px';
-        menu.style.display = 'block';
 
         var isCreator = el.dataset.isCreator === '1';
 
@@ -1186,10 +1168,12 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
         if (deleteItem) {
             if (isCreator) {
                 deleteItem.style.opacity = '';
+                deleteItem.removeAttribute('aria-disabled');
                 deleteItem.style.cursor  = 'pointer';
                 deleteItem.onclick = dbTaskCtxDelete;
             } else {
                 deleteItem.style.opacity = '0.38';
+                deleteItem.setAttribute('aria-disabled', 'true');
                 deleteItem.style.cursor  = 'not-allowed';
                 deleteItem.onclick = null;
             }
@@ -1199,27 +1183,23 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
         if (editItem) {
             if (isCreator) {
                 editItem.style.opacity = '';
+                editItem.removeAttribute('aria-disabled');
                 editItem.style.cursor  = 'pointer';
                 editItem.onclick = dbTaskCtxEdit;
             } else {
                 editItem.style.opacity = '0.38';
+                editItem.setAttribute('aria-disabled', 'true');
                 editItem.style.cursor  = 'not-allowed';
                 editItem.onclick = null;
             }
         }
 
-        setTimeout(function () {
-            document.addEventListener('click', function hide() {
-                var m = document.getElementById('dbTaskCtxMenu');
-                if (m) m.style.display = 'none';
-                document.removeEventListener('click', hide);
-            }, { once: true });
-        }, 0);
+        ouvrirMenuDuTableauDeBord(menu, event, el);
     }
 
     function dbTaskCtxFeedback() {
         var menu = document.getElementById('dbTaskCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_id) return;
 
         var labelEl = _el && _el.querySelector('.db-task-label');
@@ -1250,7 +1230,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
     function dbTaskCtxClose() {
         var menu = document.getElementById('dbTaskCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_el || !_id) return;
 
         var el   = _el;
@@ -1317,7 +1297,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
     function dbTaskCtxDelete() {
         var menu = document.getElementById('dbTaskCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_el || !_id) return;
 
         var el = _el, tid = _id;
@@ -1381,7 +1361,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
     function dbTaskCtxEdit() {
         var menu = document.getElementById('dbTaskCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_id) return;
 
         document.dispatchEvent(new CustomEvent('app:loading.start'));
@@ -1518,12 +1498,6 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
         var menu = document.getElementById('dbPisteCtxMenu');
         if (!menu) return;
-        var mw = 220, mh = 110;
-        var left = (event.clientX + mw > window.innerWidth)  ? window.innerWidth  - mw - 6 : event.clientX;
-        var top  = (event.clientY + mh > window.innerHeight) ? window.innerHeight - mh - 6 : event.clientY;
-        menu.style.left    = left + 'px';
-        menu.style.top     = top  + 'px';
-        menu.style.display = 'block';
 
         var isCreator = el.dataset.isCreator === '1';
 
@@ -1532,10 +1506,12 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
             if (!item) return;
             if (isCreator) {
                 item.style.opacity = '';
+                item.removeAttribute('aria-disabled');
                 item.style.cursor  = 'pointer';
                 item.onclick = itemId === 'dbPisteCtxCloseItem' ? dbPisteCtxClose : dbPisteCtxDelete;
             } else {
                 item.style.opacity = '0.38';
+                item.setAttribute('aria-disabled', 'true');
                 item.style.cursor  = 'not-allowed';
                 item.onclick = null;
             }
@@ -1544,18 +1520,12 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
         var editItem = document.getElementById('dbPisteCtxEditItem');
         if (editItem) editItem.onclick = dbPisteCtxEdit;
 
-        setTimeout(function () {
-            document.addEventListener('click', function hide() {
-                var m = document.getElementById('dbPisteCtxMenu');
-                if (m) m.style.display = 'none';
-                document.removeEventListener('click', hide);
-            }, { once: true });
-        }, 0);
+        ouvrirMenuDuTableauDeBord(menu, event, el);
     }
 
     function dbPisteCtxEdit() {
         var menu = document.getElementById('dbPisteCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_pid) return;
         document.dispatchEvent(new CustomEvent('app:loading.start'));
         document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
@@ -1583,7 +1553,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
     function dbPisteCtxClose() {
         var menu = document.getElementById('dbPisteCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_el || !_pid) return;
 
         var nom = _el.dataset.pisteNom || ('Piste #' + _pid);
@@ -1652,7 +1622,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
     function dbPisteCtxDelete() {
         var menu = document.getElementById('dbPisteCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_el || !_pid) return;
 
         var nom  = _el.dataset.pisteNom || ('Piste #' + _pid);
@@ -1855,12 +1825,6 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
         var menu = document.getElementById('dbBordCtxMenu');
         if (!menu) return;
-        var mw = 220, mh = 160;
-        var left = (event.clientX + mw > window.innerWidth)  ? window.innerWidth  - mw - 6 : event.clientX;
-        var top  = (event.clientY + mh > window.innerHeight) ? window.innerHeight - mh - 6 : event.clientY;
-        menu.style.left    = left + 'px';
-        menu.style.top     = top  + 'px';
-        menu.style.display = 'block';
 
         var isCreator = el.dataset.isCreator === '1';
         var hasNote   = el.dataset.hasNote   === '1';
@@ -1889,27 +1853,23 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
         if (deleteItem) {
             if (isCreator) {
                 deleteItem.style.opacity = '';
+                deleteItem.removeAttribute('aria-disabled');
                 deleteItem.style.cursor  = 'pointer';
                 deleteItem.onclick = dbBordCtxDelete;
             } else {
                 deleteItem.style.opacity = '0.38';
+                deleteItem.setAttribute('aria-disabled', 'true');
                 deleteItem.style.cursor  = 'not-allowed';
                 deleteItem.onclick = null;
             }
         }
 
-        setTimeout(function () {
-            document.addEventListener('click', function hide() {
-                var m = document.getElementById('dbBordCtxMenu');
-                if (m) m.style.display = 'none';
-                document.removeEventListener('click', hide);
-            }, { once: true });
-        }, 0);
+        ouvrirMenuDuTableauDeBord(menu, event, el);
     }
 
     function dbBordCtxEdit() {
         var menu = document.getElementById('dbBordCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_bid) return;
         document.dispatchEvent(new CustomEvent('app:loading.start'));
         document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
@@ -1935,7 +1895,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
     async function dbBordCtxAnalyse() {
         var menu = document.getElementById('dbBordCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_bid) return;
         try {
             document.dispatchEvent(new CustomEvent('app:loading.start'));
@@ -1955,7 +1915,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
     function dbBordCtxNote() {
         var menu = document.getElementById('dbBordCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_bid) return;
         document.dispatchEvent(new CustomEvent('app:loading.start'));
         fetch('/admin/bordereau/api/get-linked-note-preview-url/' + _bid, {
@@ -1975,7 +1935,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
     function dbBordCtxDelete() {
         var menu = document.getElementById('dbBordCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_bordEl || !_bid) return;
 
         var nom = (_bordEl.dataset.bordNom || ('Bordereau #' + _bid));
@@ -2103,12 +2063,6 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
         var menu = document.getElementById('dbNoteCtxMenu');
         if (!menu) return;
-        var mw = 220, mh = 200;
-        var left = (event.clientX + mw > window.innerWidth)  ? window.innerWidth  - mw - 6 : event.clientX;
-        var top  = (event.clientY + mh > window.innerHeight) ? window.innerHeight - mh - 6 : event.clientY;
-        menu.style.left    = left + 'px';
-        menu.style.top     = top  + 'px';
-        menu.style.display = 'block';
 
         var editItem       = document.getElementById('dbNoteCtxEditItem');
         var previewItem    = document.getElementById('dbNoteCtxPreviewItem');
@@ -2122,18 +2076,12 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
         if (addPaiItem)   addPaiItem.onclick   = dbNoteCtxAddPaiement;
         if (deleteItem)   deleteItem.onclick   = dbNoteCtxDelete;
 
-        setTimeout(function () {
-            document.addEventListener('click', function hide() {
-                var m = document.getElementById('dbNoteCtxMenu');
-                if (m) m.style.display = 'none';
-                document.removeEventListener('click', hide);
-            }, { once: true });
-        }, 0);
+        ouvrirMenuDuTableauDeBord(menu, event, el);
     }
 
     function dbNoteCtxEdit() {
         var menu = document.getElementById('dbNoteCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_nid) return;
         document.dispatchEvent(new CustomEvent('app:loading.start'));
         document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
@@ -2159,7 +2107,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
     function dbNoteCtxPreview() {
         var menu = document.getElementById('dbNoteCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_nid) return;
         document.dispatchEvent(new CustomEvent('app:loading.start'));
         fetch('/admin/note/api/get-preview-url/' + _nid, {
@@ -2179,14 +2127,14 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
     function dbNoteCtxDownload() {
         var menu = document.getElementById('dbNoteCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_nid) return;
         window.location.href = '/admin/note/download-pdf/' + _nid;
     }
 
     function dbNoteCtxAddPaiement() {
         var menu = document.getElementById('dbNoteCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_nid) return;
         document.dispatchEvent(new CustomEvent('app:loading.start'));
         document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
@@ -2214,7 +2162,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
     function dbNoteCtxDelete() {
         var menu = document.getElementById('dbNoteCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_noteEl || !_nid) return;
 
         var nom = (_noteEl.dataset.noteNom || ('Note #' + _nid));
@@ -3124,25 +3072,13 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
         var menu = document.getElementById('dbInviteCtxMenu');
         if (!menu) return;
-        var mw = 230, mh = 140;
-        var left = (event.clientX + mw > window.innerWidth)  ? window.innerWidth  - mw - 6 : event.clientX;
-        var top  = (event.clientY + mh > window.innerHeight) ? window.innerHeight - mh - 6 : event.clientY;
-        menu.style.left    = left + 'px';
-        menu.style.top     = top  + 'px';
-        menu.style.display = 'block';
 
-        setTimeout(function () {
-            document.addEventListener('click', function hide() {
-                var m = document.getElementById('dbInviteCtxMenu');
-                if (m) m.style.display = 'none';
-                document.removeEventListener('click', hide);
-            }, { once: true });
-        }, 0);
+        ouvrirMenuDuTableauDeBord(menu, event, el);
     }
 
     function dbInviteCtxEdit() {
         var menu = document.getElementById('dbInviteCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_id) return;
 
         document.dispatchEvent(new CustomEvent('app:loading.start'));
@@ -3171,7 +3107,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
     function dbInviteCtxResend() {
         var menu = document.getElementById('dbInviteCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_id) return;
 
         document.dispatchEvent(new CustomEvent('app:loading.start'));
@@ -3190,7 +3126,7 @@ console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
     function dbInviteCtxDelete() {
         var menu = document.getElementById('dbInviteCtxMenu');
-        if (menu) menu.style.display = 'none';
+        fermerMenuDuTableauDeBord(menu);
         if (!_el || !_id) return;
 
         var el = _el;

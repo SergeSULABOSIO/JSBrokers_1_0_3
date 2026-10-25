@@ -46,8 +46,12 @@ export function positionnerMenu({ ancre, menu, viewport, marge = MARGE_VIEWPORT,
     let left = alignement === 'gauche' ? ancre.left : ancre.right - menu.largeur;
     let top = ancre.bottom + 4;
 
-    // Bascule au-dessus de l'ancre s'il n'y a pas la place dessous.
-    if (top + menu.hauteur + marge > viewport.hauteur) {
+    // Bascule au-dessus de l'ancre s'il n'y a pas la place dessous — et seulement s'il y a plus
+    // de place au-dessus : un menu plus haut que les deux côtés reste du côté le plus spacieux
+    // (l'écrêtage le ramène dans l'écran), au lieu de remonter par-dessus sa ligne.
+    const placeDessous = viewport.hauteur - marge - (ancre.bottom + 4);
+    const placeDessus = ancre.top - 4 - marge;
+    if (menu.hauteur > placeDessous && placeDessus > placeDessous) {
         top = ancre.top - menu.hauteur - 4;
     }
 
@@ -135,4 +139,38 @@ export function toucheDuMenu(touche, indexCourant, nombre) {
     const index = indexApresTouche(touche, indexCourant, nombre);
 
     return index === null ? null : { type: 'aller', index };
+}
+
+/** Délai pendant lequel un `contextmenu` suit une touche de menu (ms). */
+export const DELAI_TOUCHE_DE_MENU = 1000;
+
+/**
+ * La touche Menu, ou Maj+F10 : les deux gestes du clavier qui ouvrent un menu contextuel.
+ *
+ * @param {string} touche `event.key`
+ * @param {boolean} maj `event.shiftKey`
+ * @returns {boolean}
+ */
+export function estToucheDeMenu(touche, maj) {
+    return touche === 'ContextMenu' || (maj === true && touche === 'F10');
+}
+
+/**
+ * Un `contextmenu` venu du CLAVIER (le menu s'ouvre alors sous l'élément focalisé, sur sa
+ * première entrée) plutôt que de la souris (au curseur) :
+ *   - Chromium le marque `button = -1` ;
+ *   - Firefox ne le marque pas : il suit de près une touche de menu.
+ * Un clic droit (`button = 2`) n'en est jamais un ; un Ctrl+clic sur Mac (`button = 0`, aucune
+ * touche de menu) non plus.
+ *
+ * @param {number} bouton `event.button`
+ * @param {number} msDepuisTouche temps écoulé depuis la dernière touche de menu (Infinity : aucune)
+ * @returns {boolean}
+ */
+export function contextmenuAuClavier(bouton, msDepuisTouche) {
+    if (bouton === 2) {
+        return false;
+    }
+
+    return bouton === -1 || msDepuisTouche < DELAI_TOUCHE_DE_MENU;
 }

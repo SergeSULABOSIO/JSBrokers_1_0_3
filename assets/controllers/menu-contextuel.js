@@ -1,4 +1,4 @@
-import { ancreAuPoint, positionnerMenu, toucheDuMenu } from './menu-flottant.js';
+import { ancreAuPoint, contextmenuAuClavier, estToucheDeMenu, positionnerMenu, toucheDuMenu } from './menu-flottant.js';
 import { fermerInfobulle } from './infobulle-moteur.js';
 
 /**
@@ -25,6 +25,45 @@ let ouvert = null;
 
 /** Touches qui feraient défiler la page sous un menu ouvert (et donc le fermeraient). */
 const TOUCHES_DE_DEFILEMENT = [' ', 'PageUp', 'PageDown'];
+
+/** L'instant de la dernière touche Menu ou Maj+F10 (Firefox ne marque pas son `contextmenu`). */
+let instantToucheDeMenu = -Infinity;
+// Au relâchement aussi : sous Windows, le `contextmenu` de Firefox part au relâchement — une
+// touche tenue plus d'une seconde ne fait pas passer le geste pour un clic.
+const noterLaToucheDeMenu = (e) => {
+    if (estToucheDeMenu(e.key, e.shiftKey)) instantToucheDeMenu = Date.now();
+};
+window.addEventListener('keydown', noterLaToucheDeMenu, true);
+window.addEventListener('keyup', noterLaToucheDeMenu, true);
+
+/**
+ * Le geste d'ouverture d'un `contextmenu`, prêt pour `MenuContextuel.ouvrir()` :
+ *   - au CLAVIER (touche Menu, Maj+F10 — WCAG 2.1.1) : sous la ligne (son <summary> quand c'est
+ *     une ligne dépliable : dépliée, la ligne entière descendrait loin), le focus sur la
+ *     première entrée ; il reviendra à l'élément focalisé à la fermeture ;
+ *   - à la SOURIS : au curseur.
+ *
+ * @param {MouseEvent} event le `contextmenu`
+ * @param {HTMLElement} ligne l'élément qui porte le menu
+ */
+export function gesteDOuverture(event, ligne) {
+    if (!contextmenuAuClavier(event.button, Date.now() - instantToucheDeMenu)) {
+        return { point: { x: event.clientX, y: event.clientY } };
+    }
+    const sommaire = ligne.tagName === 'DETAILS' ? ligne.querySelector(':scope > summary') : null;
+    let ancre = sommaire || ligne;
+    // Une ligne CACHÉE relayée par ce qui est à l'écran (Vue Cartes : la carte focalisée renvoie
+    // le geste à sa <tr> masquée) : sous l'élément focalisé, à défaut au point de l'événement.
+    if (ancre.getClientRects().length === 0) {
+        const actif = document.activeElement;
+        if (!(actif instanceof HTMLElement) || actif === document.body || actif.getClientRects().length === 0) {
+            return { point: { x: event.clientX, y: event.clientY }, viaClavier: true };
+        }
+        ancre = actif;
+    }
+
+    return { ancre: ancre.getBoundingClientRect(), alignement: 'gauche', viaClavier: true };
+}
 
 export class MenuContextuel {
     /**
@@ -58,6 +97,12 @@ export class MenuContextuel {
             this.fermer({ rendreLeFocus: false });
         };
         this._surRedimensionnement = () => this.fermer({ rendreLeFocus: false });
+        // La touche Menu (ou un clic droit) DANS le menu ouvert : pas de menu natif par-dessus.
+        // (Le menu vit au <body> ou dans son écran, hors des lignes : l'événement s'arrête là.)
+        menu.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
     }
 
     estOuvert() {

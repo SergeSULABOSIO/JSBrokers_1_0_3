@@ -1,6 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 import { nomAffiche } from './selecto.js';
 import { evenementInterne } from './evenement-interne.js';
+import { gesteDOuverture } from './menu-contextuel.js';
 
 /**
  * @class ListRowController
@@ -77,10 +78,13 @@ export default class extends Controller {
         // NOUVELLE LOGIQUE "B" : On notifie le list-manager d'une demande de menu contextuel.
         // On passe notre propre payload "selecto" pour qu'il sache quelle ligne sélectionner,
         // ainsi que les coordonnées de la souris.
+        // `geste` : au clavier (touche Menu, Maj+F10 sur la case de la ligne), le menu s'ouvre
+        // sous la ligne, sur sa première entrée — à la souris, au curseur (menu-contextuel.js).
         this.dispatch('list-manager:context-menu-requested', {
             selecto: this.buildSelectoPayload(),
             menuX: event.clientX,
-            menuY: event.clientY
+            menuY: event.clientY,
+            geste: gesteDOuverture(event, this.element),
         });
     }
 

@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { MARGE_VIEWPORT, ancreAuPoint, indexApresTouche, positionnerMenu, toucheDuMenu } from '../../assets/controllers/menu-flottant.js';
+import { MARGE_VIEWPORT, ancreAuPoint, contextmenuAuClavier, estToucheDeMenu, indexApresTouche, positionnerMenu, toucheDuMenu } from '../../assets/controllers/menu-flottant.js';
 
 /** Viewport de référence : colonne 4 du workspace sur un écran courant. */
 const VIEWPORT = { largeur: 1440, hauteur: 900 };
@@ -177,4 +177,33 @@ test('toucheDuMenu : Échap ferme (même sans entrée), Tab ferme et laisse le f
 test('toucheDuMenu : une autre touche n’est pas celle du menu (raccourcis A, M, S… de l’écran)', () => {
     assert.equal(toucheDuMenu('a', 0, 3), null);
     assert.equal(toucheDuMenu('ArrowDown', -1, 0), null);
+});
+
+// ── Ouvrir au clavier (chantier 3, commit 5) ─────────────────────────────────
+
+test('estToucheDeMenu : la touche Menu et Maj+F10 ouvrent un menu, F10 seul non', () => {
+    assert.equal(estToucheDeMenu('ContextMenu', false), true);
+    assert.equal(estToucheDeMenu('F10', true), true);
+    assert.equal(estToucheDeMenu('F10', false), false);
+    assert.equal(estToucheDeMenu('Enter', false), false);
+});
+
+test('contextmenuAuClavier : bouton -1 (Chromium), ou une touche de menu à l’instant (Firefox)', () => {
+    assert.equal(contextmenuAuClavier(2, Infinity), false, 'un clic droit');
+    assert.equal(contextmenuAuClavier(-1, Infinity), true, 'Chromium : touche Menu ou Maj+F10');
+    assert.equal(contextmenuAuClavier(0, 120), true, 'Firefox : la touche vient d’être pressée');
+    assert.equal(contextmenuAuClavier(0, 5000), false, 'Ctrl+clic sur Mac : aucune touche de menu récente');
+    assert.equal(contextmenuAuClavier(2, 50), false, 'un vrai clic droit reste un clic droit');
+});
+
+test('positionnerMenu : ne bascule au-dessus que si le menu y tient — sinon le côté le plus spacieux', () => {
+    // Ligne au tiers haut, menu plus haut que la place dessous ET dessus : il reste dessous,
+    // ramené dans l'écran, et ne remonte pas par-dessus la ligne.
+    const ancre = { left: 480, right: 1500, top: 299, bottom: 379 };
+    const { top } = positionnerMenu({ ancre, menu: { largeur: 340, hauteur: 614 }, viewport: { largeur: 1500, hauteur: 950 }, alignement: 'gauche' });
+    assert.equal(top, 950 - 614 - MARGE_VIEWPORT);
+    assert.ok(top >= ancre.top, 'jamais au-dessus du haut de la ligne');
+    // Plus de place au-dessus (ligne en bas) : il bascule au-dessus, ramené dans l'écran.
+    const bas = { left: 480, right: 1500, top: 800, bottom: 840 };
+    assert.equal(positionnerMenu({ ancre: bas, menu: { largeur: 340, hauteur: 900 }, viewport: { largeur: 1500, hauteur: 950 } }).top, MARGE_VIEWPORT);
 });
