@@ -5,6 +5,7 @@ use App\Services\Canvas\CalculationProvider;
 use App\Services\Canvas\EntityCanvasProvider;
 use App\Services\Canvas\FormCanvasProvider;
 use App\Services\Canvas\ListCanvasProvider;
+use App\Services\Canvas\BarreDesTotaux;
 use App\Services\Canvas\NumericCanvasProvider;
 use App\Services\Canvas\SearchCanvasProvider;
 
@@ -18,7 +19,8 @@ class CanvasBuilder
         private ListCanvasProvider $listCanvasProvider,
         private FormCanvasProvider $formCanvasProvider,
         private NumericCanvasProvider $numericCanvasProvider,
-        private CalculationProvider $calculationProvider // Ajout du CalculationProvider
+        private CalculationProvider $calculationProvider, // Ajout du CalculationProvider
+        private BarreDesTotaux $barreDesTotaux,
     ) {
     }
 
@@ -50,6 +52,21 @@ class CanvasBuilder
     public function getNumericAttributesAndValuesForCollection($data): array
     {
         return $this->numericCanvasProvider->getAttributesAndValuesForCollection($data);
+    }
+
+    /**
+     * LA BARRE DES TOTAUX D'UNE PAGE, rendue par le serveur (chantier 4) : options, totaux de la
+     * page déjà formatés, valeurs par ligne. C'est elle que reçoit `list-summary`.
+     */
+    public function getBarreDesTotaux($data): array
+    {
+        return $this->barreDesTotaux->composer($this->getNumericAttributesAndValuesForCollection($data));
+    }
+
+    /** La barre composée depuis des valeurs déjà construites (rapport de production). */
+    public function composerBarreDesTotaux(array $valeursParId): array
+    {
+        return $this->barreDesTotaux->composer($valeursParId);
     }
 
     /**

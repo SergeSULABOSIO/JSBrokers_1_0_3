@@ -591,10 +591,11 @@ class PortefeuilleFilterTest extends WebTestCase
         $numericJson = html_entity_decode($matches[2], ENT_QUOTES | ENT_HTML5);
         $numericData = json_decode($numericJson, true);
         $this->assertIsArray($numericData, 'Le contenu de l\'attribut doit être un JSON valide.');
-        $trancheEntry = array_values($numericData)[0] ?? null;
-        $this->assertNotNull($trancheEntry, 'La barre des totaux doit embarquer les indicateurs de la tranche affichée.');
+        // La barre rendue par le serveur (chantier 4) : les options sous `attributs`.
+        $this->assertNotEmpty($numericData['attributs'] ?? [], 'La barre des totaux doit embarquer les indicateurs de la tranche affichée.');
+        $this->assertNotEmpty($numericData['valeurs'] ?? [], 'Et les valeurs de la tranche affichée.');
 
-        $descriptions = array_column($trancheEntry, 'description');
+        $descriptions = array_column($numericData['attributs'], 'libelle');
         foreach (['Prime Tranche', 'Commission Exigible', 'Rétro Exigible', 'Montant TTC', 'Montant HT', 'Montant Dû', 'Reste à Payer', 'Prime Signalée Payée'] as $label) {
             $this->assertContains($label, $descriptions, sprintf('La barre des totaux doit proposer « %s ».', $label));
         }

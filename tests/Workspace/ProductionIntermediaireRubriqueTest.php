@@ -513,7 +513,8 @@ class ProductionIntermediaireRubriqueTest extends WebTestCase
         self::assertStringContainsString('data-list-manager-target="selectAllCheckbox"', $html);
 
         // ET LES VALEURS SONT LÀ, indexées par le MÊME identifiant que les lignes.
-        $numerique = $reponse['numericAttributesAndValues'];
+        $barre = $reponse['numericAttributesAndValues'];
+        $numerique = $barre['valeurs'];
         self::assertNotEmpty($numerique, 'La barre des totaux doit avoir de quoi totaliser.');
 
         $id = (int) array_key_first($numerique);
@@ -524,8 +525,10 @@ class ProductionIntermediaireRubriqueTest extends WebTestCase
         // d'Alice 20 % : 200.
         // Le JSON rend un entier quand la valeur est ronde : on compare des NOMBRES,
         // pas leur type — 200 et 200.0 sont le même argent.
-        self::assertEqualsWithDelta(200.0, $numerique[$id]['due']['value'] / 100, 0.001);
-        self::assertSame('Rétrocommission due', $numerique[$id]['due']['description']);
+        self::assertEqualsWithDelta(200.0, $numerique[$id]['due'] / 100, 0.001);
+        self::assertSame('Rétrocommission due', $barre['attributs']['due']['libelle']);
+        // Le total de la page, formaté par le serveur comme une cellule (chantier 4).
+        self::assertMatchesRegularExpression('/^(?:[A-Z]{3} )?200,00$/', $barre['totaux']['due']);
     }
 
     /**

@@ -266,17 +266,17 @@ class TrancheTotauxBarTest extends WebTestCase
         $this->assertResponseIsSuccessful();
         $payload = json_decode((string) $this->client->getResponse()->getContent(), true);
         $this->assertSame(1, $payload['pagination']['totalItems'], 'La tranche doit remonter sous « Payées » (bordereau soldé sans article).');
-        $numeric = $payload['numericAttributesAndValues'][$tranche->getId()] ?? null;
+        $numeric = $payload['numericAttributesAndValues']['valeurs'][$tranche->getId()] ?? null;
         $this->assertNotNull($numeric, 'La barre des totaux doit embarquer les indicateurs de la tranche visible.');
 
         // Prime (50 % de 1000) réputée payée par inférence bordereau : solde nul.
-        $this->assertEqualsWithDelta(50000.0, $numeric['primeTranche']['value'], 1.0, 'Prime Tranche = 500 x 100.');
-        $this->assertEqualsWithDelta(0.0, $numeric['commissionExigible']['value'], 1.0, 'Commission encaissée : plus rien à collecter.');
+        $this->assertEqualsWithDelta(50000.0, $numeric['primeTranche'], 1.0, 'Prime Tranche = 500 x 100.');
+        $this->assertEqualsWithDelta(0.0, $numeric['commissionExigible'], 1.0, 'Commission encaissée : plus rien à collecter.');
         // Commission de la TRANCHE (50 % de la cotation, 200 HT sans taxe) = 100.
-        $this->assertEqualsWithDelta(10000.0, $numeric['montantCalculeTTC']['value'], 1.0, 'Montant TTC = 200 x 50 % x 100.');
-        $this->assertEqualsWithDelta(10000.0, $numeric['montant_paye']['value'], 1.0, 'Montant Payé = Montant TTC : bordereau intégralement encaissé, réputé perçu sans article.');
-        $this->assertEqualsWithDelta(0.0, $numeric['solde_restant_du']['value'], 1.0, 'Solde Restant Dû nul : bordereau intégralement encaissé.');
-        $this->assertEqualsWithDelta(0.0, $numeric['primeDeclareePayee']['value'], 1.0, 'Fait dérivé : aucun PaiementPrime signalé n\'a été créé.');
+        $this->assertEqualsWithDelta(10000.0, $numeric['montantCalculeTTC'], 1.0, 'Montant TTC = 200 x 50 % x 100.');
+        $this->assertEqualsWithDelta(10000.0, $numeric['montant_paye'], 1.0, 'Montant Payé = Montant TTC : bordereau intégralement encaissé, réputé perçu sans article.');
+        $this->assertEqualsWithDelta(0.0, $numeric['solde_restant_du'], 1.0, 'Solde Restant Dû nul : bordereau intégralement encaissé.');
+        $this->assertEqualsWithDelta(0.0, $numeric['primeDeclareePayee'], 1.0, 'Fait dérivé : aucun PaiementPrime signalé n\'a été créé.');
 
         // « Impayées » : la tranche ne doit plus y remonter (tout est réputé réglé).
         $this->client->request(
@@ -430,12 +430,12 @@ class TrancheTotauxBarTest extends WebTestCase
 
         // Scope : SEULE la tranche du portefeuille de Serge doit apparaître.
         $this->assertSame(1, $payload['pagination']['totalItems'], 'Seule la tranche du portefeuille de Serge doit remonter.');
-        $this->assertSame([$trancheAId], array_keys($payload['numericAttributesAndValues']), 'La barre des totaux ne doit embarquer AUCUNE donnée de la tranche hors portefeuille.');
+        $this->assertSame([$trancheAId], array_keys($payload['numericAttributesAndValues']['valeurs']), 'La barre des totaux ne doit embarquer AUCUNE donnée de la tranche hors portefeuille.');
 
         // Calcul : SA part réelle (200), jamais l'agrégat payé (500) ni la part de B (300).
-        $numericA = $payload['numericAttributesAndValues'][$trancheAId];
-        $this->assertEqualsWithDelta(20000.0, $numericA['montant_paye']['value'], 1.0, 'Commission encaissée de A = SA part (200), jamais l\'agrégat du bordereau (500).');
-        $this->assertNotEqualsWithDelta(50000.0, $numericA['montant_paye']['value'], 1.0, 'Ne doit surtout pas afficher l\'agrégat payé (500) sur une seule tranche.');
+        $numericA = $payload['numericAttributesAndValues']['valeurs'][$trancheAId];
+        $this->assertEqualsWithDelta(20000.0, $numericA['montant_paye'], 1.0, 'Commission encaissée de A = SA part (200), jamais l\'agrégat du bordereau (500).');
+        $this->assertNotEqualsWithDelta(50000.0, $numericA['montant_paye'], 1.0, 'Ne doit surtout pas afficher l\'agrégat payé (500) sur une seule tranche.');
 
         // Non-régression : Serge ne peut voir la tranche B ni en la cherchant
         // explicitement (hors de son portefeuille), ni via son propre portefeuille.

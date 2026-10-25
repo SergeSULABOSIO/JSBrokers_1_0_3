@@ -271,7 +271,7 @@ class ProductionIntermediaireController extends AbstractController
                 // Lui renvoyer le gabarit entier aurait imbriqué une seconde coquille dans
                 // la première à chaque recherche.
                 'html' => $this->renderView('components/production/_corps.html.twig', $contexte),
-                'numericAttributesAndValues' => $this->valeursNumeriques($contexte['data']),
+                'numericAttributesAndValues' => $this->canvasBuilder->composerBarreDesTotaux($this->valeursNumeriques($contexte['data'])),
                 // AUCUNE PAGINATION. Le rapport d'un intermédiaire tient en quelques dizaines
                 // de lignes, et son pied de totaux doit rester VRAI : paginer l'aurait rendu
                 // partiel sans le dire.
@@ -286,7 +286,7 @@ class ProductionIntermediaireController extends AbstractController
             'entityCanvas' => $this->canvasBuilder->getEntityCanvas(ProductionScope::ENTITE),
             'entityFormCanvas' => $this->canevasDeFormulaire(),
             'searchCanvas' => $this->canvasBuilder->getSearchCanvas(ProductionScope::ENTITE),
-            'numericAttributesAndValues' => $this->valeursNumeriques($contexte['data']) ?: new \stdClass(),
+            'numericAttributesAndValues' => $this->canvasBuilder->composerBarreDesTotaux($this->valeursNumeriques($contexte['data'])),
             'idInvite' => $request->attributes->get('idInvite'),
             'idEntreprise' => $request->attributes->get('idEntreprise'),
             'mainListUrl' => $this->generateUrl('admin.productionintermediaire.app_dynamic_query', [

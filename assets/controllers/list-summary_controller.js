@@ -3,128 +3,94 @@ import { Controller } from '@hotwired/stimulus';
 /**
  * @class ListSummaryController
  * @extends Controller
- * @description Gère l'affichage d'une barre de résumé (totaux) pour une liste.
- * Ce contrôleur écoute les changements de contexte de l'application, reçoit des données numériques,
- * et calcule des totaux globaux et de sélection pour un attribut choisi par l'utilisateur.
+ * @description La barre des totaux d'une liste.
+ *
+ * LE SERVEUR REND LA BARRE (chantier 4, décision de Serge : « le chiffre est calculé et formaté
+ * par le serveur, plus par le navigateur ») : il envoie, avec la page,
+ *   - `attributs` : les options du sélecteur (libellé, nature : montant ou nombre) ;
+ *   - `totaux`    : le total de la PAGE de chaque grandeur, déjà formaté comme une cellule ;
+ *   - `valeurs`   : les valeurs entières par ligne.
+ * Ce contrôleur choisit le texte à montrer : il n'additionne ni ne formate la page.
+ * (Étape : le total de la SÉLECTION est encore sommé ici ; le commit 3 le confie au serveur.)
  */
 export default class extends Controller {
-    /**
-     * @property {HTMLElement[]} globalTotalTargets - L'élément où afficher le total global.
-     * @property {HTMLElement[]} selectionTotalTargets - L'élément où afficher le total de la sélection.
-     * @property {HTMLSelectElement[]} attributeSelectorTargets - Le sélecteur <select> pour choisir l'attribut à totaliser.
-     */
     static targets = ["globalTotal", "selectionTotal", "attributeSelector"];
 
     static values = {
-        // Repli seulement : le serveur passe la monnaie de travail du cabinet. USD, le
-        // défaut d'un cabinet — jamais l'euro, qu'aucun cabinet ne reçoit.
+        // Repli seulement : le serveur passe la monnaie de travail du cabinet.
         currencyCode: { type: String, default: 'USD' }
     };
 
-    /**
-     * Méthode du cycle de vie de Stimulus.
-     * S'exécute lorsque le contrôleur est connecté au DOM.
-     */
     connect() {
         this.nomControleur = "LIST-SUMMARY";
-        console.log(`${this.nomControleur} - Connecté et à l'écoute.`);
-
-        /**
-         * @property {object} numericData - Stocke les données numériques brutes reçues.
-         * @private
-         */
-        this.numericData = {};
-        /**
-         * @property {Set<number>} selectedIds - L'ensemble des IDs des éléments actuellement sélectionnés.
-         * @private
-         */
+        /** @property {{attributs: Object, totaux: Object, valeurs: Object}} barre - La barre rendue par le serveur. */
+        this.barre = { attributs: {}, totaux: {}, valeurs: {} };
+        /** @property {Set<number>} selectedIds - Les identifiants des lignes cochées. */
         this.selectedIds = new Set();
 
         const workspacePanel = this.element.closest('[data-tab-id]');
         this.workspaceTabId = workspacePanel ? workspacePanel.dataset.tabId : null;
 
-        // Lecture directe depuis l'attribut HTML du list-manager parent.
-        // Bypasse le broadcast Cerveau initial qui peut être filtré par workspaceTabId
-        // si le panneau workspace est déjà dans le DOM avec un data-tab-id.
+        // Lecture directe depuis l'attribut HTML du list-manager parent : le premier contexte du
+        // Cerveau peut être filtré par workspaceTabId si le panneau est déjà dans le DOM.
         this._readInitialDataFromDom();
 
         this.boundHandleContextChanged = this.handleContextChanged.bind(this);
         document.addEventListener('app:context.changed', this.boundHandleContextChanged);
     }
 
-    /**
-     * Méthode du cycle de vie de Stimulus.
-     * Nettoie l'écouteur d'événement pour éviter les fuites de mémoire.
-     */
     disconnect() {
         document.removeEventListener('app:context.changed', this.boundHandleContextChanged);
     }
 
     /**
-     * Gère la mise à jour de l'état reçue du Cerveau.
-     * Met à jour les données internes et déclenche un recalcul.
+     * La barre (données du serveur) et la sélection, publiées par le Cerveau.
      * @param {CustomEvent} event - L'événement `app:context.changed`.
      */
     handleContextChanged(event) {
         if (this.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         const { selection, numericAttributesAndValues } = event.detail;
 
-        const data = numericAttributesAndValues || {};
-        const keys = Object.keys(data);
-        const hasNumericData = keys.length > 0 && keys.every(key => /^[1-9]\d*$/.test(key));
-        let numericAttributes = [];
-
         // La barre des totaux doit toujours être visible pour afficher un statut.
         this.element.style.display = 'flex';
-
-        if (hasNumericData) {
-            // On prend le premier enregistrement comme modèle pour les en-têtes (options du sélecteur).
-            const attributesModel = Object.values(data)[0];
-            
-            // On extrait les paires code/intitulé pour peupler le sélecteur.
-            numericAttributes = Object.entries(attributesModel).map(([code, details]) => ({
-                code: code,
-                intitule: details.description,
-                nature: details.nature,
-            }));
-        }
-
-        // On met à jour l'état interne dans tous les cas.
-        this.numericData = data;
+        this._poserLaBarre(numericAttributesAndValues);
         this.selectedIds = new Set((selection || []).map(s => parseInt(s.id, 10)));
-        
-        // On met à jour le sélecteur avec les attributs trouvés (ou un message si vide).
-        this.updateAttributeSelector(numericAttributes);
-
-        // On recalcule les totaux, ce qui mettra à jour l'affichage.
         this.recalculate();
+    }
+
+    /** Une barre bien formée (attributs, totaux, valeurs), sinon une barre vide. */
+    _poserLaBarre(donnees) {
+        const d = donnees && typeof donnees === 'object' ? donnees : {};
+        this.barre = {
+            attributs: d.attributs && typeof d.attributs === 'object' ? d.attributs : {},
+            totaux: d.totaux && typeof d.totaux === 'object' ? d.totaux : {},
+            valeurs: d.valeurs && typeof d.valeurs === 'object' ? d.valeurs : {},
+        };
+        this.updateAttributeSelector(Object.entries(this.barre.attributs).map(([code, a]) => ({ code, intitule: a.libelle })));
     }
 
     /**
      * Met à jour les options du sélecteur d'attributs.
-     * @param {Array<object>} attributes - Un tableau d'objets { code, intitule }.
+     * @param {Array<{code: string, intitule: string}>} attributes
      * @private
      */
     updateAttributeSelector(attributes) {
-        // La nature de chaque grandeur (chantier 4) : un MONTANT en centimes, ou un NOMBRE.
-        this.natures = Object.fromEntries(attributes.map((a) => [a.code, a.nature]));
         const currentValue = this.attributeSelectorTarget.value;
-        this.attributeSelectorTarget.innerHTML = ''; // On vide complètement
+        this.attributeSelectorTarget.innerHTML = '';
 
         if (attributes.length === 0) {
-            this.attributeSelectorTarget.innerHTML = '<option value="">Aucune valeur numérique à calculer</option>';
+            this.attributeSelectorTarget.appendChild(new Option('Aucune valeur numérique à calculer', ''));
             this.attributeSelectorTarget.disabled = true;
             this.element.classList.add('is-disabled');
         } else {
             this.attributeSelectorTarget.disabled = false;
             this.element.classList.remove('is-disabled');
-            this.attributeSelectorTarget.innerHTML = '<option value="">-- Choisir --</option>';
+            this.attributeSelectorTarget.appendChild(new Option('-- Choisir --', ''));
             for (const attr of attributes) {
                 this.attributeSelectorTarget.appendChild(new Option(attr.intitule, attr.code));
             }
-            // On essaie de restaurer la sélection précédente si l'option existe toujours.
+            // On restaure la sélection précédente si l'option existe toujours, sinon la première.
             this.attributeSelectorTarget.value = currentValue;
-            // Si rien n'est sélectionné (premier chargement), on pré-sélectionne le premier attribut.
             if (!this.attributeSelectorTarget.value) {
                 this.attributeSelectorTarget.value = attributes[0].code;
             }
@@ -132,52 +98,31 @@ export default class extends Controller {
     }
 
     /**
-     * Calcule et affiche les totaux en fonction de l'attribut sélectionné.
+     * Montre les totaux de la grandeur choisie : celui de la page tel que le serveur l'a rendu.
      * Déclenché par un changement d'état ou par l'utilisateur via le sélecteur.
      */
     recalculate() {
         const attribute = this.attributeSelectorTarget.value;
         if (!attribute) {
-            this.displayTotals(0, 0);
+            this.globalTotalTarget.textContent = '—';
+            this.selectionTotalTarget.textContent = '—';
             return;
         }
+        this.globalTotalTarget.textContent = this.barre.totaux[attribute] ?? '—';
 
-        // On utilise des méthodes fonctionnelles pour un code plus clair et moins sujet aux erreurs.
-        const allValues = Object.values(this.numericData);
-
-        // Calcul du total global
-        const globalTotal = allValues
-            .map(item => item[attribute]?.value || 0) // Extrait la valeur de l'attribut, ou 0 si non trouvée
-            .reduce((sum, value) => sum + value, 0); // Somme toutes les valeurs
-
-        // Calcul du total de la sélection
-        const selectionTotal = Object.entries(this.numericData)
-            .filter(([id, item]) => this.selectedIds.has(parseInt(id, 10))) // Garde uniquement les éléments sélectionnés
-            .map(([id, item]) => item[attribute]?.value || 0) // Extrait leur valeur
-            .reduce((sum, value) => sum + value, 0); // Somme les valeurs de la sélection
-
-        this.displayTotals(globalTotal, selectionTotal, (this.natures || {})[attribute]);
+        // Étape (commit 3 du chantier 4 : la sélection passe au serveur).
+        const selectionTotal = Object.entries(this.barre.valeurs)
+            .filter(([id]) => this.selectedIds.has(parseInt(id, 10)))
+            .reduce((somme, [, ligne]) => somme + (ligne[attribute] || 0), 0);
+        const nature = (this.barre.attributs[attribute] || {}).nature;
+        this.selectionTotalTarget.textContent = nature === 'nombre'
+            ? new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(selectionTotal)
+            : this.formatCurrency(selectionTotal);
     }
 
     /**
-     * Affiche les totaux formatés dans le DOM.
-     * @param {number} globalTotal - Le total pour tous les éléments.
-     * @param {number} selectionTotal - Le total pour les éléments sélectionnés.
-     * @private
-     */
-    displayTotals(globalTotal, selectionTotal, nature) {
-        // Un NOMBRE (Nb. Pistes, Nb. Transactions) n'est pas un montant : il s'affiche entier,
-        // sans monnaie. (Étape du chantier 4 : le serveur formatera bientôt les deux.)
-        const formater = nature === 'nombre'
-            ? (valeur) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(valeur)
-            : (valeur) => this.formatCurrency(valeur);
-        this.globalTotalTarget.textContent = formater(globalTotal);
-        this.selectionTotalTarget.textContent = formater(selectionTotal);
-    }
-
-    /**
-     * Lit les données numériques initiales directement depuis l'attribut HTML du list-manager parent,
-     * sans attendre le premier broadcast Cerveau (qui peut être filtré par workspaceTabId).
+     * Lit la barre initiale depuis l'attribut HTML du list-manager parent, sans attendre le
+     * premier contexte du Cerveau.
      * @private
      */
     _readInitialDataFromDom() {
@@ -188,48 +133,20 @@ export default class extends Controller {
         if (!raw) return;
 
         try {
-            const decoded = this._decodeHtmlEntities(raw);
-            const parsed = JSON.parse(decoded || '{}');
-            const keys = Object.keys(parsed);
-            const hasData = keys.length > 0 && keys.every(k => /^[1-9]\d*$/.test(k));
-
-            if (hasData) {
-                this.numericData = parsed;
-                const model = Object.values(parsed)[0];
-                const numericAttributes = Object.entries(model).map(([code, details]) => ({
-                    code,
-                    intitule: details.description,
-                    nature: details.nature,
-                }));
+            this._poserLaBarre(JSON.parse(raw));
+            if (Object.keys(this.barre.attributs).length) {
                 this.element.style.display = 'flex';
-                this.updateAttributeSelector(numericAttributes);
                 this.recalculate();
-            } else {
-                this.updateAttributeSelector([]);
             }
         } catch (e) {
             console.error(`${this.nomControleur} - Erreur lecture DOM initiale.`, e);
-            this.updateAttributeSelector([]);
+            this._poserLaBarre({});
         }
     }
 
     /**
-     * Décode les entités HTML d'une chaîne de caractères.
-     * @param {string} str La chaîne à décoder.
-     * @returns {string} La chaîne décodée.
-     * @private
-     */
-    _decodeHtmlEntities(str) {
-        if (!str) return str;
-        const textarea = document.createElement('textarea');
-        textarea.innerHTML = str;
-        return textarea.value;
-    }
-
-    /**
-     * Formate une valeur en centimes en une chaîne de caractères monétaire.
-     * @param {number} valueInCents - La valeur en centimes.
-     * @returns {string} La valeur formatée (ex: "1 234,56 €").
+     * Étape : format du total de la SÉLECTION (le commit 3 le confie au serveur).
+     * @param {number} valueInCents
      * @private
      */
     formatCurrency(valueInCents) {

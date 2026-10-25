@@ -46,7 +46,8 @@ class BarreDesTotauxValeursTest extends KernelTestCase
     // ===================== L'échelle : des centimes, toujours =====================
 
     /**
-     * LE CONTRAT DE `list-summary_controller.js` : il divise par 100 avant de formater.
+     * LE CONTRAT DE LA BARRE (`BarreDesTotaux`, chantier 4) : des centimes entiers, sommés
+     * puis divisés par 100 au formatage.
      * Une rétro-commission de 200,00 doit donc arriver à 20000.
      */
     public function testLesMontantsSontEnCentimes(): void

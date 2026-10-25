@@ -140,10 +140,11 @@ class BarreDesTotauxSuitLesColonnesTest extends KernelTestCase
     /**
      * LE SÉLECTEUR EST BÂTI SUR LA PREMIÈRE LIGNE SEULEMENT.
      *
-     * `list-summary_controller.js` prend `Object.values(data)[0]` comme modèle des
-     * options. Une entité vierge — aucune valeur calculée, aucune propriété dynamique
-     * posée — doit donc porter TOUTES les clés, à zéro. Sinon un partenaire sans affaire
-     * en tête de page ferait disparaître les options pour la page entière.
+     * Historique : `list-summary_controller.js` prenait `Object.values(data)[0]` comme
+     * modèle des options. Depuis le chantier 4, `BarreDesTotaux` (serveur) réunit les
+     * options de toutes les lignes ; une entité vierge — aucune valeur calculée, aucune
+     * propriété dynamique posée — doit tout de même porter TOUTES les clés, à zéro : une
+     * ligne sans la clé n'entrerait pas dans le total de cette grandeur.
      *
      * C'est le mode dégradé que l'ancien mécanisme laissait ouvert : il déduisait le
      * canevas de l'INSTANCE (`property_exists`), quand celui-ci se déduit maintenant de

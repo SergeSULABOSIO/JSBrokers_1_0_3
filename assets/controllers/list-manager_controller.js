@@ -184,8 +184,9 @@ export default class extends BaseController {
         // 1. Décode les données numériques initiales.
         let initialNumericData = {};
         try {
-            const decodedInitialData = this._decodeHtmlEntities(this.numericAttributesAndValuesValue);
-            initialNumericData = JSON.parse(decodedInitialData || '{}');
+            // La valeur Stimulus est DÉJÀ décodée par le navigateur (attribut HTML) : la décoder
+            // une seconde fois altérerait un libellé contenant « &amp; » écrit tel quel.
+            initialNumericData = JSON.parse(this.numericAttributesAndValuesValue || '{}');
         } catch (e) {
             console.error(`${this.nomControleur} - Erreur de parsing des données numériques initiales.`, { raw: this.numericAttributesAndValuesValue, error: e });
             initialNumericData = {};
@@ -1043,19 +1044,6 @@ export default class extends BaseController {
             input.value = input.defaultValue;
             input.blur();
         }
-    }
-
-    /**
-     * NOUVEAU : Décode les entités HTML d'une chaîne de caractères.
-     * @param {string} str La chaîne à décoder.
-     * @returns {string} La chaîne décodée.
-     * @private
-     */
-    _decodeHtmlEntities(str) {
-        if (!str) return str;
-        const textarea = document.createElement('textarea');
-        textarea.innerHTML = str;
-        return textarea.value;
     }
 
     /**

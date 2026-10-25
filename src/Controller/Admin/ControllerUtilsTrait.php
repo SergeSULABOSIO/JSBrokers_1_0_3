@@ -1009,7 +1009,8 @@ trait ControllerUtilsTrait
             'entite_nom' => $this->getEntityName($entityClass),
             'listeCanvas' => $this->canvasBuilder->getListeCanvas($entityClass),
             'entityCanvas' => $entityCanvas,
-            'numericAttributesAndValues' => $this->canvasBuilder->getNumericAttributesAndValuesForCollection($data), // NOUVEAU : Pour la barre des totaux.
+            // La barre des totaux, rendue par le serveur (chantier 4) : options, totaux, valeurs.
+            'numericAttributesAndValues' => $this->canvasBuilder->getBarreDesTotaux($data),
             'entityFormCanvas' => $entityFormCanvas,
             // Canvas de recherche de l'entité ENFANT : permet à la barre de recherche
             // (partagée dans l'entête) de basculer ses critères quand l'onglet de
@@ -1257,7 +1258,7 @@ trait ControllerUtilsTrait
             }
 
             // Extraction des données numériques et rendu du HTML partiel de la liste
-            $numericData = $this->canvasBuilder->getNumericAttributesAndValuesForCollection($data);
+            $numericData = $this->canvasBuilder->getBarreDesTotaux($data);
             // OPTIMISATION : On ne passe au template que les variables strictement nécessaires.
             $html = $this->renderView('components/_list_content.html.twig', [
                 'data' => $data,
@@ -1346,12 +1347,9 @@ trait ControllerUtilsTrait
             $this->loadCalculatedValues($entityCanvas, $item);
         }
 
-        // CORRECTION : Forcer un objet vide si les attributs numériques sont un tableau vide.
-        // Cela évite une erreur JS dans Stimulus qui attend un objet `{}` et non un tableau `[]`.
-        $numericAttributesAndValues = $this->canvasBuilder->getNumericAttributesAndValuesForCollection($data);
-        if (empty($numericAttributesAndValues)) {
-            $numericAttributesAndValues = new \stdClass();
-        }
+        // La barre des totaux, rendue par le serveur (chantier 4) : toujours un objet
+        // (attributs, totaux, valeurs), vide ou non.
+        $numericAttributesAndValues = $this->canvasBuilder->getBarreDesTotaux($data);
 
         // NOUVEAU : Construire l'URL de la liste principale pour la persistance de l'état.
         // C'est l'URL que le list-manager utilisera pour s'identifier.
