@@ -40,10 +40,7 @@ class ReversementRetroAgentNumericCanvasProvider implements NumericCanvasProvide
         /** @var ReversementRetroAgent $object */
 
         return [
-            'montant' => [
-                'description' => 'Montant versé',
-                'value' => $this->lots->montantAffiche($object) * 100,
-            ],
+            'montant' => GrandeurTotalisable::montant('Montant versé', $this->lots->montantAffiche($object)),
         ];
     }
 }

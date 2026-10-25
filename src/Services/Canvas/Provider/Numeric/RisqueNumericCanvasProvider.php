@@ -16,12 +16,7 @@ class RisqueNumericCanvasProvider implements NumericCanvasProviderInterface
     public function getCanvas(object $object): array
     {
         /** @var Risque $object */
-        return array_merge([
-            "pourcentageCommissionSpecifiqueHT" => [
-                "description" => "Comm. Spécifique HT",
-                "value" => ($object->getPourcentageCommissionSpecifiqueHT() ?? 0),
-                "unit" => "%",
-            ],
-        ], $this->getCalculatedIndicatorsNumericAttributes($object));
+        // Le taux de commission spécifique ne s'additionne pas (chantier 4, décision 1).
+        return $this->getCalculatedIndicatorsNumericAttributes($object);
     }
 }

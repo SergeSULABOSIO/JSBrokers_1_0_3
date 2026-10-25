@@ -13,13 +13,7 @@ class MonnaieNumericCanvasProvider implements NumericCanvasProviderInterface
 
     public function getCanvas(object $object): array
     {
-        /** @var Monnaie $object */
-        return [
-            "tauxusd" => [
-                "description" => "Taux de change USD",
-                "value" => ($object->getTauxusd() ?? 0),
-                "unit" => "",
-            ],
-        ];
+        // Un taux de change ne s'additionne pas : rien à totaliser (chantier 4, décision 1).
+        return [];
     }
 }

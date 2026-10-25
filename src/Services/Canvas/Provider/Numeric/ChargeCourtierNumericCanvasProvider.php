@@ -22,10 +22,7 @@ class ChargeCourtierNumericCanvasProvider implements NumericCanvasProviderInterf
         /** @var ChargeCourtier $object */
 
         return [
-            'montantBudgeteMensuelFloat' => [
-                'description' => 'Budget mensuel',
-                'value' => ($object->montantBudgeteMensuelFloat ?? $object->getMontantBudgeteMensuelFloat()) * 100,
-            ],
+            'montantBudgeteMensuelFloat' => GrandeurTotalisable::montant('Budget mensuel', $object->montantBudgeteMensuelFloat ?? $object->getMontantBudgeteMensuelFloat()),
         ];
     }
 }

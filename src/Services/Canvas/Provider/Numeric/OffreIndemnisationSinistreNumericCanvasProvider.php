@@ -17,10 +17,7 @@ class OffreIndemnisationSinistreNumericCanvasProvider implements NumericCanvasPr
     {
         /** @var OffreIndemnisationSinistre $object */
         return array_merge([
-            "franchiseAppliquee" => [
-                "description" => "Franchise",
-                "value" => ($object->getFranchiseAppliquee() ?? 0) * 100,
-            ],
+            "franchiseAppliquee" => GrandeurTotalisable::montant("Franchise", $object->getFranchiseAppliquee()),
         ], $this->getCalculatedIndicatorsNumericAttributes($object));
     }
 }

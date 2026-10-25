@@ -24,22 +24,20 @@ class CompteBancaireNumericCanvasProvider implements NumericCanvasProviderInterf
         // This provider's job is to format them for the numeric summary view.
         $attributes = [];
 
+        // Montants en centimes, le nombre de transactions tel quel ; la moyenne par transaction
+        // ne s'additionne pas (chantier 4, décision 1).
         $indicators = [
-            'soldeActuel' => 'Solde Actuel',
-            'totalEntrees' => 'Total Entrées',
-            'totalSorties' => 'Total Sorties',
-            'nombreTransactions' => 'Nb. Transactions',
-            'moyenneTransaction' => 'Moyenne / Trans.',
+            'soldeActuel' => ['Solde Actuel', GrandeurTotalisable::MONTANT],
+            'totalEntrees' => ['Total Entrées', GrandeurTotalisable::MONTANT],
+            'totalSorties' => ['Total Sorties', GrandeurTotalisable::MONTANT],
+            'nombreTransactions' => ['Nb. Transactions', GrandeurTotalisable::NOMBRE],
         ];
 
-        foreach ($indicators as $code => $description) {
+        foreach ($indicators as $code => [$description, $nature]) {
             if (property_exists($object, $code)) {
-                $attributes[$code] = [
-                    'description' => $description,
-                    // The frontend expects values to be multiplied by 100 (e.g., cents for currency).
-                    // This convention is followed even for counts.
-                    'value' => ($object->$code ?? 0) * 100,
-                ];
+                $attributes[$code] = $nature === GrandeurTotalisable::NOMBRE
+                    ? GrandeurTotalisable::nombre($description, $object->$code ?? 0)
+                    : GrandeurTotalisable::montant($description, $object->$code ?? 0);
             }
         }
 

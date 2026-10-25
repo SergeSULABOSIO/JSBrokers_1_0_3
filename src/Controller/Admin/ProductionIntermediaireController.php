@@ -14,6 +14,7 @@ use App\Service\Soa\SoaPoliceDocumentsCollector;
 use App\Service\RetroAgent\RapportProductionAgentBuilder;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\CanvasBuilder;
+use App\Services\Canvas\Provider\Numeric\GrandeurTotalisable;
 use App\Services\Search\ProductionScope;
 use App\Services\ServiceMonnaies;
 use Doctrine\ORM\EntityManagerInterface;
@@ -421,7 +422,7 @@ class ProductionIntermediaireController extends AbstractController
      *
      * @param array<int, array<string, mixed>> $lignes
      *
-     * @return array<int, array<string, array{description: string, value: float}>>
+     * @return array<int, array<string, array{description: string, value: int, nature: string}>>
      */
     private function valeursNumeriques(array $lignes): array
     {
@@ -445,10 +446,8 @@ class ProductionIntermediaireController extends AbstractController
 
             $attributs = [];
             foreach ($colonnes as $code => $intitule) {
-                $attributs[$code] = [
-                    'description' => $intitule,
-                    'value' => round((float) ($ligne[$code] ?? 0.0), 2) * 100,
-                ];
+                // Des montants, comme toute grandeur de la barre (chantier 4) : en centimes, entiers.
+                $attributs[$code] = GrandeurTotalisable::montant($intitule, round((float) ($ligne[$code] ?? 0.0), 2));
             }
             $valeurs[$id] = $attributs;
         }

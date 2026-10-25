@@ -17,18 +17,9 @@ class NotificationSinistreNumericCanvasProvider implements NumericCanvasProvider
     {
         /** @var NotificationSinistre $object */
         return array_merge([
-            "dommageAvantEvaluation" => [
-                "description" => "Dommages (av. éval.)",
-                "value" => ($object->getDommage() ?? 0) * 100,
-            ],
-            'dommageApresEvaluation' => [
-                "description" => "Dommages (ap. éval.)",
-                "value" => ($object->getEvaluationChiffree() ?? 0) * 100,
-            ],
-            'franchise' => [
-                "description" => "Franchise",
-                "value" => ($this->getFranchiseForNotificationSinistre($object) ?? 0) * 100,
-            ],
+            "dommageAvantEvaluation" => GrandeurTotalisable::montant("Dommages (av. éval.)", $object->getDommage()),
+            'dommageApresEvaluation' => GrandeurTotalisable::montant("Dommages (ap. éval.)", $object->getEvaluationChiffree()),
+            'franchise' => GrandeurTotalisable::montant("Franchise", $this->getFranchiseForNotificationSinistre($object)),
         ], $this->getCalculatedIndicatorsNumericAttributes($object));
     }
 

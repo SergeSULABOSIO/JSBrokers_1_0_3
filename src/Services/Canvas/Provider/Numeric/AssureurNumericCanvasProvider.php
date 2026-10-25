@@ -17,16 +17,8 @@ class AssureurNumericCanvasProvider implements NumericCanvasProviderInterface
     {
         /** @var Assureur $object */
         return array_merge([
-            "nombrePolicesSouscrites" => [
-                "description" => "Nb. Polices",
-                "value" => ($object->nombrePolicesSouscrites ?? 0) * 100,
-                "is_percentage" => false
-            ],
-            "nombreSinistresGeres" => [
-                "description" => "Nb. Sinistres",
-                "value" => ($object->nombreSinistresGeres ?? 0) * 100,
-                "is_percentage" => false
-            ],
+            "nombrePolicesSouscrites" => GrandeurTotalisable::nombre("Nb. Polices", $object->nombrePolicesSouscrites ?? null),
+            "nombreSinistresGeres" => GrandeurTotalisable::nombre("Nb. Sinistres", $object->nombreSinistresGeres ?? null),
         ], $this->getCalculatedIndicatorsNumericAttributes($object));
     }
 }

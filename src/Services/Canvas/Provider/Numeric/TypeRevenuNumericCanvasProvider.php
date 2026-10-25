@@ -3,17 +3,10 @@
 namespace App\Services\Canvas\Provider\Numeric;
 
 use App\Entity\TypeRevenu;
-use App\Services\ServiceMonnaies;
 
 class TypeRevenuNumericCanvasProvider implements NumericCanvasProviderInterface
 {
     use CalculatedIndicatorsNumericProviderTrait;
-
-    public function __construct(
-        private ServiceMonnaies $serviceMonnaies
-    )
-    {
-    }
 
     public function supports(string $entityClassName): bool
     {
@@ -23,17 +16,10 @@ class TypeRevenuNumericCanvasProvider implements NumericCanvasProviderInterface
     public function getCanvas(object $object): array
     {
         /** @var TypeRevenu $object */
+        // Le montant fixe EN CENTIMES (il ne l'était pas : la barre l'affichait cent fois trop
+        // petit) ; le pourcentage ne s'additionne pas (chantier 4, décision 1).
         $attributes = [
-            "montantflat" => [
-                "description" => "Montant Fixe",
-                "value" => $object->getMontantflat() ?? 0,
-                "unit" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-            ],
-            "pourcentage" => [
-                "description" => "Pourcentage",
-                "value" => ($object->getPourcentage() ?? 0),
-                "unit" => "%",
-            ],
+            "montantflat" => GrandeurTotalisable::montant("Montant Fixe", $object->getMontantflat()),
         ];
 
         return array_merge($attributes, $this->getCalculatedIndicatorsNumericAttributes($object));

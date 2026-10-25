@@ -278,8 +278,8 @@ class ReversementListeRepliTest extends KernelTestCase
         $numerique = $canvas->getNumericAttributesAndValuesForCollection($replie['data']);
 
         // La sélection, côté navigateur, n'est qu'un filtre par identifiant sur ces données.
-        self::assertSame(60.0, $numerique[$s['porteurId']]['montant']['value'] / 100);
-        self::assertSame(5.0, $numerique[$s['soloId']]['montant']['value'] / 100);
+        self::assertSame(6000, $numerique[$s['porteurId']]['montant']['value']);
+        self::assertSame(500, $numerique[$s['soloId']]['montant']['value']);
     }
 
     /**

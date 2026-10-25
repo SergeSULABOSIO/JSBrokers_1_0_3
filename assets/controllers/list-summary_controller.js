@@ -84,7 +84,8 @@ export default class extends Controller {
             // On extrait les paires code/intitulé pour peupler le sélecteur.
             numericAttributes = Object.entries(attributesModel).map(([code, details]) => ({
                 code: code,
-                intitule: details.description
+                intitule: details.description,
+                nature: details.nature,
             }));
         }
 
@@ -105,6 +106,8 @@ export default class extends Controller {
      * @private
      */
     updateAttributeSelector(attributes) {
+        // La nature de chaque grandeur (chantier 4) : un MONTANT en centimes, ou un NOMBRE.
+        this.natures = Object.fromEntries(attributes.map((a) => [a.code, a.nature]));
         const currentValue = this.attributeSelectorTarget.value;
         this.attributeSelectorTarget.innerHTML = ''; // On vide complètement
 
@@ -153,7 +156,7 @@ export default class extends Controller {
             .map(([id, item]) => item[attribute]?.value || 0) // Extrait leur valeur
             .reduce((sum, value) => sum + value, 0); // Somme les valeurs de la sélection
 
-        this.displayTotals(globalTotal, selectionTotal);
+        this.displayTotals(globalTotal, selectionTotal, (this.natures || {})[attribute]);
     }
 
     /**
@@ -162,11 +165,14 @@ export default class extends Controller {
      * @param {number} selectionTotal - Le total pour les éléments sélectionnés.
      * @private
      */
-    displayTotals(globalTotal, selectionTotal) {
-        // console.log(this.nomControleur + " - Code: 1980 - displayTotals - Global Total:", globalTotal, "Selection Total:", selectionTotal);
-        this.globalTotalTarget.textContent = this.formatCurrency(globalTotal);
-
-        this.selectionTotalTarget.textContent = this.formatCurrency(selectionTotal);
+    displayTotals(globalTotal, selectionTotal, nature) {
+        // Un NOMBRE (Nb. Pistes, Nb. Transactions) n'est pas un montant : il s'affiche entier,
+        // sans monnaie. (Étape du chantier 4 : le serveur formatera bientôt les deux.)
+        const formater = nature === 'nombre'
+            ? (valeur) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(valeur)
+            : (valeur) => this.formatCurrency(valeur);
+        this.globalTotalTarget.textContent = formater(globalTotal);
+        this.selectionTotalTarget.textContent = formater(selectionTotal);
     }
 
     /**
@@ -192,7 +198,8 @@ export default class extends Controller {
                 const model = Object.values(parsed)[0];
                 const numericAttributes = Object.entries(model).map(([code, details]) => ({
                     code,
-                    intitule: details.description
+                    intitule: details.description,
+                    nature: details.nature,
                 }));
                 this.element.style.display = 'flex';
                 this.updateAttributeSelector(numericAttributes);

@@ -16,14 +16,8 @@ class NoteNumericCanvasProvider implements NumericCanvasProviderInterface
         /** @var Note $object */
 
         return [
-            'montantTotal' => [
-                'description' => 'Montant Total',
-                'value' => ($object->montantTotal ?? 0) * 100,
-            ],
-            'solde' => [
-                'description' => 'Solde',
-                'value' => ($object->solde ?? 0) * 100,
-            ]
+            'montantTotal' => GrandeurTotalisable::montant('Montant Total', $object->montantTotal ?? null),
+            'solde' => GrandeurTotalisable::montant('Solde', $object->solde ?? null),
         ];
     }
 }

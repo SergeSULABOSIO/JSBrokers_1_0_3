@@ -17,21 +17,9 @@ class ClientNumericCanvasProvider implements NumericCanvasProviderInterface
     {
         /** @var Client $object */
         return array_merge([
-            "nombrePistes" => [
-                "description" => "Nb. Pistes",
-                "value" => ($object->nombrePistes ?? 0) * 100,
-                "is_percentage" => false
-            ],
-            "nombrePolices" => [
-                "description" => "Nb. Polices",
-                "value" => ($object->nombrePolices ?? 0) * 100,
-                "is_percentage" => false
-            ],
-            "nombreSinistres" => [
-                "description" => "Nb. Sinistres",
-                "value" => ($object->nombreSinistres ?? 0) * 100,
-                "is_percentage" => false
-            ],
+            "nombrePistes" => GrandeurTotalisable::nombre("Nb. Pistes", $object->nombrePistes ?? null),
+            "nombrePolices" => GrandeurTotalisable::nombre("Nb. Polices", $object->nombrePolices ?? null),
+            "nombreSinistres" => GrandeurTotalisable::nombre("Nb. Sinistres", $object->nombreSinistres ?? null),
         ], $this->getCalculatedIndicatorsNumericAttributes($object));
     }
 }

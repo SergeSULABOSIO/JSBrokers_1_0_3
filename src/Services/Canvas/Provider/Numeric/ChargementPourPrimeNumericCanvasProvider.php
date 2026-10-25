@@ -17,10 +17,7 @@ class ChargementPourPrimeNumericCanvasProvider implements NumericCanvasProviderI
     {
         /** @var ChargementPourPrime $object */
         return array_merge([
-            "montantFlatExceptionel" => [
-                "description" => "Montant",
-                "value" => ($object->getMontantFlatExceptionel() ?? 0) * 100,
-            ],
+            "montantFlatExceptionel" => GrandeurTotalisable::montant("Montant", $object->getMontantFlatExceptionel()),
         ], $this->getCalculatedIndicatorsNumericAttributes($object));
     }
 }

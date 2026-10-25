@@ -22,18 +22,9 @@ class DepenseCourtierNumericCanvasProvider implements NumericCanvasProviderInter
         /** @var DepenseCourtier $object */
 
         return [
-            'montantTtc' => [
-                'description' => 'Montant TTC',
-                'value' => ($object->montantTtc ?? $object->getMontantFloat()) * 100,
-            ],
-            'montantHt' => [
-                'description' => 'Montant HT',
-                'value' => ($object->montantHt ?? $object->getMontantHtFloat()) * 100,
-            ],
-            'tvaDeductible' => [
-                'description' => 'TVA déductible',
-                'value' => ($object->tvaDeductible ?? $object->getTvaDeductibleFloat()) * 100,
-            ],
+            'montantTtc' => GrandeurTotalisable::montant('Montant TTC', $object->montantTtc ?? $object->getMontantFloat()),
+            'montantHt' => GrandeurTotalisable::montant('Montant HT', $object->montantHt ?? $object->getMontantHtFloat()),
+            'tvaDeductible' => GrandeurTotalisable::montant('TVA déductible', $object->tvaDeductible ?? $object->getTvaDeductibleFloat()),
         ];
     }
 }

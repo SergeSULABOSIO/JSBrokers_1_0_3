@@ -27,38 +27,14 @@ class TrancheNumericCanvasProvider implements NumericCanvasProviderInterface
     {
         /** @var Tranche $object */
         return array_merge([
-            "primeTranche" => [
-                "description" => "Prime Tranche",
-                "value" => ($object->primeTranche ?? 0) * 100,
-            ],
-            "montantCalculeHT" => [
-                "description" => "Montant HT",
-                "value" => ($object->montantCalculeHT ?? 0) * 100,
-            ],
-            "montantCalculeTTC" => [
-                "description" => "Montant TTC",
-                "value" => ($object->montantCalculeTTC ?? 0) * 100,
-            ],
-            "montant_du" => [
-                "description" => "Montant Dû",
-                "value" => ($object->montant_du ?? 0) * 100,
-            ],
-            "commissionExigible" => [
-                "description" => "Commission Exigible",
-                "value" => ($object->commissionExigible ?? 0) * 100,
-            ],
-            "retroCommissionExigible" => [
-                "description" => "Rétro Exigible",
-                "value" => ($object->retroCommissionExigible ?? 0) * 100,
-            ],
-            "primeDeclareePayee" => [
-                "description" => "Prime Signalée Payée",
-                "value" => ($object->primeDeclareePayee ?? 0) * 100,
-            ],
-            "resteAPayer" => [
-                "description" => "Reste à Payer",
-                "value" => ($object->resteAPayer ?? 0) * 100,
-            ],
+            "primeTranche" => GrandeurTotalisable::montant("Prime Tranche", $object->primeTranche ?? null),
+            "montantCalculeHT" => GrandeurTotalisable::montant("Montant HT", $object->montantCalculeHT ?? null),
+            "montantCalculeTTC" => GrandeurTotalisable::montant("Montant TTC", $object->montantCalculeTTC ?? null),
+            "montant_du" => GrandeurTotalisable::montant("Montant Dû", $object->montant_du ?? null),
+            "commissionExigible" => GrandeurTotalisable::montant("Commission Exigible", $object->commissionExigible ?? null),
+            "retroCommissionExigible" => GrandeurTotalisable::montant("Rétro Exigible", $object->retroCommissionExigible ?? null),
+            "primeDeclareePayee" => GrandeurTotalisable::montant("Prime Signalée Payée", $object->primeDeclareePayee ?? null),
+            "resteAPayer" => GrandeurTotalisable::montant("Reste à Payer", $object->resteAPayer ?? null),
         ], $this->getCalculatedIndicatorsNumericAttributes($object));
     }
 }

@@ -5,74 +5,63 @@ namespace App\Services\Canvas\Provider\Numeric;
 trait CalculatedIndicatorsNumericProviderTrait
 {
     /**
-     * Returns an array of numeric attributes from CalculatedIndicatorsTrait.
+     * LES INDICATEURS CALCULÉS QUE PARTAGENT LES RUBRIQUES (CalculatedIndicatorsTrait), pour la
+     * barre des totaux : tous des MONTANTS, en centimes (GrandeurTotalisable). Seuls ceux que
+     * l'entité porte (property_exists) sont proposés.
      *
-     * @param object $object An entity object that uses CalculatedIndicatorsTrait.
-     * @return array
+     * Taux de sinistralité, indice de solvabilité, taux de commission n'y sont PAS : non
+     * additifs — une somme de taux n'est pas un taux (chantier 4, décision 1 de Serge).
+     *
+     * @return array<string, array{description: string, value: int, nature: string}>
      */
     private function getCalculatedIndicatorsNumericAttributes(object $object): array
     {
-        $attributes = [];
-        $indicators = [
-            'primeTotale' => ['description' => 'Prime Totale', 'is_percentage' => false],
-            'primePayee' => ['description' => 'Prime Payée', 'is_percentage' => false],
-            'primeSoldeDue' => ['description' => 'Solde Prime', 'is_percentage' => false],
-            'montantTTC' => ['description' => 'Commission Totale', 'is_percentage' => false],
-            'montant_paye' => ['description' => 'Commission Encaissée', 'is_percentage' => false],
-            'solde_restant_du' => ['description' => 'Solde Commission', 'is_percentage' => false],
-            'montantHT' => ['description' => 'Commission Nette', 'is_percentage' => false],
-            'montantPur' => ['description' => 'Commission Pure', 'is_percentage' => false],
-            'commissionPartageable' => ['description' => 'Assiette Partageable', 'is_percentage' => false],
-            'primeNette' => ['description' => 'Prime Nette', 'is_percentage' => false],
-            'reserve' => ['description' => 'Réserve Courtier', 'is_percentage' => false],
-            'retroCommission' => ['description' => 'Rétrocommission Partenaire', 'is_percentage' => false],
-            'retroCommissionReversee' => ['description' => 'Rétrocommission Payée', 'is_percentage' => false],
-            'retroCommissionSolde' => ['description' => 'Solde Rétrocommission', 'is_percentage' => false],
+        $indicateurs = [
+            'primeTotale' => 'Prime Totale',
+            'primePayee' => 'Prime Payée',
+            'primeSoldeDue' => 'Solde Prime',
+            'montantTTC' => 'Commission Totale',
+            'montant_paye' => 'Commission Encaissée',
+            'solde_restant_du' => 'Solde Commission',
+            'montantHT' => 'Commission Nette',
+            'montantPur' => 'Commission Pure',
+            'commissionPartageable' => 'Assiette Partageable',
+            'primeNette' => 'Prime Nette',
+            'reserve' => 'Réserve Courtier',
+            'retroCommission' => 'Rétrocommission Partenaire',
+            'retroCommissionReversee' => 'Rétrocommission Payée',
+            'retroCommissionSolde' => 'Solde Rétrocommission',
             // ⚠ « Rétro Exigible » — le libellé EXISTANT de TrancheNumericCanvasProvider,
             // et non un synonyme. Ce tableau est fusionné PAR-DESSUS celui des providers
             // (array_merge, trait en second) : une description différente pour le même
             // code renomme silencieusement l'entrée de la barre des totaux d'une rubrique
             // qu'on ne touchait pas. Ket dérive de plus son vocabulaire de ces libellés.
-            'retroCommissionExigible' => ['description' => 'Rétro Exigible', 'is_percentage' => false],
+            'retroCommissionExigible' => 'Rétro Exigible',
             // Rétrocommission des AGENTS INTERNES — l'autre bénéficiaire du partage.
             // Les inscrire ici suffit à les rendre totalisables : la barre des totaux
-            // (list-summary_controller.js) construit son sélecteur depuis ce dictionnaire,
-            // et calcule le total global comme celui de la sélection.
-            'retroAgentDue' => ['description' => 'Rétrocom. agent due', 'is_percentage' => false],
-            'retroAgentPayee' => ['description' => 'Rétrocom. agent payée', 'is_percentage' => false],
-            'retroAgentSolde' => ['description' => 'Rétrocom. agent solde', 'is_percentage' => false],
-            'retroAgentExigible' => ['description' => 'Rétrocom. agent exigible', 'is_percentage' => false],
-            'taxeCourtierMontant' => ['description' => 'Taxe Courtier', 'is_percentage' => false],
-            'taxeCourtierPayee' => ['description' => 'Taxe Courtier Payée', 'is_percentage' => false],
-            'taxeCourtierSolde' => ['description' => 'Solde Taxe Courtier', 'is_percentage' => false],
-            'taxeAssureurMontant' => ['description' => 'Taxe Assureur', 'is_percentage' => false],
-            'taxeAssureurPayee' => ['description' => 'Taxe Assureur Payée', 'is_percentage' => false],
-            'taxeAssureurSolde' => ['description' => 'Solde Taxe Assureur', 'is_percentage' => false],
-            'indemnisationDue' => ['description' => 'Sinistre Payable', 'is_percentage' => false],
-            'indemnisationVersee' => ['description' => 'Sinistre Payé', 'is_percentage' => false],
-            'indemnisationSolde' => ['description' => 'Solde Sinistre', 'is_percentage' => false],
-            'tauxSP' => ['description' => 'Taux de Sinistralité', 'is_percentage' => true],
-            'indiceSolvabilite' => ['description' => 'Indice de Solvabilité', 'is_percentage' => true],
-            'tauxCommission' => ['description' => 'Taux de Commission', 'is_percentage' => true],
+            // construit son sélecteur depuis ce dictionnaire.
+            'retroAgentDue' => 'Rétrocom. agent due',
+            'retroAgentPayee' => 'Rétrocom. agent payée',
+            'retroAgentSolde' => 'Rétrocom. agent solde',
+            'retroAgentExigible' => 'Rétrocom. agent exigible',
+            'taxeCourtierMontant' => 'Taxe Courtier',
+            'taxeCourtierPayee' => 'Taxe Courtier Payée',
+            'taxeCourtierSolde' => 'Solde Taxe Courtier',
+            'taxeAssureurMontant' => 'Taxe Assureur',
+            'taxeAssureurPayee' => 'Taxe Assureur Payée',
+            'taxeAssureurSolde' => 'Solde Taxe Assureur',
+            'indemnisationDue' => 'Sinistre Payable',
+            'indemnisationVersee' => 'Sinistre Payé',
+            'indemnisationSolde' => 'Solde Sinistre',
         ];
 
-        foreach ($indicators as $code => $config) {
-            // Check if the property exists on the object before trying to access it
+        $attributs = [];
+        foreach ($indicateurs as $code => $libelle) {
             if (property_exists($object, $code)) {
-                $value = isset($object->$code) ? $object->$code : 0;
-                $item = [
-                    "description" => $config['description'],
-                    "value" => $value,
-                ];
-                if (!$config['is_percentage']) {
-                    $item['value'] *= 100; // Convert to cents for non-percentage values
-                } else {
-                    $item['unit'] = "%"; // Add unit for percentages
-                }
-                $attributes[$code] = $item;
+                $attributs[$code] = GrandeurTotalisable::montant($libelle, $object->$code ?? 0);
             }
         }
 
-        return $attributes;
+        return $attributs;
     }
 }

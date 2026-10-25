@@ -54,7 +54,7 @@ class BarreDesTotauxValeursTest extends KernelTestCase
         $partenaire = new Partenaire();
         $partenaire->retroCommission = 200.0;
 
-        self::assertSame(20000.0, $this->canevas($partenaire)['retroCommission']['value']);
+        self::assertSame(20000, $this->canevas($partenaire)['retroCommission']['value']);
     }
 
     /**
@@ -69,7 +69,7 @@ class BarreDesTotauxValeursTest extends KernelTestCase
         $partenaire = new Partenaire();
         $partenaire->montantPur = 407.24;
 
-        self::assertSame(40724.0, $this->canevas($partenaire)['montantPur']['value']);
+        self::assertSame(40724, $this->canevas($partenaire)['montantPur']['value']);
     }
 
     // ===================== Les trois modes de lecture =====================
@@ -83,9 +83,9 @@ class BarreDesTotauxValeursTest extends KernelTestCase
 
         $canevas = $this->canevas($portefeuille);
 
-        self::assertSame(150000.0, $canevas['primeTotale']['value']);
-        self::assertSame(4250.0, $canevas['reserve']['value']);
-        self::assertSame(0.0, $canevas['montantTTC']['value'], 'Non renseignée : zéro, et non absente.');
+        self::assertSame(150000, $canevas['primeTotale']['value']);
+        self::assertSame(4250, $canevas['reserve']['value']);
+        self::assertSame(0, $canevas['montantTTC']['value'], 'Non renseignée : zéro, et non absente.');
     }
 
     /**
@@ -98,7 +98,7 @@ class BarreDesTotauxValeursTest extends KernelTestCase
         $invite = new Invite();
         $invite->montantTTC = 800.0;
 
-        self::assertSame(80000.0, $this->canevas($invite)['montantTTC']['value']);
+        self::assertSame(80000, $this->canevas($invite)['montantTTC']['value']);
     }
 
     /**
@@ -116,7 +116,7 @@ class BarreDesTotauxValeursTest extends KernelTestCase
         $canevas = $this->canevas($paiement);
 
         self::assertArrayHasKey('montant', $canevas);
-        self::assertSame(123456.0, $canevas['montant']['value']);
+        self::assertSame(123456, $canevas['montant']['value']);
         self::assertSame('Montant réglé', $canevas['montant']['description']);
     }
 
@@ -143,6 +143,6 @@ class BarreDesTotauxValeursTest extends KernelTestCase
             ->getNumericAttributesAndValuesForCollection([$partenaire]);
 
         self::assertArrayHasKey(7, $collection);
-        self::assertSame(7500.0, $collection[7]['retroCommissionExigible']['value']);
+        self::assertSame(7500, $collection[7]['retroCommissionExigible']['value']);
     }
 }

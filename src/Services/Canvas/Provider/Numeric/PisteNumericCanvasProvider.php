@@ -18,14 +18,8 @@ class PisteNumericCanvasProvider implements NumericCanvasProviderInterface
         /** @var Piste $object */
         // On fusionne les propriétés directes avec les indicateurs calculés.
         return array_merge([
-            "primePotentielle" => [
-                "description" => "Prime Potentielle",
-                "value" => ($object->getPrimePotentielle() ?? 0) * 100,
-            ],
-            "commissionPotentielle" => [
-                "description" => "Commission Potentielle",
-                "value" => ($object->getCommissionPotentielle() ?? 0) * 100,
-            ],
+            "primePotentielle" => GrandeurTotalisable::montant("Prime Potentielle", $object->getPrimePotentielle()),
+            "commissionPotentielle" => GrandeurTotalisable::montant("Commission Potentielle", $object->getCommissionPotentielle()),
         ], $this->getCalculatedIndicatorsNumericAttributes($object));
     }
 }

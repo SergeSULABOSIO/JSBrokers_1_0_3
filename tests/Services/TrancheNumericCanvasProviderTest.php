@@ -49,33 +49,33 @@ class TrancheNumericCanvasProviderTest extends TestCase
         $canvas = (new TrancheNumericCanvasProvider())->getCanvas($tranche);
 
         // Indicateurs propres à Tranche, désormais exposés (valeurs en centimes).
-        $this->assertSame(100000.0, $canvas['primeTranche']['value'], 'Prime Tranche = 1000 x 100.');
+        $this->assertSame(100000, $canvas['primeTranche']['value'], 'Prime Tranche = 1000 x 100.');
         $this->assertSame('Prime Tranche', $canvas['primeTranche']['description']);
-        $this->assertSame(20000.0, $canvas['montantCalculeHT']['value']);
-        $this->assertSame(23200.0, $canvas['montantCalculeTTC']['value']);
-        $this->assertSame(23200.0, $canvas['montant_du']['value']);
-        $this->assertSame(13200.0, $canvas['commissionExigible']['value'], 'Commission exigible : indicateur clé du suivi des impayés — doit être totalisable.');
-        $this->assertSame(2000.0, $canvas['retroCommissionExigible']['value'], 'Rétro exigible : idem, indicateur clé.');
-        $this->assertSame(0.0, $canvas['primeDeclareePayee']['value']);
-        $this->assertSame(60000.0, $canvas['resteAPayer']['value']);
+        $this->assertSame(20000, $canvas['montantCalculeHT']['value']);
+        $this->assertSame(23200, $canvas['montantCalculeTTC']['value']);
+        $this->assertSame(23200, $canvas['montant_du']['value']);
+        $this->assertSame(13200, $canvas['commissionExigible']['value'], 'Commission exigible : indicateur clé du suivi des impayés — doit être totalisable.');
+        $this->assertSame(2000, $canvas['retroCommissionExigible']['value'], 'Rétro exigible : idem, indicateur clé.');
+        $this->assertSame(0, $canvas['primeDeclareePayee']['value']);
+        $this->assertSame(60000, $canvas['resteAPayer']['value']);
 
         // Indicateurs déjà correctement nommés par le trait générique (property_exists
         // match) : toujours exposés, sans doublon ni perte après le complément.
-        $this->assertSame(40000.0, $canvas['primePayee']['value']);
-        $this->assertSame(60000.0, $canvas['primeSoldeDue']['value']);
-        $this->assertSame(10000.0, $canvas['montant_paye']['value']);
-        $this->assertSame(13200.0, $canvas['solde_restant_du']['value']);
-        $this->assertSame(18000.0, $canvas['montantPur']['value']);
-        $this->assertSame(15000.0, $canvas['reserve']['value']);
-        $this->assertSame(3000.0, $canvas['retroCommission']['value']);
-        $this->assertSame(1000.0, $canvas['retroCommissionReversee']['value']);
-        $this->assertSame(2000.0, $canvas['retroCommissionSolde']['value']);
-        $this->assertSame(2000.0, $canvas['taxeCourtierMontant']['value']);
-        $this->assertSame(500.0, $canvas['taxeCourtierPayee']['value']);
-        $this->assertSame(1500.0, $canvas['taxeCourtierSolde']['value']);
-        $this->assertSame(1200.0, $canvas['taxeAssureurMontant']['value']);
-        $this->assertSame(300.0, $canvas['taxeAssureurPayee']['value']);
-        $this->assertSame(900.0, $canvas['taxeAssureurSolde']['value']);
+        $this->assertSame(40000, $canvas['primePayee']['value']);
+        $this->assertSame(60000, $canvas['primeSoldeDue']['value']);
+        $this->assertSame(10000, $canvas['montant_paye']['value']);
+        $this->assertSame(13200, $canvas['solde_restant_du']['value']);
+        $this->assertSame(18000, $canvas['montantPur']['value']);
+        $this->assertSame(15000, $canvas['reserve']['value']);
+        $this->assertSame(3000, $canvas['retroCommission']['value']);
+        $this->assertSame(1000, $canvas['retroCommissionReversee']['value']);
+        $this->assertSame(2000, $canvas['retroCommissionSolde']['value']);
+        $this->assertSame(2000, $canvas['taxeCourtierMontant']['value']);
+        $this->assertSame(500, $canvas['taxeCourtierPayee']['value']);
+        $this->assertSame(1500, $canvas['taxeCourtierSolde']['value']);
+        $this->assertSame(1200, $canvas['taxeAssureurMontant']['value']);
+        $this->assertSame(300, $canvas['taxeAssureurPayee']['value']);
+        $this->assertSame(900, $canvas['taxeAssureurSolde']['value']);
 
         // Clés génériques SANS équivalent sur Tranche : absentes (pas de faux zéro
         // trompeur dans le sélecteur de la barre des totaux).

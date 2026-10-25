@@ -63,18 +63,18 @@ final class ListColumnsNumericCanvasBuilder
     }
 
     /**
-     * @return array<string, array{description: string, value: float}>
+     * @return array<string, array{description: string, value: int, nature: string}>
      */
     public function build(object $entity): array
     {
         $canevas = [];
         foreach ($this->colonnesTotalisables($this->classeReelle($entity)) as $code => $libelle) {
-            $canevas[$code] = [
-                'description' => $libelle,
-                // L'arrondi entier évite les 1234.5600000000001 qu'accumulerait la
-                // multiplication flottante sur une page de vingt lignes.
-                'value' => round(((float) ($this->lireValeur($entity, $code) ?? 0.0)) * 100),
-            ];
+            // Les colonnes retenues sont des MONTANTS (les taux en sont écartés). ⚠ Une colonne
+            // de COMPTE ajoutée un jour à l'une de ces rubriques sortirait ×100, en monnaie : son
+            // unité ne la distingue pas d'un montant sans monnaie configurée (null dans les deux
+            // cas). La déclarer alors comme nombre (GrandeurTotalisable::nombre) ;
+            // TotaliseurNatureDesGrandeursTest ne le verrait pas.
+            $canevas[$code] =GrandeurTotalisable::montant($libelle, $this->lireValeur($entity, $code));
         }
 
         return $canevas;
