@@ -50,7 +50,8 @@ faire.
 
 ### Localisation
 15. **Nombres** : `format_nombre` et `format_montant` (`src/Twig/Extension/NombreExtension.php`),
-    localisés selon la langue.
+    localisés selon la langue. `format_montant` n'a AUCUN symbole par défaut : un prix en dollars
+    (tokens) passe `'$'`, un montant du cabinet porte le code de sa monnaie de travail.
 16. **Monnaie** : celle de travail du cabinet, `ServiceMonnaies::getCodeMonnaieAffichage()`
     (:75) ; jamais un code écrit en dur (`courtage-assurance` §4, « une seule monnaie par cabinet »).
 17. **Dates** : une seule horloge, `APP_TIMEZONE` ; en Twig `format_datetime`, côté client
@@ -73,8 +74,11 @@ faire.
 
 - **« USD » en dur dans `PisteType`** sur les deux montants : mentait à tout cabinet qui compte
   dans une autre monnaie. Monnaie d'affichage du cabinet depuis `62d7ebde`
-  (`PisteType.php:42-45`). Restent des replis `'USD'` et `format_montant` à `'$'` par défaut —
-  chantier 5 de `jsbrokers-dev`.
+  (`PisteType.php:42-45`). Les derniers replis `'USD'` et le `'$'` par défaut de
+  `format_montant` sont partis au chantier 5 (`e4d1ba09`).
+- **Un défaut posé par l'option `data` d'un champ** (l'exercice d'une piste) : elle l'emporte
+  sur la valeur de l'objet, et MODIFIER une piste de 2024 la ramenait à 2026. Le défaut d'une
+  entité neuve se pose dans son constructeur (`Piste::__construct`, chantier 5, `8858cdd7`).
 - **« Transformée (Souscrite) » contre « Transformées »** : la sous-ligne ne parlait pas la
   langue du chip. Un seul libellé, en badge coloré, depuis `2809442f`
   (`PisteListCanvasProvider.php:30-33`).

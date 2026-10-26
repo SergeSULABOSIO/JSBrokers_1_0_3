@@ -411,14 +411,28 @@ Inscrits le 2026-10-16 (décisions de Serge), après l'inventaire fait pour la s
    - Le navigateur n'additionne ni ne formate (`tests/js/totaliseur-serveur.test.mjs`).
    - ⚠ `ListColumnsNumericCanvasBuilder` déclare toute colonne non-% en montant : une future
      colonne de COMPTE y serait ×100.
-5. **Valeurs en dur.** Replis `'USD'` (`TrancheType.php:82`, `_list_summary.html.twig:3` — retiré
-   au chantier 4,
-   placeholder `DepenseType.php:48`) ; `format_montant` à `'$'` par défaut
-   (`NombreExtension.php`) ; couleurs hexadécimales des badges (`app.css:1809-1810`, contraste
-   du blanc sur `#e69500` à mesurer) ; `date('Y')` dans `PisteController.php:108`, :177 ;
-   `color:#0d2440` hors charte, en style inline, sur 11 titres et libellés du picker de
-   facturation (`_facturation_picker.html.twig:110` à :351) ; format de date `d/m/Y` écrit en
-   dur sur la carte de piste (`_carte_piste.html.twig:40`), au lieu de `format_datetime`.
+5. ✅ **FAIT (2026-10-26) — Valeurs en dur** (`e4d1ba09` monnaie, `761b8a96` couleurs,
+   `8858cdd7` exercice ; décisions de Serge du 2026-10-26). Ce qui en reste comme règle :
+   - **Aucun symbole monétaire par défaut.** `format_montant` (Twig, `ServiceNombres`,
+     `number-format.js`) rend le nombre seul ; un prix en dollars (tokens) passe `'$'`
+     explicitement. Un montant du cabinet porte le CODE de sa monnaie de travail, jamais un
+     « $ » d'office ni un repli « USD » (`TrancheType`). Tableaux de Ket : « 3 195,16 CDF »,
+     monnaie lue UNE fois par tableau, jamais retenue dans un service (le worker sert plusieurs
+     cabinets) ; les exemples du prompt portent `[MONNAIE]`, remplacé par le code du cabinet.
+     L'export Excel lit l'unité devant ou derrière le nombre.
+   - **Couleurs : la charte, par ses jetons** (skill `charte-couleurs`). `#0d2440` → cobalt
+     foncé ; titres de l'infobulle `#adb5bd` ; texte foncé sur l'orange `#e69500`. ⚠ Un gabarit
+     rendu SANS app.css (e-mails, export DomPDF des messages de Ket, picker des documents du SOA
+     servi aussi par la page publique) écrit la VALEUR (`#003380`), jamais `var(--…)` : le jeton
+     n'y vaut rien. Garde `CouleursHorsChartesTest`.
+   - **Un défaut de formulaire ne passe JAMAIS par l'option `data`** : elle l'emporte sur la
+     valeur de l'objet, et une modification réécrit le champ (l'exercice d'une piste de 2024
+     revenait à 2026). Le défaut d'une entité NEUVE se pose dans son constructeur
+     (`Piste::__construct`, année de l'horloge de référence) : l'écran, Ket (source `entite`) et
+     l'import le lisent au même endroit ; le dictionnaire `.jsbx` le tient pour facultatif.
+   - Une date affichée passe par `format_datetime(..., locale: app.user.locale)`, jamais `|date('d/m/Y')`.
+   - **QUESTION OUVERTE, à Serge** : le champ « Devise » en texte libre des dépenses
+     (`DepenseType`) contredit la monnaie de travail unique — non touché sans sa décision.
 6. ✅ **FAIT (2026-10-21) — État vide.** Le SERVEUR dit pourquoi une liste est vide
    (`App\Service\Liste\CauseDeListeVide`, `ControllerUtilsTrait::etatVideParametres`) et rend
    l'état vide, au premier affichage comme à chaque recherche (`etatVide` de la réponse) :
