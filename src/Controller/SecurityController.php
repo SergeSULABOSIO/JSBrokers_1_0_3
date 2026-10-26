@@ -7,7 +7,7 @@
  * 1. `index()`: Afficher la page d'accueil de l'application.
  * 2. `login()`: Afficher le formulaire de connexion et gérer les erreurs d'authentification.
  * 3. `logout()`: Gérer la déconnexion de l'utilisateur (intercepté par le pare-feu de sécurité).
- * 4. `translateApp()`: Gérer le changement de langue pour l'utilisateur.
+ * (La langue se choisit par `?lang=` — l'ancienne route `/translate/…` est supprimée, chantier 21.)
  */
 
 namespace App\Controller;
@@ -17,7 +17,6 @@ use App\DTO\DemandeContactDTO;
 use App\Form\DemandeContactType;
 use App\Event\DemandeContactEvent;
 use App\Service\Contact\GardeDuFormulaireDeContact;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -30,7 +29,6 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 class SecurityController extends AbstractController
 {
     public function __construct(
-        private EntityManagerInterface $manager,
         private TranslatorInterface $translator,
         private readonly LocaleSwitcher $localeSwitcher
     ) {}
@@ -83,22 +81,9 @@ class SecurityController extends AbstractController
         ]);
     }
 
-    #[Route(path: '/translate/{locale}/{currentURL}', name: 'app_translate', requirements: ['currentURL' => '.+'])]
-    public function translateApp(Request $request, $locale, $currentURL): Response
-    {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-        if ($user) {
-            $user->setlocale($locale);
-            $this->manager->persist($user);
-            $this->manager->flush();
-
-            $this->localeSwitcher->setLocale($user->getLocale());
-        } else {
-            $this->localeSwitcher->setLocale($request->getLocale());
-        }
-        return $this->redirect($currentURL);
-    }
+    // L'ancienne bascule de langue `/translate/{locale}/{currentURL}` a été SUPPRIMÉE (chantier
+    // 21) : elle redirigeait vers n'importe quelle adresse reçue (redirection ouverte) et n'était
+    // plus reliée à rien. La langue se choisit par `?lang=` (components/_lang_switch.html.twig).
 
     #[Route(path: '/login', name: 'app_login')]
     public function login(AuthenticationUtils $authenticationUtils): Response

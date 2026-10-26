@@ -38,7 +38,6 @@ class EmailVerificationSubscriber implements EventSubscriberInterface
         'app_logout',
         'app_reverify_email',
         'app_verify_email',
-        'app_translate',
         'app_index',
         'app_register',
         // Conditions d'utilisation : page publique, lisible par tous (y compris un

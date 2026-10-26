@@ -566,11 +566,10 @@ Inscrits le 2026-10-22 (décisions de Serge) :
     focus — la raison du refus (son `title`, lu par l'infobulle unique) ne s'affiche jamais. Aligner
     sur `barre-actions.js` (barre des dialogues) : `aria-disabled`, clic et Entrée/Espace bloqués à
     la main, style désactivé conservé ; E2E souris + clavier.
-21. **Redirection ouverte de la bascule de langue** (accepté par Serge le 2026-10-25, famille
-    Sécurité, après le chantier 4). `SecurityController::translateApp`
-    (`/translate/{locale}/{currentURL}`, `currentURL '.+'`) fait `redirect($currentURL)` sans
-    contrôle : un lien piégé envoie un utilisateur CONNECTÉ hors de joseara.com, après avoir écrit
-    sa langue en base ; `{locale}` n'est pas borné à fr/en. D'abord vérifier si la route sert
-    encore (`segments/boutons_translation.html.twig` n'est inclus nulle part ; les pages cabinet
-    basculent par `?lang=`) : morte, la supprimer ; vivante, n'accepter qu'un chemin relatif de
-    même origine (sinon l'accueil) et fr/en. Test d'abord : une URL externe → redirection interne.
+21. ✅ **FAIT (2026-10-26) — Plus de redirection ouverte.** `/translate/{locale}/{currentURL}`
+    redirigeait vers toute adresse reçue (trois variantes prouvées : absolue, `//` sans schéma,
+    encodée), après avoir écrit la langue de l'utilisateur connecté. La route ne servait plus
+    (son seul gabarit n'était inclus nulle part ; la langue se choisit par `?lang=`) : supprimée,
+    avec ce gabarit. Garde-fou : `tests/Security/RedirectionOuverteTest.php` (aucune réponse vers
+    un autre hôte, langue intacte). Revue : aucune autre redirection ouverte — toute redirection
+    se fait vers une route nommée, une URL du serveur, ou un chemin filtré (`/console/supervision`).
