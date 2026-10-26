@@ -65,8 +65,12 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
 ### Totaliseur — partagé
 - Gabarit `_list_summary.html.twig` (« Total de la page », :22-23), contrôleur
   `list-summary_controller.js`, CSS `.jsb-list-summary` (`app.css:2177`).
-- ⚠ Écart : le navigateur additionne (:148-154) et formate en `fr-FR` (:230). Chantier 4 de
-  `jsbrokers-dev` : le serveur calcule et formate.
+- Le SERVEUR calcule et formate tout (chantier 4 de `jsbrokers-dev`) : le contrôleur affiche
+  des textes. Une rubrique nouvelle déclare ses grandeurs dans son `NumericCanvasProvider` par
+  `GrandeurTotalisable::montant()` / `::nombre()` — jamais un taux, un indice ni une moyenne.
+- Total de la sélection : demandé par le Cerveau avec la requête de la liste
+  (`totauxDeLaSelection`) ; une liste servie par un contrôleur propre (comme la production des
+  intermédiaires) y répond aussi.
 
 ### Barre d'actions et menu contextuel — partagé
 - Déclaration : `attribute_actions` du canevas de formulaire, avec `droit` et `event`

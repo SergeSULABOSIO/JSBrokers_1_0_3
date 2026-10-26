@@ -395,9 +395,24 @@ Inscrits le 2026-10-16 (décisions de Serge), après l'inventaire fait pour la s
      `MenusDuTableauDeBordTest`. Une bulle « maison » (élément en `position: fixed`) échappe à un
      test statique : à voir en revue. Restent hors coquille, motivés : menus-boutons de `barre-actions.js` (ils ne
      participent pas encore à « un seul menu ouvert ») et menu d'entête de Ket (plein écran).
-4. **Totaliseur.** Le chiffre est calculé et formaté par le serveur, plus par le navigateur
-   (`list-summary_controller.js:148-154`, `Intl.NumberFormat('fr-FR')` :230).
-5. **Valeurs en dur.** Replis `'USD'` (`TrancheType.php:82`, `_list_summary.html.twig:3`,
+4. ✅ **FAIT (2026-10-25/26) — Le totaliseur, calculé et formaté par le serveur** (commits
+   `e484d5f0`, `a76b4bbd`, `378eebbe` ; décisions de Serge : taux retirés, sélection calculée par
+   le serveur, portée page + sélection). Les règles :
+   - **Nature de chaque grandeur** (`GrandeurTotalisable`) : `montant` (centimes entiers) ou
+     `nombre` (compte, entier). Une grandeur NON ADDITIVE (taux, indice, cours, moyenne) ne se
+     déclare pas : une somme de taux n'est pas un taux. `TotaliseurNatureDesGrandeursTest` le
+     tient pour toutes les rubriques.
+   - **Total de la page** : `BarreDesTotaux` (via `CanvasBuilder::getBarreDesTotaux`) rend la
+     barre — options, totaux DÉJÀ FORMATÉS comme une cellule (code de la monnaie de travail,
+     nombre dans la langue active), valeurs par ligne — sous la clé `numericAttributesAndValues`.
+   - **Total de la sélection** : la requête de la liste porte `totauxDeLaSelection` ; le serveur
+     refait la MÊME recherche et ne totalise que les cochées qui en font partie (cloisonnement par
+     construction, `TotalDeLaSelectionCloisonneTest`), dit un total partiel (« (1 sur 3) »).
+   - Le navigateur n'additionne ni ne formate (`tests/js/totaliseur-serveur.test.mjs`).
+   - ⚠ `ListColumnsNumericCanvasBuilder` déclare toute colonne non-% en montant : une future
+     colonne de COMPTE y serait ×100.
+5. **Valeurs en dur.** Replis `'USD'` (`TrancheType.php:82`, `_list_summary.html.twig:3` — retiré
+   au chantier 4,
    placeholder `DepenseType.php:48`) ; `format_montant` à `'$'` par défaut
    (`NombreExtension.php`) ; couleurs hexadécimales des badges (`app.css:1809-1810`, contraste
    du blanc sur `#e69500` à mesurer) ; `date('Y')` dans `PisteController.php:108`, :177 ;
