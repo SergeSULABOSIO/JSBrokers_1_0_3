@@ -339,7 +339,7 @@
                 <div class="contact-field">
                     {{ form_label(contactForm.email, null, {label_attr: {class: 'form-label'}}) }}
                     <div class="contact-input">
-                        {{ ux_icon(resolve_icon_name('invite'), {height: '20px', width: '20px', class: 'contact-field-icon'}) }}
+                        {{ ux_icon(resolve_icon_name('action:send-email'), {height: '20px', width: '20px', class: 'contact-field-icon'}) }}
                         {{ form_widget(contactForm.email, {attr: {
                             class: 'form-control', autocomplete: 'email', placeholder: 'ContactForm.email'|trans
                         }}) }}

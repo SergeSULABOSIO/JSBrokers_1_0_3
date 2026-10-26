@@ -38,7 +38,7 @@ class ReversementRetroAgentEntityCanvasProvider implements EntityCanvasProviderI
                 // Le libellé de la FICHE suit celui de la rubrique : elle porte les deux
                 // familles, et « Rétro agent » aurait fait douter de la place d'un partenaire.
                 "description" => "Rétro intermédiaire",
-                "icone" => "depense",
+                "icone" => "reversement-retro-agent",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Versé le [[paidAt|date('d/m/Y')]] ([[*reference]]).",

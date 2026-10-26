@@ -49,7 +49,7 @@ class RolesEnFinanceEntityCanvasProvider implements EntityCanvasProviderInterfac
         return [
             "parametres" => [
                 "description" => "Rôle en Finance",
-                "icone" => "action:role",
+                "icone" => "roles",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Rôle Finance: [[*nom]].",

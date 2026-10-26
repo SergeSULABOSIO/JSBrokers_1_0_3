@@ -24,7 +24,7 @@ class PaiementPrimeEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Paiement de prime signalé",
-                "icone" => "paiement",
+                "icone" => "paiement-prime",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Prime réglée le [[paidAt|date('d/m/Y')]] ([[*reference]]).",

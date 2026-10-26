@@ -43,7 +43,7 @@ class FournisseurFormCanvasProvider implements FormCanvasProviderInterface
                 "nom"             => "fournisseur",
                 "personneContact" => "contact",
                 "telephone"       => "contact",
-                "email"           => "invite",
+                "email"           => "action:send-email",
                 "adresse"         => "entreprise",
                 "rccm"            => "action:edit",
                 "numimpot"        => "taxe",

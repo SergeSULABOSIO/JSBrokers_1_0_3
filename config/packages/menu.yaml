@@ -48,7 +48,7 @@ parameters:
                         # « Reversements de rétrocommission » se tronquait en
                         # « Reversements d… ». L'ancien terme reste compris de
                         # l'assistant (WorkspaceAccessResolver::ALIAS).
-                        "Rétros intermédiaires": { icone: 'depense', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\ReversementRetroAgent' }
+                        "Rétros intermédiaires": { icone: 'reversement-retro-agent', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\ReversementRetroAgent' }
                         "Fournisseurs": { icone: 'fournisseur', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Fournisseur' }
                         "Dépenses": { icone: 'depense', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\DepenseCourtier' }
                         # Rubrique SANS entité Doctrine : 'DocumentComptable' est une PSEUDO-entité
@@ -94,7 +94,7 @@ parameters:
                         # pour le gating du menu et le routage du composant.
                         # Elle remplace le rapport de production, qui ne s'ouvrait que par la
                         # porte d'une fiche et ne se situait nulle part dans l'arbre.
-                        "Production intermédiaires": { icone: 'invite', composant_twig: '_view_manager_production.html.twig', entity_name: 'ProductionIntermediaire' }
+                        "Production intermédiaires": { icone: 'production-intermediaire', composant_twig: '_view_manager_production.html.twig', entity_name: 'ProductionIntermediaire' }
 
                 Sinistre:
                     icone: 'sinistre'
@@ -128,7 +128,7 @@ parameters:
                         # Les réglages qui gouvernent les contrôles de la soumission :
                         # préavis, absents simultanés, périodes de blocage, dotation,
                         # relances. Même droit que les deux rubriques ci-dessus.
-                        "Paramètres congés": { icone: 'action:settings', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\ParametresConge' }
+                        "Paramètres congés": { icone: 'parametres-conge', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\ParametresConge' }
                         # ── ÉCHANGE DE DONNÉES ────────────────────────────────────────
                         # Rubrique OUTIL (pas de liste d'entité) : entity_name porte donc un
                         # nom court EN CLAIR, la pseudo-entité « Echange », comme le font déjà

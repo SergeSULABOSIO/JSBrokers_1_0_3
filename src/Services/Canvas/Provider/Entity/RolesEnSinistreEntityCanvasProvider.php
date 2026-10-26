@@ -34,7 +34,7 @@ class RolesEnSinistreEntityCanvasProvider implements EntityCanvasProviderInterfa
         return [
             "parametres" => [
                 "description" => "Rôle en Sinistre",
-                "icone" => "action:role",
+                "icone" => "roles",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Rôle Sinistre: [[*nom]].",

@@ -150,7 +150,7 @@ final class OnboardingCatalogue
             'bloc' => 'Administration', 'poids' => self::POIDS_CONFORT,
         ],
         [
-            'cle' => 'parametres_conges', 'libelle' => 'Paramètres congés', 'icone' => 'action:settings',
+            'cle' => 'parametres_conges', 'libelle' => 'Paramètres congés', 'icone' => 'parametres-conge',
             'entite' => ParametresConge::class, 'seuil' => null, 'singleton' => true,
             'bloc' => 'Administration', 'poids' => self::POIDS_CONFORT,
         ],

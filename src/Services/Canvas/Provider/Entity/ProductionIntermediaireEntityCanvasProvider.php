@@ -29,7 +29,7 @@ class ProductionIntermediaireEntityCanvasProvider implements EntityCanvasProvide
         return [
             'parametres' => [
                 'description' => 'Production des intermédiaires',
-                'icone' => 'invite',
+                'icone' => 'production-intermediaire',
                 'background_image' => '/images/fitures/default.jpg',
             ],
             // Aucun champ : voir l'entête. La recherche avancée n'a rien à proposer sur une

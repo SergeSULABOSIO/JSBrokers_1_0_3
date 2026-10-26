@@ -235,8 +235,13 @@ identiques**, et aucune icône n'est écrite en dur dans un gabarit.
 personne, retirée (`62d7ebde` ; `PisteListCanvasProvider.php:26-28`).
 
 **Tests.** `IconAliasVendorisationTest` et `IconInvocationsVendoriseesTest` restent verts.
-**Test prescrit, pas encore écrit** (décision de Serge, 2026-10-16) : au premier chantier de
-rubrique, un test vérifie (a) qu'aucune mascotte n'est partagée hors exceptions motivées,
-(b) qu'aucune mascotte n'est un alias `action:*`, (c) que `menu.yaml` et le canevas concordent.
-Les partages existants sont tranchés cas par cas par Serge à ce moment-là (chantier 8 de
-`jsbrokers-dev`).
+**Test `tests/Frontend/MascottesUniquesTest.php`** (écrit au chantier 8, 2026-10-26) : (a) aucune
+mascotte partagée hors FAMILLE déclarée (les cinq Rôles) ; (b) aucune mascotte n'est ni ne dessine
+(SVG résolu) un alias `action:*` / `fichier:*`, hors exceptions motivées nommées (Classeurs,
+Échange) ; (c) `menu.yaml` = canevas ; (d) les vitrines qui recopient une mascotte — page des
+tokens (`PlanTarifaireExtension::ENTITES`), guide de démarrage (`OnboardingCatalogue::ETAPES`) —
+reprennent celle du canevas ; les rubriques du menu sans canevas comptent aussi. Une nouvelle
+rubrique y passe d'office ; une nouvelle exception se motive dans le test.
+⚠ Un alias d'ENTITÉ ne dit jamais une action : un e-mail se dit `action:send-email`, pas `invite`.
+⚠ `texte_principal.icone` des canevas de LISTE n'est lu par personne (la ligne lit le canevas
+d'entité) : ne pas s'y fier, ne pas en ajouter.

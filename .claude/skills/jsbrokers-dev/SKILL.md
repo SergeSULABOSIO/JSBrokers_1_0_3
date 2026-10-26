@@ -452,11 +452,14 @@ Inscrits le 2026-10-16 (décisions de Serge), après l'inventaire fait pour la s
    gabarit nommé en toutes lettres dans `render`/`renderView`/`htmlTemplate` existe).
    ⚠ L'IDE dit `ArticleController::checkForDuplicates` morte : FAUX, elle est appelée par
    `method_exists` (`ControllerUtilsTrait`) — prouver la mort avant de supprimer.
-8. **Mascottes.** Partages (Paiement et PaiementPrime ; Chargement et ChargementPourPrime ;
-   DepenseCourtier et ReversementRetroAgent ; Invite et ProductionIntermediaire) et alias
-   d'action utilisés comme mascotte (cinq Roles* sur `action:role`, ParametresConge sur
-   `action:settings`, PeriodeBlocage sur `action:resiliation`). Serge tranche cas par cas au
-   premier chantier de rubrique, avec le test prescrit par `jsb-construire-rubrique` §6.
+8. ✅ **FAIT (2026-10-26) — Mascottes.** Dix cas tranchés par Serge un par un : PaiementPrime
+   (main tendant une pièce), ChargementPourPrime (argent « + »), Rétros intermédiaires (virement),
+   Invités (collaborateur en cravate), Production intermédiaires (podium), les cinq Rôles (une
+   mascotte de famille, personne + engrenage), Paramètres congés (calendrier validé), Périodes de
+   blocage (calendrier + alerte), Article (facture à lignes) ; exceptions motivées : Classeurs
+   (= `action:replier`) et Échange (= `fichier:excel`). Alias nommés comme l'entité en kebab-case.
+   Garde `MascottesUniquesTest` (règles dans `jsb-construire-rubrique` §6). ⚠ Un alias d'ENTITÉ ne
+   sert jamais à dire une action : un e-mail se dit `action:send-email`, pas `invite`.
 
 Inscrits le 2026-10-17, à la clôture du chantier 1 (constats faits en route, prouvés) :
 

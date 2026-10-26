@@ -43,7 +43,7 @@
                                           data-confirm-action-title-value="Envoyer la campagne"
                                           data-confirm-action-body-value="Envoyer « {{ c.nom }} » à son segment ?">
                                         <input type="hidden" name="_token" value="{{ csrf_token('crm-campagne-envoyer-' ~ c.id) }}">
-                                        <button type="submit" class="btn btn-sm btn-cobalt">{{ ux_icon(resolve_icon_name('invite'), {height:'15px', width:'15px'}) }} Envoyer</button>
+                                        <button type="submit" class="btn btn-sm btn-cobalt">{{ ux_icon(resolve_icon_name('action:send-email'), {height:'15px', width:'15px'}) }} Envoyer</button>
                                     </form>
                                 {% else %}
                                     <form method="post" action="{{ path('console.crm.campagne.relancer', {id: c.id}) }}" style="display:inline;"

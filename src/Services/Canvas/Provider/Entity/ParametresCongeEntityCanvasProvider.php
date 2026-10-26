@@ -18,7 +18,7 @@ class ParametresCongeEntityCanvasProvider implements EntityCanvasProviderInterfa
         return [
             "parametres" => [
                 "description" => "Paramètres des congés",
-                "icone" => "action:settings",
+                "icone" => "parametres-conge",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Réglages des congés : [[*resumeReglages]].",

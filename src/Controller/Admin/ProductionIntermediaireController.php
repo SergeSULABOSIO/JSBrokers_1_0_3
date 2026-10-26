@@ -507,7 +507,7 @@ class ProductionIntermediaireController extends AbstractController
         return [
             'parametres' => [
                 'description' => 'Production des intermédiaires',
-                'icone' => 'invite',
+                'icone' => 'production-intermediaire',
                 'creation_interdite' => true,
                 // LES DEUX COMMANDES DE L'ANCIEN ENTÊTE. Le rapport les portait en haut à
                 // droite : verser au bénéficiaire affiché, et relire ce qu'on lui a déjà

@@ -91,9 +91,9 @@ class PlanTarifaireExtension extends AbstractExtension
         RevenuPourCourtier::class => ['fr' => 'Revenu',    'en' => 'Broker revenue',  'icon' => 'revenu'],
         Tranche::class       => ['fr' => 'Tranche',        'en' => 'Installment',     'icon' => 'tranche'],
         Chargement::class    => ['fr' => 'Type de chargement', 'en' => 'Loading type', 'icon' => 'chargement'],
-        ChargementPourPrime::class => ['fr' => 'Chargement sur prime', 'en' => 'Premium loading', 'icon' => 'chargement'],
+        ChargementPourPrime::class => ['fr' => 'Chargement sur prime', 'en' => 'Premium loading', 'icon' => 'chargement-pour-prime'],
         Note::class          => ['fr' => 'Note de débit',  'en' => 'Debit note',      'icon' => 'note'],
-        Article::class       => ['fr' => 'Article',        'en' => 'Line item',       'icon' => 'note'],
+        Article::class       => ['fr' => 'Article',        'en' => 'Line item',       'icon' => 'article'],
         Paiement::class      => ['fr' => 'Paiement',       'en' => 'Payment',         'icon' => 'paiement'],
         Operation::class     => ['fr' => 'Opération',      'en' => 'Operation',       'icon' => 'operation'],
         Bordereau::class     => ['fr' => 'Bordereau',      'en' => 'Bordereau',       'icon' => 'bordereau'],
@@ -128,8 +128,8 @@ class PlanTarifaireExtension extends AbstractExtension
         \App\Entity\TypeAbsence::class  => ['fr' => "Type d'absence",   'en' => 'Absence type',  'icon' => 'type-absence'],
         \App\Entity\JourFerie::class    => ['fr' => 'Jour férié',       'en' => 'Public holiday', 'icon' => 'jour-ferie'],
         \App\Entity\RegimeTravail::class => ['fr' => 'Régime de travail', 'en' => 'Work schedule', 'icon' => 'regime-travail'],
-        \App\Entity\ParametresConge::class => ['fr' => 'Paramètres des congés', 'en' => 'Leave settings', 'icon' => 'action:settings'],
-        \App\Entity\PeriodeBlocage::class => ['fr' => 'Période de blocage', 'en' => 'Blackout period', 'icon' => 'action:resiliation'],
+        \App\Entity\ParametresConge::class => ['fr' => 'Paramètres des congés', 'en' => 'Leave settings', 'icon' => 'parametres-conge'],
+        \App\Entity\PeriodeBlocage::class => ['fr' => 'Période de blocage', 'en' => 'Blackout period', 'icon' => 'periode-blocage'],
 
         // ── IA ───────────────────────────────────────────────────────────────
         // Chaque message envoyé à l'assistant IA est métré comme une écriture :
@@ -138,11 +138,11 @@ class PlanTarifaireExtension extends AbstractExtension
         AssistantMessage::class => ['fr' => 'Message à l\'assistant IA', 'en' => 'AI assistant message', 'icon' => 'assistant-ia'],
 
         // ── Rôles collaborateurs (par pôle) ──────────────────────────────────
-        RolesEnAdministration::class => ['fr' => 'Rôle en administration', 'en' => 'Administration role', 'icon' => 'role'],
-        RolesEnFinance::class => ['fr' => 'Rôle en finance', 'en' => 'Finance role',   'icon' => 'role'],
-        RolesEnMarketing::class => ['fr' => 'Rôle en marketing', 'en' => 'Marketing role', 'icon' => 'role'],
-        RolesEnProduction::class => ['fr' => 'Rôle en production', 'en' => 'Production role', 'icon' => 'role'],
-        RolesEnSinistre::class => ['fr' => 'Rôle en sinistre', 'en' => 'Claims role',  'icon' => 'role'],
+        RolesEnAdministration::class => ['fr' => 'Rôle en administration', 'en' => 'Administration role', 'icon' => 'roles'],
+        RolesEnFinance::class => ['fr' => 'Rôle en finance', 'en' => 'Finance role',   'icon' => 'roles'],
+        RolesEnMarketing::class => ['fr' => 'Rôle en marketing', 'en' => 'Marketing role', 'icon' => 'roles'],
+        RolesEnProduction::class => ['fr' => 'Rôle en production', 'en' => 'Production role', 'icon' => 'roles'],
+        RolesEnSinistre::class => ['fr' => 'Rôle en sinistre', 'en' => 'Claims role',  'icon' => 'roles'],
     ];
 
     /**

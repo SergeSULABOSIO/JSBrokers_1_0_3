@@ -58,13 +58,25 @@ class IconCanvasProvider
         'feedback'        => 'tabler:message-chatbot',
         'fournisseur'     => 'tabler:building-store', // opérateur économique (achats / services généraux)
         'groupe'          => 'mingcute:group-3-fill',
-        'invite'          => 'hugeicons:mail-send-01',
+        // Un collaborateur du cabinet (chantier 8) : l'enveloppe ne disait que « invitation par
+        // e-mail », et dessinait comme l'action « envoyer un e-mail ».
+        'invite'          => 'mdi:account-tie',
         'modele-piece'    => 'uil:document-layout-left',
         'monnaie'         => 'hugeicons:dollar-circle',
         'note'            => 'tdesign:bill-filled',
         'offre'           => 'hugeicons:invoice-01',
         'operation'       => 'tabler:transaction-dollar', // Ajout pour la rubrique Opération
         'paiement'        => 'hugeicons:dollar-receive-02',
+        // MASCOTTES DU CHANTIER 8 (cas tranchés par Serge le 2026-10-26) : chacune remplace un
+        // dessin partagé avec une autre rubrique, ou un dessin d'action.
+        'paiement-prime'           => 'mdi:hand-coin',        // l'assuré paie sa prime à l'assureur
+        'chargement-pour-prime'    => 'mdi:cash-plus',        // une composante qui s'ajoute à la prime
+        'reversement-retro-agent'  => 'mdi:bank-transfer',    // ce que le cabinet verse à un bénéficiaire
+        'production-intermediaire' => 'mdi:podium-gold',      // ce que chacun apporte, classé
+        'roles'                    => 'lucide:user-cog',      // les droits d'un invité (famille des 5 rôles)
+        'parametres-conge'         => 'mdi:calendar-check',   // les règles qui valident un congé
+        'periode-blocage'          => 'mdi:calendar-alert',   // une période où l'on ne pose pas de congé
+        'article'                  => 'hugeicons:invoice-04', // une ligne d'une note de débit ou de crédit
         'partenaire'      => 'carbon:partnership',
         'piece-sinistre'  => 'hugeicons:document-attachment',
         'piste'           => 'material-symbols:footprint',

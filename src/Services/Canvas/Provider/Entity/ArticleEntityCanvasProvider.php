@@ -24,7 +24,7 @@ class ArticleEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Ligne de facturation (Article) appartenant à une Note.",
-                "icone" => "default", // Icône générique
+                "icone" => "article",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     " Nature: [[natureArticle]] ([[elementLie]]).",

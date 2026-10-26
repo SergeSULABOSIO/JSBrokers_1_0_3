@@ -18,7 +18,7 @@ class PeriodeBlocageEntityCanvasProvider implements EntityCanvasProviderInterfac
         return [
             "parametres" => [
                 "description" => "Période de blocage",
-                "icone" => "action:resiliation",
+                "icone" => "periode-blocage",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "[[*libelle]].",
