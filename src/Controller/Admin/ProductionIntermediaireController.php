@@ -254,15 +254,23 @@ class ProductionIntermediaireController extends AbstractController
                 : $this->render('components/_access_denied.html.twig', ['entite' => 'Production intermédiaires']);
         }
 
-        $criteres = $estRafraichissement
-            ? (json_decode($request->getContent(), true)['criteria'] ?? [])
-            : [];
+        $corps = $estRafraichissement ? (json_decode($request->getContent(), true) ?? []) : [];
+        $criteres = $corps['criteria'] ?? [];
         if (!is_array($criteres)) {
             $criteres = [];
         }
 
         $statut = ProductionScope::statutDemande($criteres);
         $contexte = $this->contexteDuRapport($criteres, $statut);
+
+        // LE TOTAL DE LA SÉLECTION (chantier 4, commit 3) : le même rapport, réduit aux lignes
+        // cochées qui en font partie — un identifiant étranger au rapport ne compte pas.
+        if ($estRafraichissement && isset($corps['totauxDeLaSelection'])) {
+            $cochees = array_flip(\array_slice(array_map('intval', array_filter((array) $corps['totauxDeLaSelection'], 'is_numeric')), 0, 100));
+            $valeurs = array_intersect_key($this->valeursNumeriques($contexte['data']), $cochees);
+
+            return $this->json($this->canvasBuilder->totauxDeLaSelection($valeurs, \count($cochees), true));
+        }
 
         if ($estRafraichissement) {
             return $this->json([

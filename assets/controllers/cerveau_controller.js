@@ -190,6 +190,8 @@ export default class extends Controller {
                         entiteNom: storedState.entiteNom || null,
                         workspaceTabId: this.currentWorkspaceTabId,
                     });
+                    // Le total de la sélection de cet onglet (le serveur le recalcule).
+                    this._demanderTotauxDeLaSelection(storedState, this.currentWorkspaceTabId, this.activeTabId);
                 } else {
                     // L'onglet n'a pas encore d'état (contenu en cours de chargement) :
                     // on RÉINITIALISE immédiatement tout le chrome contextuel (toolbar,
@@ -996,6 +998,62 @@ export default class extends Controller {
             formCanvas: activeTabState.activeTabFormCanvas,
             workspaceTabId: this.currentWorkspaceTabId,
         });
+
+        this._demanderTotauxDeLaSelection(activeTabState, this.currentWorkspaceTabId, this.activeTabId);
+    }
+
+    /**
+     * LE TOTAL DE LA SÉLECTION, CALCULÉ PAR LE SERVEUR (chantier 4, commit 3 — décision de
+     * Serge). La requête de la liste elle-même — critères, contexte parent, page de l'onglet —
+     * porte les lignes cochées ; le serveur refait la même recherche et ne totalise que celles
+     * qui en font partie (ControllerUtilsTrait). Le texte reçu, déjà formaté, est diffusé à la
+     * barre des totaux (`app:totaux-selection.ready`).
+     *
+     * Une sélection qui change vite (« Tout cocher », cases enchaînées) : la dernière fait
+     * autorité — courte attente, puis la requête précédente est annulée.
+     *
+     * @param {object} tabState l'état de l'onglet interne
+     * @param {string|null} workspaceTabId l'onglet de rubrique
+     * @param {string|null} tabId l'onglet interne (principal ou collection)
+     * @private
+     */
+    _demanderTotauxDeLaSelection(tabState, workspaceTabId, tabId) {
+        if (!tabState) return;
+        clearTimeout(tabState._minuterieTotaux);
+        tabState._requeteTotaux?.abort();
+        const ids = [...(tabState.selectionIds || [])];
+        const attributs = tabState.numericAttributesAndValues?.attributs || {};
+        if (ids.length === 0 || Object.keys(attributs).length === 0) {
+            this.broadcast('app:totaux-selection.ready', { workspaceTabId, tabId, ids, totaux: null });
+            return;
+        }
+        const adresse = this._buildDynamicQueryUrl(tabState);
+        if (!adresse) return;
+        // Le contexte parent est lu MAINTENANT, à la sélection — pas à l'expiration du délai.
+        const parentContext = tabId === this.activeTabId ? this._getParentContextForSearch() : null;
+        tabState._minuterieTotaux = setTimeout(() => {
+            const annulation = new AbortController();
+            tabState._requeteTotaux = annulation;
+            fetch(adresse, {
+                method: 'POST',
+                signal: annulation.signal,
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({
+                    criteria: tabState.searchCriteria || {},
+                    parentContext,
+                    page: tabState.currentPage ?? 1,
+                    totauxDeLaSelection: ids,
+                }),
+            })
+                .then((reponse) => (reponse.ok ? reponse.json() : Promise.reject(new Error(`HTTP ${reponse.status}`))))
+                .then((donnees) => this.broadcast('app:totaux-selection.ready', {
+                    workspaceTabId, tabId, ids, totaux: donnees.totaux || {}, suffixe: donnees.suffixe || '', note: donnees.note || '',
+                }))
+                .catch((erreur) => {
+                    if (erreur?.name === 'AbortError') return;
+                    this.broadcast('app:totaux-selection.ready', { workspaceTabId, tabId, ids, totaux: null, erreur: true });
+                });
+        }, 200);
     }
 
     /**
@@ -1127,6 +1185,11 @@ export default class extends Controller {
         const proprietaire = workspaceTabId || '__global__';
         const affiche = proprietaire === (this.currentWorkspaceTabId || '__global__');
         const tabState = (this.tabsState[proprietaire] || (this.tabsState[proprietaire] = {}))[targetTabId];
+        // La liste change : un total de sélection en attente porterait sur l'ancienne.
+        if (tabState) {
+            clearTimeout(tabState._minuterieTotaux);
+            tabState._requeteTotaux?.abort();
+        }
 
 
         // La logique de fetch est maintenant directement dans le cerveau.

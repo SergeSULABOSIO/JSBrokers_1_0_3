@@ -88,6 +88,32 @@ class BarreDesTotauxServeurTest extends KernelTestCase
         self::assertSame(['attributs' => [], 'totaux' => [], 'valeurs' => []], $barre);
     }
 
+    /**
+     * LE TOTAL DE LA SÉLECTION, ET CE QU'IL COUVRE (chantier 4, commit 3). Des lignes cochées
+     * peuvent ne plus faire partie de la liste recalculée (un collègue a modifié une fiche) :
+     * le total le DIT, au lieu d'un chiffre partiel présenté comme entier.
+     */
+    public function testLeTotalDeLaSelectionDitSilEstPartiel(): void
+    {
+        $outil = $this->barre();
+        $this->langue('fr');
+
+        $entiere = $outil->selection(self::PAGE, 2);
+        self::assertSame('USD 1 545,67', $entiere['totaux']['primeTotale']);
+        self::assertSame(2, $entiere['lignes']);
+        self::assertSame('', $entiere['suffixe']);
+        self::assertSame('', $entiere['note']);
+
+        $partielle = $outil->selection([7 => self::PAGE[7]], 3);
+        self::assertSame('USD 1 200,00', $partielle['totaux']['primeTotale']);
+        self::assertSame(' (1 sur 3)', $partielle['suffixe']);
+        self::assertStringContainsString('2 lignes cochées ne font plus partie de la liste', $partielle['note']);
+
+        $aucune = $outil->selection([], 1);
+        self::assertSame([], $aucune['totaux']);
+        self::assertSame(' (0 sur 1)', $aucune['suffixe']);
+    }
+
     /** Un total exact au centime : aucune somme flottante. */
     public function testLaSommeEstExacteAuCentime(): void
     {

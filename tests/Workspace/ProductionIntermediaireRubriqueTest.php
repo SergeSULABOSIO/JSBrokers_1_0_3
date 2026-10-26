@@ -529,6 +529,28 @@ class ProductionIntermediaireRubriqueTest extends WebTestCase
         self::assertSame('Rétrocommission due', $barre['attributs']['due']['libelle']);
         // Le total de la page, formaté par le serveur comme une cellule (chantier 4).
         self::assertMatchesRegularExpression('/^(?:[A-Z]{3} )?200,00$/', $barre['totaux']['due']);
+
+        // LE TOTAL DE LA SÉLECTION, calculé par le serveur (chantier 4, commit 3) : le même
+        // rapport, réduit aux lignes cochées qui en font partie ; un identifiant étranger au
+        // rapport ne compte pas.
+        $selection = function (array $cochees) use ($ids): array {
+            $this->client->request(
+                'POST',
+                sprintf('/admin/productionintermediaire/api/dynamic-query/%d/%d', $ids['idInvite'], $ids['idEntreprise']),
+                [],
+                [],
+                ['CONTENT_TYPE' => 'application/json'],
+                json_encode(['criteria' => ProductionScope::critereBeneficiaire($ids['aliceId'], 'Alice'), 'totauxDeLaSelection' => $cochees]),
+            );
+            self::assertResponseIsSuccessful();
+
+            return json_decode((string) $this->client->getResponse()->getContent(), true);
+        };
+        $cochee = $selection([$id]);
+        self::assertArrayNotHasKey('html', $cochee);
+        self::assertSame(1, $cochee['lignes']);
+        self::assertMatchesRegularExpression('/^(?:[A-Z]{3} )?200,00$/', $cochee['totaux']['due']);
+        self::assertSame(0, $selection([999999999])['lignes'], 'Un identifiant étranger au rapport ne compte pas.');
     }
 
     /**

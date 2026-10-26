@@ -437,6 +437,44 @@ class TrancheTotauxBarTest extends WebTestCase
         $this->assertEqualsWithDelta(20000.0, $numericA['montant_paye'], 1.0, 'Commission encaissée de A = SA part (200), jamais l\'agrégat du bordereau (500).');
         $this->assertNotEqualsWithDelta(50000.0, $numericA['montant_paye'], 1.0, 'Ne doit surtout pas afficher l\'agrégat payé (500) sur une seule tranche.');
 
+        // LE TOTAL DE LA SÉLECTION, CALCULÉ PAR LE SERVEUR (chantier 4, commit 3) : la même
+        // recherche (critères, portefeuille, page), réduite aux lignes cochées QUI EN FONT
+        // PARTIE. Cocher A totalise A ; glisser B (hors portefeuille) ou un identifiant
+        // inventé n'ajoute RIEN — une ligne qu'on ne voit pas n'entre jamais dans un total.
+        $totauxDe = function (array $ids) use ($sergeId, $entrepriseId): array {
+            $this->client->request(
+                'POST',
+                sprintf('/admin/tranche/api/dynamic-query/%d/%d', $sergeId, $entrepriseId),
+                [],
+                [],
+                ['CONTENT_TYPE' => 'application/json'],
+                json_encode([
+                    'criteria' => [
+                        '__paiement_prime__' => 'payee', '__paiement_commission__' => 'payee',
+                        '__mon_portefeuille__' => ['operator' => '=', 'value' => $sergeId, 'label' => 'Portefeuille de Serge'],
+                    ],
+                    'parentContext' => null,
+                    'page' => 1,
+                    'totauxDeLaSelection' => $ids,
+                ])
+            );
+            $this->assertResponseIsSuccessful();
+
+            return json_decode((string) $this->client->getResponse()->getContent(), true);
+        };
+        $selectionA = $totauxDe([$trancheAId]);
+        $this->assertArrayNotHasKey('html', $selectionA, 'Un total, pas une page : aucune ligne n’est renvoyée.');
+        $this->assertSame(1, $selectionA['lignes']);
+        $this->assertMatchesRegularExpression('/^(?:[A-Z]{3} )?200,00$/', $selectionA['totaux']['montant_paye'], 'Le total de A, formaté par le serveur.');
+        $avecB = $totauxDe([$trancheAId, $trancheBId, 999999999]);
+        $this->assertSame(1, $avecB['lignes'], 'B (hors portefeuille) et un identifiant inventé ne comptent pas.');
+        $this->assertSame($selectionA['totaux'], $avecB['totaux']);
+        $this->assertSame(' (1 sur 3)', $avecB['suffixe'], 'Le total ne couvre pas toute la sélection : il le dit.');
+        $this->assertSame('', $selectionA['suffixe']);
+        $seulementB = $totauxDe([$trancheBId]);
+        $this->assertSame(0, $seulementB['lignes']);
+        $this->assertSame([], $seulementB['totaux'], 'Rien de B ne fuit.');
+
         // Non-régression : Serge ne peut voir la tranche B ni en la cherchant
         // explicitement (hors de son portefeuille), ni via son propre portefeuille.
         $this->client->request(

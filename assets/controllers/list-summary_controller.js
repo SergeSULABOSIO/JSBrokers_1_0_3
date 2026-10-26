@@ -10,16 +10,15 @@ import { Controller } from '@hotwired/stimulus';
  *   - `attributs` : les options du sélecteur (libellé, nature : montant ou nombre) ;
  *   - `totaux`    : le total de la PAGE de chaque grandeur, déjà formaté comme une cellule ;
  *   - `valeurs`   : les valeurs entières par ligne.
- * Ce contrôleur choisit le texte à montrer : il n'additionne ni ne formate la page.
- * (Étape : le total de la SÉLECTION est encore sommé ici ; le commit 3 le confie au serveur.)
+ * Le total de la SÉLECTION vient aussi du serveur : à chaque sélection, le Cerveau rejoue la
+ * requête de la liste avec les lignes cochées, et diffuse le texte reçu
+ * (`app:totaux-selection.ready`).
+ * Ce contrôleur choisit le texte à montrer : il n'additionne ni ne formate rien.
  */
 export default class extends Controller {
     static targets = ["globalTotal", "selectionTotal", "attributeSelector"];
-
-    static values = {
-        // Repli seulement : le serveur passe la monnaie de travail du cabinet.
-        currencyCode: { type: String, default: 'USD' }
-    };
+    // Les mots du serveur (gabarit) : un total qui n'a pas pu être calculé.
+    static values = { indisponible: String, indisponibleNote: String };
 
     connect() {
         this.nomControleur = "LIST-SUMMARY";
@@ -27,6 +26,8 @@ export default class extends Controller {
         this.barre = { attributs: {}, totaux: {}, valeurs: {} };
         /** @property {Set<number>} selectedIds - Les identifiants des lignes cochées. */
         this.selectedIds = new Set();
+        /** @property {Object|null|undefined} totauxSelection - Textes du serveur ; undefined : en cours. */
+        this.totauxSelection = null;
 
         const workspacePanel = this.element.closest('[data-tab-id]');
         this.workspaceTabId = workspacePanel ? workspacePanel.dataset.tabId : null;
@@ -36,11 +37,36 @@ export default class extends Controller {
         this._readInitialDataFromDom();
 
         this.boundHandleContextChanged = this.handleContextChanged.bind(this);
+        this.boundTotauxSelection = this._surTotauxDeLaSelection.bind(this);
         document.addEventListener('app:context.changed', this.boundHandleContextChanged);
+        document.addEventListener('app:totaux-selection.ready', this.boundTotauxSelection);
     }
 
     disconnect() {
         document.removeEventListener('app:context.changed', this.boundHandleContextChanged);
+        document.removeEventListener('app:totaux-selection.ready', this.boundTotauxSelection);
+    }
+
+    /** La clé d'une sélection : ses identifiants, triés. */
+    _cle(ids) {
+        return [...ids].map((id) => parseInt(id, 10)).sort((a, b) => a - b).join(',');
+    }
+
+    /**
+     * Les totaux de la sélection, rendus par le serveur. Une réponse pour une AUTRE sélection
+     * que la courante (cases enchaînées) est ignorée.
+     * @param {CustomEvent} event
+     */
+    _surTotauxDeLaSelection(event) {
+        const { workspaceTabId, ids, totaux, erreur, suffixe, note } = event.detail || {};
+        if (this.workspaceTabId && workspaceTabId !== this.workspaceTabId) return;
+        if (this._cle(ids || []) !== this._cle(this.selectedIds)) return;
+        // Une ERREUR n'est pas une sélection vide : elle se dit (« indisponible »).
+        this.totauxSelection = erreur ? { erreur: true } : (totaux || null);
+        // Un total PARTIEL (des lignes cochées ne sont plus dans la liste) : le serveur le dit.
+        this.suffixeSelection = suffixe || '';
+        this.noteSelection = note || '';
+        this.recalculate();
     }
 
     /**
@@ -54,7 +80,12 @@ export default class extends Controller {
         // La barre des totaux doit toujours être visible pour afficher un statut.
         this.element.style.display = 'flex';
         this._poserLaBarre(numericAttributesAndValues);
+        const avant = this._cle(this.selectedIds);
         this.selectedIds = new Set((selection || []).map(s => parseInt(s.id, 10)));
+        // Une nouvelle sélection : son total est demandé au serveur (le Cerveau) — en attente.
+        if (this._cle(this.selectedIds) !== avant || this.selectedIds.size === 0) {
+            this.totauxSelection = this.selectedIds.size ? undefined : null;
+        }
         this.recalculate();
     }
 
@@ -110,14 +141,18 @@ export default class extends Controller {
         }
         this.globalTotalTarget.textContent = this.barre.totaux[attribute] ?? '—';
 
-        // Étape (commit 3 du chantier 4 : la sélection passe au serveur).
-        const selectionTotal = Object.entries(this.barre.valeurs)
-            .filter(([id]) => this.selectedIds.has(parseInt(id, 10)))
-            .reduce((somme, [, ligne]) => somme + (ligne[attribute] || 0), 0);
-        const nature = (this.barre.attributs[attribute] || {}).nature;
-        this.selectionTotalTarget.textContent = nature === 'nombre'
-            ? new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(selectionTotal)
-            : this.formatCurrency(selectionTotal);
+        // La sélection : le texte du serveur ; « … » pendant le calcul ; « — » sans sélection ;
+        // « indisponible » si le calcul a échoué ; la mention du serveur si le total est partiel.
+        this.selectionTotalTarget.removeAttribute('title');
+        if (this.totauxSelection === undefined) {
+            this.selectionTotalTarget.textContent = '…';
+        } else if (this.totauxSelection && this.totauxSelection.erreur) {
+            this.selectionTotalTarget.textContent = this.indisponibleValue || '—';
+            if (this.indisponibleNoteValue) this.selectionTotalTarget.setAttribute('title', this.indisponibleNoteValue);
+        } else {
+            this.selectionTotalTarget.textContent = ((this.totauxSelection || {})[attribute] ?? '—') + (this.suffixeSelection || '');
+            if (this.noteSelection) this.selectionTotalTarget.setAttribute('title', this.noteSelection);
+        }
     }
 
     /**
@@ -144,13 +179,4 @@ export default class extends Controller {
         }
     }
 
-    /**
-     * Étape : format du total de la SÉLECTION (le commit 3 le confie au serveur).
-     * @param {number} valueInCents
-     * @private
-     */
-    formatCurrency(valueInCents) {
-        const currency = this.currencyCodeValue || 'USD';
-        return new Intl.NumberFormat('fr-FR', { style: 'currency', currency }).format(valueInCents / 100);
-    }
 }

@@ -63,6 +63,19 @@ class CanvasBuilder
         return $this->barreDesTotaux->composer($this->getNumericAttributesAndValuesForCollection($data));
     }
 
+    /**
+     * Le total de la SÉLECTION (chantier 4, commit 3) : les lignes retenues et ce qu'il couvre.
+     *
+     * @param iterable<object>|array<int, array<string, array>> $retenues entités, ou valeurs déjà construites
+     */
+    public function totauxDeLaSelection(array $retenues, int $demandees, bool $valeursConstruites = false): array
+    {
+        return $this->barreDesTotaux->selection(
+            $valeursConstruites ? $retenues : $this->getNumericAttributesAndValuesForCollection($retenues),
+            $demandees,
+        );
+    }
+
     /** La barre composée depuis des valeurs déjà construites (rapport de production). */
     public function composerBarreDesTotaux(array $valeursParId): array
     {

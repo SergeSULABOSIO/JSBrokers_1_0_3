@@ -1235,9 +1235,33 @@ trait ControllerUtilsTrait
             // Appel du service de recherche refactorisé et sécurisé
             // CORRECTION : On passe le contexte du parent au service de recherche.
             $listeCanvas = $this->canvasBuilder->getListeCanvas($entityClass);
-            [$criteria, $vueCartes, $basculerEnListe] = $this->preparerLaVueCartes($request, $entityClass, $criteria, $parentContext, $entreprise, $listeCanvas);
+            [$criteria, $vueCartes, $basculerEnListe] = $this->preparerLaVueCartes($request, $entityClass, $criteria, $parentContext, $entreprise, $listeCanvas, isset($payload['totauxDeLaSelection']));
             $searchResult = $this->searchService->search($entityClass, $criteria, $entreprise, $parentContext, $page, 20);
             $data = $searchResult['data'];
+
+            // LE TOTAL DE LA SÉLECTION (chantier 4, commit 3 — décision de Serge : calculé par le
+            // serveur). La MÊME recherche que la page affichée — critères, portefeuille, droits,
+            // page —, réduite aux lignes cochées qui EN FONT PARTIE : une ligne que l'on ne voit
+            // pas n'entre jamais dans un total, et aucun identifiant de la requête ne charge quoi
+            // que ce soit. Aucune ligne n'est renvoyée : rien à métrer en tokens.
+            if (isset($payload['totauxDeLaSelection'])) {
+                // Un cabinet dont le solde est épuisé ne lit pas ses chiffres par ce détour :
+                // refusé, comme sa liste (rien n'est débité — aucune ligne ne part).
+                $proprietaire = $entreprise->getUtilisateur();
+                if ($proprietaire instanceof \App\Entity\Utilisateur && !$this->tokenAccountService->canAfford($proprietaire, 1)) {
+                    return $this->tokensBlockedJson(new InsufficientTokensException(1, 0, $this->tokenAccountService->nextRenewalAt($proprietaire)));
+                }
+                // Une page compte vingt lignes : cent identifiants au plus suffisent largement.
+                $cochees = array_flip(\array_slice(array_map('intval', array_filter((array) $payload['totauxDeLaSelection'], 'is_numeric')), 0, 100));
+                $selection = array_values(array_filter($data, static fn (object $ligne): bool => isset($cochees[(int) $ligne->getId()])));
+                $this->canvasBuilder->batchPreloadForCollection($selection);
+                $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
+                foreach ($selection as $ligne) {
+                    $this->loadCalculatedValues($entityCanvas, $ligne);
+                }
+
+                return $this->json($this->canvasBuilder->totauxDeLaSelection($selection, \count($cochees)));
+            }
 
             // MÉTRAGE TOKENS (lecture) : bloquant. Chaque entité envoyée vers le
             // frontend pèse 2 tokens, débités au propriétaire de l'entreprise.
@@ -1401,7 +1425,7 @@ trait ControllerUtilsTrait
      *
      * @return array{0: array, 1: ?array, 2: bool} critères à chercher, contexte de la vue, bascule en Liste
      */
-    private function preparerLaVueCartes(Request $request, string $entityClass, array $criteria, ?array $parentContext, Entreprise $entreprise, array $listeCanvas): array
+    private function preparerLaVueCartes(Request $request, string $entityClass, array $criteria, ?array $parentContext, Entreprise $entreprise, array $listeCanvas, bool $sansAgregats = false): array
     {
         if (!isset($listeCanvas['vue_cartes']) || $parentContext !== null) {
             return [$criteria, null, false];
@@ -1425,7 +1449,11 @@ trait ControllerUtilsTrait
             'cloturees' => 0,
             'droits' => [],
         ];
-        if ($vue === 'cartes') {
+        if ($vue === 'cartes' && $sansAgregats) {
+            // Un total de sélection : les MÊMES critères que la vue (pistes ouvertes), sans les
+            // agrégats de ses colonnes — coûteux, et sans usage ici (chantier 4, commit 3).
+            $criteria[\App\Services\Search\PisteTransformationScope::CLE_PISTES_OUVERTES] = true;
+        } elseif ($vue === 'cartes') {
             $agregat = $this->searchService->agregerPistesParEtape($criteria, $entreprise);
             // LA COLONNE « TRANSFORMÉES » DIT CE QUI A ÉTÉ GAGNÉ : la commission RÉELLE des
             // polices souscrites (commission TTC due au courtier, celle de la colonne
