@@ -45,17 +45,19 @@ class ServiceNombres
      * @param int|float|string|null $valeur
      * @param int                   $decimales
      * @param string|null           $locale   Langue forcée ; sinon la langue active.
-     * @param string                $symbole  Symbole monétaire (dollar par défaut).
+     * @param string                $symbole  Symbole monétaire, à DONNER : aucun par défaut (chantier 5 —
+     *                                        un montant du cabinet est dans SA monnaie de travail,
+     *                                        pas en dollars d'office ; seuls les prix des tokens le sont).
      */
     public function formatMontant(
         int|float|string|null $valeur,
         int $decimales = 2,
         ?string $locale = null,
-        string $symbole = '$',
+        string $symbole = '',
     ): string {
         $nombre = $this->format($valeur, $decimales, $locale);
-        if ($nombre === '') {
-            return '';
+        if ($nombre === '' || $symbole === '') {
+            return $nombre;
         }
 
         return self::anglais($locale ?? $this->localeCourante())

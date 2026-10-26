@@ -61,6 +61,7 @@ export default class extends Controller {
 
     /** Montant écrit dans la notation de la langue active, comme le rendu serveur. */
     money(n) {
-        return formatMontant(n, 2) || formatMontant(0, 2);
+        // Un prix de tokens est en dollars : il le dit (aucun symbole par défaut, chantier 5).
+        return formatMontant(n, 2, null, '$') || formatMontant(0, 2, null, '$');
     }
 }

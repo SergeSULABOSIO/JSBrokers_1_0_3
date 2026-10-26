@@ -237,7 +237,7 @@ final class ExcelRapportRenderer implements RapportRendererInterface
         }
 
         if ($this->estNombre($valeur)) {
-            $feuille->setCellValueExplicit($coordonnee, BordereauLigneNormaliseur::nettoyerNombre($valeur), DataType::TYPE_NUMERIC);
+            $feuille->setCellValueExplicit($coordonnee, BordereauLigneNormaliseur::nettoyerNombre($this->sansUnite($valeur)), DataType::TYPE_NUMERIC);
             $feuille->getStyle($coordonnee)->getNumberFormat()->setFormatCode($this->formatAvecUnite($valeur));
 
             return;
@@ -254,16 +254,23 @@ final class ExcelRapportRenderer implements RapportRendererInterface
      */
     private function formatAvecUnite(string $valeur): string
     {
-        if (preg_match('/(%|€|\$|USD|EUR|CDF)\s*$/iu', $valeur, $trouve) !== 1) {
+        if (preg_match('/^\s*(€|\$|USD|EUR|CDF)|(%|€|\$|USD|EUR|CDF)\s*$/iu', $valeur, $trouve) !== 1) {
             return self::FORMAT_NOMBRE;
         }
 
-        $unite = strtoupper($trouve[1]) === $trouve[1] ? $trouve[1] : mb_strtoupper($trouve[1]);
+        $trouve = $trouve[1] !== '' ? $trouve[1] : $trouve[2];
+        $unite = strtoupper($trouve) === $trouve ? $trouve : mb_strtoupper($trouve);
 
         // Le pourcentage se colle au nombre, une devise s'en sépare d'une espace.
         return $unite === '%'
             ? self::FORMAT_NOMBRE . '"%"'
             : self::FORMAT_NOMBRE . ' "' . $unite . '"';
+    }
+
+    /** La valeur sans son unité, devant ou derrière : « USD 3 195,16 » → « 3 195,16 ». */
+    private function sansUnite(string $valeur): string
+    {
+        return trim(preg_replace('/^\s*(€|\$|USD|EUR|CDF)|(%|€|\$|USD|EUR|CDF)\s*$/iu', '', $valeur) ?? $valeur);
     }
 
     /**

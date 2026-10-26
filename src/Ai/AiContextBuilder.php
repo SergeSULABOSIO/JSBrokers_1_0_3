@@ -1374,7 +1374,7 @@ class AiContextBuilder
      */
     private function regleMonnaie(?string $monnaie): string
     {
-        $code = trim((string) $monnaie) !== '' ? trim((string) $monnaie) : 'USD';
+        $code = $this->codeMonnaie($monnaie);
 
         return <<<MONNAIE
         - MONNAIE (règle impérative) : ce cabinet lit ses montants en {$code}. C'est la monnaie
@@ -1386,6 +1386,12 @@ class AiContextBuilder
           PAS de l'argent : c'est un décompte d'unités de la plateforme. Ne lui accole aucun
           symbole monétaire et ne le convertis jamais, ni en {$code} ni en autre chose.
         MONNAIE;
+    }
+
+    /** Le code de la monnaie du cabinet ; USD quand aucune n'est configurée (le défaut d'un cabinet). */
+    private function codeMonnaie(?string $monnaie): string
+    {
+        return trim((string) $monnaie) !== '' ? trim((string) $monnaie) : 'USD';
     }
 
     private function monnaieDuCabinet(Entreprise $entreprise): string
@@ -1609,10 +1615,11 @@ class AiContextBuilder
      */
     private function reglesDeMiseEnForme(?string $monnaie = null): string
     {
-        // Le corps reste un NOWDOC : il contient des « $ » d'exemple (« 1 234,50 $ »)
-        // et des accolades de JSON qu'une interpolation abîmerait. La seule partie
-        // variable est donc assemblée à part.
-        return $this->regleMonnaie($monnaie) . "\n" . <<<'MISEENFORME'
+        // Le corps reste un NOWDOC : il contient du LaTeX cité (« $$ … $$ ») et des
+        // accolades de JSON qu'une interpolation abîmerait. Les montants d'exemple y portent
+        // « [MONNAIE] », remplacé par le code du cabinet (chantier 5) : un exemple en « $ »
+        // contredisait la règle MONNAIE pour un cabinet en CDF.
+        return $this->regleMonnaie($monnaie) . "\n" . str_replace('[MONNAIE]', $this->codeMonnaie($monnaie), <<<'MISEENFORME'
         - MISE EN FORME (Markdown sobre : elle sert la lisibilité, jamais la décoration).
           **gras** pour les points clés ; au plus un niveau de titre (##), réservé aux réponses
           longues qui gagnent à être structurées — jamais dans une réponse courte ; pas de bloc de
@@ -1650,10 +1657,10 @@ class AiContextBuilder
           (3) ALIGNEMENT : « ---: » dans la ligne de séparation pour toute colonne de montant, de
               quantité ou de taux ; « --- » pour le reste. Sans cela les chiffres ne s'alignent
               pas et l'œil doit relire chaque ligne pour comparer deux montants.
-          (4) FORMATS : dates en jj/mm/aaaa (jamais « 2026-08-05 ») ; montants « 1 234,50 $ »
-              (espace pour les milliers, virgule décimale, symbole après) ; taux en points
+          (4) FORMATS : dates en jj/mm/aaaa (jamais « 2026-08-05 ») ; montants « 1 234,50 [MONNAIE] »
+              (espace pour les milliers, virgule décimale, CODE de la monnaie après — jamais « $ ») ; taux en points
               (« 16 % »). Un même tableau n'emploie jamais deux formats pour la même nature.
-          (5) TOTAUX : dernière ligne « | **TOTAL** | … | **1 911 633,28 $** | », sur les colonnes
+          (5) TOTAUX : dernière ligne « | **TOTAL** | … | **1 911 633,28 [MONNAIE]** | », sur les colonnes
               de « presentation.totaliser » quand il y en a, sinon sur les montants et les
               quantités. JAMAIS de total sur une date, un identifiant ni un taux.
           (6) TRONCATURE DITE : 20 lignes au plus. S'il en reste, ajoute dessous, en italique,
@@ -1666,7 +1673,7 @@ class AiContextBuilder
           \mathbf{}, ni aucune barre oblique inverse.
           Un calcul s'écrit EN TOUTES LETTRES, sur une ligne, avec les montants au format du
           cabinet et le signe « × » :
-            **Commission de courtage** = 1 000,00 $ × 10 % = **100,00 $**
+            **Commission de courtage** = 1 000,00 [MONNAIE] × 10 % = **100,00 [MONNAIE]**
           Une étape par ligne, chacune portant SON résultat, et le résultat final en gras. Nomme
           ce que tu calcules ; un nombre seul n'apprend rien.
         - UN CALCUL SUIT LA RÈGLE DU CABINET, ET SES CHIFFRES SE LISENT. Applique la règle métier
@@ -1684,7 +1691,7 @@ class AiContextBuilder
           chaque titre « ## » quand ta réponse en comporte, SINON au début de sa première ligne.
           Une réponse substantielle porte donc toujours son émoji, qu'elle ait un titre ou non —
           choisis celui qui dit de quoi elle parle. Les seules exceptions : une réponse d'UNE
-          SEULE ligne (« La prime de cette tranche est de 1 234,50 $ » n'a rien à décorer) et une
+          SEULE ligne (« La prime de cette tranche est de 1 234,50 [MONNAIE] » n'a rien à décorer) et une
           question de pure conversation. JAMAIS deux dans la même section, jamais dans une cellule
           de tableau, jamais accolé à un chiffre. Aucun autre émoji, sous aucun prétexte : ce
           produit est un outil de travail, pas une conversation.
@@ -1703,7 +1710,7 @@ class AiContextBuilder
           nombres réellement restitués par un outil. Le graphique COMPLÈTE un propos, il ne remplace
           pas un tableau : pour un chiffre isolé, une phrase suffit. Au plus un graphique par réponse,
           6 séries maximum. Reste sobre.
-        MISEENFORME;
+        MISEENFORME);
     }
 
     /** Tout ce qui gouverne la FORME d'une réponse, réuni pour la rédaction. */

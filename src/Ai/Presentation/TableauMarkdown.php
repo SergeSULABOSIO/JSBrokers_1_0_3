@@ -39,6 +39,9 @@ final class TableauMarkdown
 
     public function __construct(
         private readonly ServiceNombres $nombres,
+        // La monnaie de travail du cabinet (chantier 5) : un montant la porte. Absente
+        // (tests, hors cabinet, aucune monnaie configurée) : le nombre seul.
+        private readonly ?\App\Services\ServiceMonnaies $monnaies = null,
     ) {
     }
 
@@ -65,12 +68,15 @@ final class TableauMarkdown
 
         $colonnes = array_keys($roles);
         $affichees = array_slice($lignes, 0, self::MAX_LIGNES);
+        // Lue UNE fois par tableau, et jamais retenue dans le service : le même processus
+        // sert plusieurs cabinets.
+        $monnaie = $this->monnaies?->getCodeMonnaieAffichage() ?: null;
 
         $corps = [];
         foreach ($affichees as $ligne) {
             $cellules = [];
             foreach ($roles as $colonne => $role) {
-                $cellules[] = $this->cellule($role, $ligne[$colonne] ?? null);
+                $cellules[] = $this->cellule($role, $ligne[$colonne] ?? null, $monnaie);
             }
             $corps[] = $this->ligne($cellules);
         }
@@ -82,7 +88,7 @@ final class TableauMarkdown
             )) . "\n"
             . implode("\n", $corps);
 
-        $totaux = $this->ligneDeTotaux($roles, $lignes, $presentation);
+        $totaux = $this->ligneDeTotaux($roles, $lignes, $presentation, $monnaie);
 
         return $totaux === null ? $texte : $texte . "\n" . $totaux;
     }
@@ -156,7 +162,7 @@ final class TableauMarkdown
      * @param array<string, string>      $roles
      * @param list<array<string, mixed>> $lignes
      */
-    private function ligneDeTotaux(array $roles, array $lignes, ?array $presentation): ?string
+    private function ligneDeTotaux(array $roles, array $lignes, ?array $presentation, ?string $monnaie): ?string
     {
         $declares = $presentation['totaliser'] ?? null;
         $aSommer = \is_array($declares)
@@ -194,7 +200,7 @@ final class TableauMarkdown
         $premiere = true;
         foreach ($roles as $colonne => $role) {
             $cellules[] = match (true) {
-                isset($sommes[$colonne]) => '**' . $this->valeurNumerique($role, $sommes[$colonne]) . '**',
+                isset($sommes[$colonne]) => '**' . $this->valeurNumerique($role, $sommes[$colonne], $monnaie) . '**',
                 $premiere                => '**TOTAL**',
                 default                  => '',
             };
@@ -206,7 +212,7 @@ final class TableauMarkdown
 
     // ─────────────────────────────── Rendu d'une cellule ────────────────────────────
 
-    private function cellule(string $role, mixed $valeur): string
+    private function cellule(string $role, mixed $valeur, ?string $monnaie): string
     {
         if ($valeur === null || $valeur === '' || (\is_array($valeur) && $valeur === [])) {
             return self::VIDE;
@@ -226,7 +232,7 @@ final class TableauMarkdown
             Colonnes::MONTANT,
             Colonnes::NOMBRE,
             Colonnes::POURCENTAGE => \is_int($valeur) || \is_float($valeur)
-                ? $this->valeurNumerique($role, (float) $valeur)
+                ? $this->valeurNumerique($role, (float) $valeur, $monnaie)
                 : $this->texte((string) $valeur),
             default               => $this->texte((string) $valeur),
         };
@@ -237,15 +243,19 @@ final class TableauMarkdown
      * avec son unité quand le rôle en porte une.
      *
      * UN MONTANT PORTE TOUJOURS SES DEUX DÉCIMALES. C'est la seule exception à la règle
-     * générale, et elle est visuelle : dans une colonne alignée à droite, « 0 $ » à côté
-     * de « 3 195,16 $ » décale la virgule et ruine précisément ce que l'alignement
+     * générale, et elle est visuelle : dans une colonne alignée à droite, « 0 USD » à côté
+     * de « 3 195,16 USD » décale la virgule et ruine précisément ce que l'alignement
      * cherchait à obtenir. Pour un compte ou un nombre de jours, en revanche, les
      * décimales ne s'affichent que si elles existent — « 25 » et non « 25,00 ».
      */
-    private function valeurNumerique(string $role, float $valeur): string
+    private function valeurNumerique(string $role, float $valeur, ?string $monnaie = null): string
     {
         if ($role === Colonnes::MONTANT) {
-            return $this->nombres->formatMontant($valeur, 2);
+            // Le CODE de la monnaie de travail, après le nombre (« 3 195,16 CDF ») : la forme
+            // que les consignes de Ket prescrivent, et que l'export Excel lit en nombre.
+            $nombre = $this->nombres->format($valeur, 2);
+
+            return $monnaie !== null ? $nombre . ' ' . $monnaie : $nombre;
         }
 
         $decimales = abs($valeur - round($valeur)) < 0.005 ? 0 : 2;

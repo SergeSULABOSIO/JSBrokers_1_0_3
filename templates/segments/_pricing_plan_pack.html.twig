@@ -29,20 +29,20 @@
                 <div class="pp-price-row">
                     <del class="pp-price-old">
                         <span class="visually-hidden">{{ "security_pricing_old_price" | trans }} </span>
-                        {{ pack.price|format_montant(0, langue) }}
+                        {{ pack.price|format_montant(0, langue, '$') }}
                     </del>
                     <p class="pp-price">
                         <span class="visually-hidden">{{ "security_pricing_new_price" | trans }} </span>
-                        {{ promo.montantFinal|format_montant(0, langue) }}
+                        {{ promo.montantFinal|format_montant(0, langue, '$') }}
                     </p>
                 </div>
                 <span class="pp-promo" aria-label="{{ 'security_pricing_promo_code' | trans }} {{ promo.code }}">
                     {{ ux_icon(resolve_icon_name('offre'), {height: '15px', width: '15px', 'aria-hidden': 'true'}) }}
                     <span class="pp-promo__code">{{ promo.code }}</span>
-                    <span>{% if promo.type == 'percent' %}−{{ promo.valeur|number_format(0) }}%{% else %}{{ "security_pricing_pack_promo_off" | trans({'%amount%': promo.remiseUsd|format_montant(0, langue)}) }}{% endif %}</span>
+                    <span>{% if promo.type == 'percent' %}−{{ promo.valeur|number_format(0) }}%{% else %}{{ "security_pricing_pack_promo_off" | trans({'%amount%': promo.remiseUsd|format_montant(0, langue, '$')}) }}{% endif %}</span>
                 </span>
             {% else %}
-                <p class="pp-price">{{ pack.price|format_montant(0, langue) }}</p>
+                <p class="pp-price">{{ pack.price|format_montant(0, langue, '$') }}</p>
             {% endif %}
         </div>
         <span class="pp-badge">{{ "security_pricing_pack_mode" | trans }}</span>

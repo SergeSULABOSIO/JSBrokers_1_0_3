@@ -69,9 +69,32 @@ class TableauMarkdownTest extends TestCase
 
         $this->assertStringContainsString('05/08/2026', $texte, 'L’ISO est un format d’échange, pas d’affichage.');
         $this->assertStringNotContainsString('2026-08-05', $texte);
-        $this->assertStringContainsString('3 195,16 $', $texte);
+        // Sans monnaie connue : le nombre seul — jamais un « $ » d'office (chantier 5).
+        $this->assertStringContainsString('3 195,16', $texte);
+        $this->assertStringNotContainsString('$', $texte);
         $this->assertStringContainsString('| **TOTAL** |', $texte);
-        $this->assertStringContainsString('**4 275,16 $**', $texte, 'Le total porte la même unité que sa colonne.');
+        $this->assertStringContainsString('**4 275,16**', $texte);
+    }
+
+    /**
+     * UN MONTANT PORTE LA MONNAIE DE TRAVAIL DU CABINET (chantier 5) — son code, après le
+     * nombre comme le prescrivent les consignes de Ket — et non un « $ » écrit d'office, faux
+     * pour un cabinet en CDF. La monnaie se lit UNE fois par tableau, pas une fois par cellule.
+     */
+    public function testUnMontantPorteLaMonnaieDeTravailDuCabinet(): void
+    {
+        $monnaies = $this->createMock(\App\Services\ServiceMonnaies::class);
+        $monnaies->expects($this->once())->method('getCodeMonnaieAffichage')->willReturn('CDF');
+        $rendu = new TableauMarkdown(new ServiceNombres(new LocaleSwitcher('fr', [])), $monnaies);
+
+        $texte = $rendu->rendre(
+            [['client' => 'A', 'montant' => 3195.16], ['client' => 'B', 'montant' => 1080.0]],
+            Colonnes::de(['client' => Colonnes::TEXTE, 'montant' => Colonnes::MONTANT]),
+        );
+
+        $this->assertStringContainsString('3 195,16 CDF', $texte);
+        $this->assertStringContainsString('**4 275,16 CDF**', $texte, 'Le total porte la même unité que sa colonne.');
+        $this->assertStringNotContainsString('$', $texte);
     }
 
     /**

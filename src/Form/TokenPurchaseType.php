@@ -29,7 +29,7 @@ class TokenPurchaseType extends AbstractType
         foreach ($this->parametres->packs() as $key => $pack) {
             $nom = $pack['label'] ?? ucfirst($key);
             $label = $nom . ' — ' . $this->serviceNombres->format($pack['tokens'])
-                . ' tokens (' . $this->serviceNombres->formatMontant($pack['price'], 0) . ')';
+                . ' tokens (' . $this->serviceNombres->formatMontant($pack['price'], 0, null, '$') . ')';
             $choices[$label] = $key;
         }
 

@@ -67,14 +67,25 @@ class ServiceNombresTest extends TestCase
     {
         $svc = $this->service('fr');
 
-        $this->assertSame('10,00 $', $svc->formatMontant(10));
-        $this->assertSame('$10.00', $svc->formatMontant(10, 2, 'en'));
-        $this->assertSame('1 234,56 $', $svc->formatMontant(1234.5649));
-        $this->assertSame('$1,234.56', $svc->formatMontant(1234.5649, 2, 'en'));
+        $this->assertSame('10,00 $', $svc->formatMontant(10, 2, null, '$'));
+        $this->assertSame('$10.00', $svc->formatMontant(10, 2, 'en', '$'));
+        $this->assertSame('1 234,56 $', $svc->formatMontant(1234.5649, 2, null, '$'));
+        $this->assertSame('$1,234.56', $svc->formatMontant(1234.5649, 2, 'en', '$'));
         // Décimales et symbole restent paramétrables (prix entiers, autres devises).
-        $this->assertSame('10 $', $svc->formatMontant(10, 0));
-        $this->assertSame('0,0400 $', $svc->formatMontant(0.04, 4));
+        $this->assertSame('10 $', $svc->formatMontant(10, 0, null, '$'));
+        $this->assertSame('0,0400 $', $svc->formatMontant(0.04, 4, null, '$'));
         $this->assertSame('€10.00', $svc->formatMontant(10, 2, 'en', '€'));
+    }
+
+    /**
+     * PAS DE « $ » PAR DÉFAUT (chantier 5) : un montant du cabinet est dans SA monnaie de
+     * travail, jamais forcément en dollars. Sans symbole demandé, le nombre seul.
+     */
+    public function testSansSymboleDemandeAucunSymbole(): void
+    {
+        $svc = $this->service('fr');
+        $this->assertSame('10,00', $svc->formatMontant(10));
+        $this->assertSame('10.00', $svc->formatMontant(10, 2, 'en'));
     }
 
     public function testMontantNonNumerique(): void

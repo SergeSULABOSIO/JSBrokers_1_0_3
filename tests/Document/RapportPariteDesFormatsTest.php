@@ -68,7 +68,7 @@ class RapportPariteDesFormatsTest extends KernelTestCase
     /** Les montants, à retrouver en toutes lettres ou en valeur numérique. */
     private const MONTANTS = ['3 195,16', '758 579,10', '88 921,25', '1 080,00', '81 392,14', '844 246,40'];
 
-    private function spec(): RapportSpec
+    private function spec(string $tableau = self::TABLEAU): RapportSpec
     {
         return RapportSpec::fromArray([
             'titre'         => 'Rapport des signalements de paiements de primes',
@@ -76,7 +76,7 @@ class RapportPariteDesFormatsTest extends KernelTestCase
             'introduction'  => 'Synthèse des règlements de primes enregistrés.',
             'definitions'   => [['terme' => 'Prime signalée', 'explication' => 'Montant versé par l\'assuré.']],
             'sections'      => [
-                ['titre' => 'Détail des paiements', 'corps' => "Reprise exhaustive des signalements.\n\n" . self::TABLEAU],
+                ['titre' => 'Détail des paiements', 'corps' => "Reprise exhaustive des signalements.\n\n" . $tableau],
                 ['titre' => 'Points de vigilance', 'corps' => "### Sous-titre de section\n\n- Premier point de vigilance\n- Second point de vigilance\n\n```\nECRITURE 6061 / 512\n```"],
             ],
             'conclusion'    => 'Ce rapport récapitule les paiements signalés.',
@@ -94,11 +94,11 @@ class RapportPariteDesFormatsTest extends KernelTestCase
         );
     }
 
-    private function rendre(DocumentFormat $format): string
+    private function rendre(DocumentFormat $format, string $tableau = self::TABLEAU): string
     {
         static::bootKernel();
         $conteneur = static::getContainer();
-        $spec = $this->spec();
+        $spec = $this->spec($tableau);
 
         return $conteneur->get(RapportRendererResolver::class)->pour($format)->rendre(
             $spec,
@@ -280,6 +280,24 @@ class RapportPariteDesFormatsTest extends KernelTestCase
         $txt = $this->rendre(DocumentFormat::Txt);
         self::assertMatchesRegularExpression('/ 3 195,16 \$/u', $txt,
             'Un montant doit être précédé de son rembourrage, donc calé à droite.');
+    }
+
+    /**
+     * LE CODE DE MONNAIE, DEVANT OU DERRIÈRE (chantier 5). Les listes écrivent
+     * « USD 3 195,16 », les tableaux de Ket « 3 195,16 CDF » : le classeur lit les deux
+     * comme des NOMBRES. Avant, le code placé devant passait dans la conversion et le
+     * montant devenait 0.
+     */
+    public function testLeClasseurLitLeCodeDeMonnaieDevantOuDerriere(): void
+    {
+        $tableau = "| Client | Prime |\n| --- | ---: |\n| A | USD 3 195,16 |\n| B | 1 080,00 CDF |\n| C | EUR 12,50 |";
+        $xml = $this->feuillesXlsx($this->rendre(DocumentFormat::Xlsx, $tableau));
+        preg_match_all('/<v>(-?\d+(?:\.\d+)?)<\/v>/', $xml, $trouves);
+        $nombres = array_map(static fn (string $v) => number_format(round((float) $v, 2), 2, '.', ''), $trouves[1]);
+
+        foreach (['3195.16', '1080.00', '12.50'] as $attendu) {
+            self::assertContains($attendu, $nombres, sprintf('Le classeur a perdu le montant %s.', $attendu));
+        }
     }
 
     /**

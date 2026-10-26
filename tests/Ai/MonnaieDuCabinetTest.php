@@ -139,7 +139,7 @@ class MonnaieDuCabinetTest extends KernelTestCase
         $this->assertStringContainsString('AUCUNE NOTATION MATHÉMATIQUE', $prompt);
         $this->assertStringContainsString('\\text{}', $prompt);
         // Le calcul se lit en toutes lettres, avec le signe multiplié.
-        $this->assertStringContainsString('1 000,00 $ × 10 % =', $prompt);
+        $this->assertStringContainsString('1 000,00 USD × 10 % =', $prompt);
         // Et l'illustration par un taux inventé est nommée comme une faute.
         $this->assertStringContainsString("n'ILLUSTRE JAMAIS un calcul avec un taux inventé", $prompt);
     }

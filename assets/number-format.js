@@ -37,7 +37,8 @@ export function formatNombre(valeur, decimales = 0, locale = null) {
 
 /**
  * Montant symbole compris, placé selon la langue : « 10,00 $ » en français,
- * « $10.00 » en anglais. Miroir de ServiceNombres::formatMontant().
+ * « $10.00 » en anglais. Miroir de ServiceNombres::formatMontant() : AUCUN symbole par
+ * défaut (chantier 5) — sans symbole demandé, le nombre seul.
  *
  * @param {number|string} valeur
  * @param {number}        [decimales]
@@ -45,9 +46,9 @@ export function formatNombre(valeur, decimales = 0, locale = null) {
  * @param {string}        [symbole]
  * @returns {string} '' si la valeur n'est pas un nombre.
  */
-export function formatMontant(valeur, decimales = 2, locale = null, symbole = '$') {
+export function formatMontant(valeur, decimales = 2, locale = null, symbole = '') {
     const nombre = formatNombre(valeur, decimales, locale);
-    if (nombre === '') return '';
+    if (nombre === '' || symbole === '') return nombre;
 
     return anglais(locale || documentLocale()) ? symbole + nombre : nombre + ' ' + symbole;
 }

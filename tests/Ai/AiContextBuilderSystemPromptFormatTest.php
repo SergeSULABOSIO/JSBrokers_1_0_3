@@ -184,7 +184,10 @@ class AiContextBuilderSystemPromptFormatTest extends KernelTestCase
         $this->assertStringContainsString('---:', $prompt);
         // (4) Les formats : date lisible, montant avec sa monnaie, taux en points.
         $this->assertStringContainsString('jj/mm/aaaa', $prompt);
-        $this->assertStringContainsString('1 234,50 $', $prompt);
+        // Le CODE de la monnaie du cabinet (USD sans monnaie configurée), jamais « $ » (chantier 5).
+        $this->assertStringContainsString('1 234,50 USD', $prompt);
+        $this->assertStringNotContainsString('1 234,50 $', $prompt);
+        $this->assertStringNotContainsString('[MONNAIE]', $prompt);
         // (5) La ligne de totaux, distincte et jamais posée sur une date ou un taux.
         $this->assertStringContainsString('**TOTAL**', $prompt);
         $this->assertStringContainsString('presentation.totaliser', $prompt);
