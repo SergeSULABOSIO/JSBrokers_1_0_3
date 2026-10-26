@@ -20,7 +20,7 @@ class DemandeCongeListCanvasProvider implements ListCanvasProviderInterface
                 // DES CODES PLATS, JAMAIS DE CHEMIN POINTÉ : « agent.nom » casserait le
                 // rendu dès la première ligne. Les libellés viennent de
                 // DemandeCongeIndicatorStrategy.
-                "texte_principal" => ["attribut_code" => "agentNom", "icone" => "fa-solid:house-user"],
+                "texte_principal" => ["attribut_code" => "agentNom"],
                 "textes_secondaires" => [
                     ["attribut_code" => "periodeLibelle"],
                     ["attribut_code" => "typeAbsenceLibelle"],

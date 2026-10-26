@@ -16,7 +16,7 @@ class MonnaieListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Monnaies",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "monnaie"],
+                "texte_principal" => ["attribut_code" => "nom"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_code" => "code"],

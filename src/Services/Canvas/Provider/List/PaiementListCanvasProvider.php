@@ -21,7 +21,7 @@ class PaiementListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Paiements",
-                "texte_principal" => ["attribut_code" => "ligne_principale", "icone" => "paiement"],
+                "texte_principal" => ["attribut_code" => "ligne_principale"],
                 "textes_secondaires" => [
                     ["attribut_code" => "ligne_secondaire"],
                 ],

@@ -21,7 +21,7 @@ class PortefeuilleListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Portefeuilles",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:briefcase-account"],
+                "texte_principal" => ["attribut_code" => "nom"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_code" => "gestionnaire", "attribut_label" => "Gestionnaire : "],

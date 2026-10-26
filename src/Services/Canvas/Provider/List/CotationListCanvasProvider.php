@@ -23,7 +23,7 @@ class CotationListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Cotations",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "cotation"],
+                "texte_principal" => ["attribut_code" => "nom"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     // LE VOYANT DE L'EFFORT COMMERCIAL, en tête : c'est ce qui distingue un

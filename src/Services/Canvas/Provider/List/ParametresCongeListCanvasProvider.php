@@ -18,7 +18,7 @@ class ParametresCongeListCanvasProvider implements ListCanvasProviderInterface
                 "titre_colonne" => "Paramètres des congés",
                 // Une seule ligne par cabinet : le « titre » est le résumé des réglages
                 // eux-mêmes. Afficher « Paramètres des congés » deux fois n'apprendrait rien.
-                "texte_principal" => ["attribut_code" => "resumeReglages", "icone" => "action:settings"],
+                "texte_principal" => ["attribut_code" => "resumeReglages"],
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Périodes de blocage : ", "attribut_code" => "nombrePeriodesBlocage"],
                 ],

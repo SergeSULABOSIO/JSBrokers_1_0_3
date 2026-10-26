@@ -16,7 +16,7 @@ class JourFerieListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Jours fériés",
-                "texte_principal" => ["attribut_code" => "libelle", "icone" => "fluent-mdl2:date-time-mirrored"],
+                "texte_principal" => ["attribut_code" => "libelle"],
                 "textes_secondaires" => [
                     ["attribut_code" => "dateLibelle"],
                     ["attribut_prefixe" => "Exercice ", "attribut_code" => "exercice"],

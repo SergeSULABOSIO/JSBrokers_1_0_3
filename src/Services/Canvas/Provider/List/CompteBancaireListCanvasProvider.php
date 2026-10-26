@@ -21,7 +21,7 @@ class CompteBancaireListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Comptes Bancaires",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:bank"],
+                "texte_principal" => ["attribut_code" => "nom"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "N° ", "attribut_code" => "numero"],

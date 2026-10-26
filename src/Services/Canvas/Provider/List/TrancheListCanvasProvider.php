@@ -22,7 +22,7 @@ class TrancheListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Tranches",
-                "texte_principal" => ["attribut_code" => "nomCompletAvecStatut", "icone" => "tranche"],
+                "texte_principal" => ["attribut_code" => "nomCompletAvecStatut"],
                 // Badges d'état rendus par _list_row à côté du texte principal :
                 // 1) urgence du recouvrement (prime/commission à collecter), colorée par niveau ;
                 // 2) rétro partenaire à payer (solde dû ET commission partageable encaissée).

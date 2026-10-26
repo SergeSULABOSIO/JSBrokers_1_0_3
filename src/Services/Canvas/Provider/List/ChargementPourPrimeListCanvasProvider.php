@@ -21,7 +21,7 @@ class ChargementPourPrimeListCanvasProvider implements ListCanvasProviderInterfa
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Chargements",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "chargement"],
+                "texte_principal" => ["attribut_code" => "nom"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Type: ", "attribut_code" => "type"],

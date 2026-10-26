@@ -21,7 +21,7 @@ class TypeRevenuListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Types de Revenu",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "type-revenu"],
+                "texte_principal" => ["attribut_code" => "nom"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Mode: ", "attribut_code" => "descriptionModeCalcul"],

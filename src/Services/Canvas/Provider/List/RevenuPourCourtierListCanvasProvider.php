@@ -21,7 +21,7 @@ class RevenuPourCourtierListCanvasProvider implements ListCanvasProviderInterfac
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Revenus Courtier",
-                "texte_principal" => ["attribut_code" => "nomCompletAvecStatut", "icone" => "revenu"],
+                "texte_principal" => ["attribut_code" => "nomCompletAvecStatut"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Client: ", "attribut_code" => "clientNom"],

@@ -22,7 +22,7 @@ class NoteListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Notes",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "note"],
+                "texte_principal" => ["attribut_code" => "nom"],
                 // ── D'OÙ VIENT CETTE NOTE ───────────────────────────────────────────
                 // Rien ne distinguait une note issue d'un bordereau de production d'une
                 // note composée à la main : mêmes montants, même statut, même ligne. Or

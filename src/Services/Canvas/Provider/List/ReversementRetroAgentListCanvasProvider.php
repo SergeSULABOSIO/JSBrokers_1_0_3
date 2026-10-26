@@ -41,7 +41,7 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Rétros intermédiaires",
-                "texte_principal" => ["attribut_code" => "reference", "icone" => "depense"],
+                "texte_principal" => ["attribut_code" => "reference"],
                 "textes_secondaires_separateurs" => " • ",
                 // DES CODES PLATS, JAMAIS DE CHEMIN POINTÉ. Le rendu d'une ligne fait
                 // `attribute(entity, code)` : « agent.nom » n'y est pas un chemin mais un nom

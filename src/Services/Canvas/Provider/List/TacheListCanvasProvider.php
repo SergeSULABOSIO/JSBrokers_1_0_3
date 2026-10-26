@@ -16,7 +16,7 @@ class TacheListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Tâches",
-                "texte_principal" => ["attribut_code" => "descriptionText", "icone" => "tache"],
+                "texte_principal" => ["attribut_code" => "descriptionText"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Statut: ", "attribut_code" => "statutExecution"],

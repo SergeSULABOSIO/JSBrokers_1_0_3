@@ -16,7 +16,7 @@ class FournisseurListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Fournisseurs",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "tabler:building-store"],
+                "texte_principal" => ["attribut_code" => "nom"],
                 "textes_secondaires" => [
                     ["attribut_code" => "coordonnees"],
                     ["attribut_prefixe" => "Statut : ", "attribut_code" => "actifLabel"],

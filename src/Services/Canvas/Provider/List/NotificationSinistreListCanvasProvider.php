@@ -21,7 +21,7 @@ class NotificationSinistreListCanvasProvider implements ListCanvasProviderInterf
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Sinistres",
-                "texte_principal" => ["attribut_code" => "referenceSinistre", "icone" => "sinistre"],
+                "texte_principal" => ["attribut_code" => "referenceSinistre"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     // On utilise la propriété "assureNom" qui sera calculée de manière sécurisée dans le CalculationProvider.

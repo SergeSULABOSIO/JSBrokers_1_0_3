@@ -16,7 +16,7 @@ class RolesEnMarketingListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Rôles en Marketing",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "role"],
+                "texte_principal" => ["attribut_code" => "nom"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Collaborateur: ", "attribut_code" => "inviteNom"],

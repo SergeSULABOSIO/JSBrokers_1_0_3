@@ -21,7 +21,7 @@ class OperationListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Opérations",
-                "texte_principal" => ["attribut_code" => "referencePolice", "icone" => "operation"],
+                "texte_principal" => ["attribut_code" => "referencePolice"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Avenant: ", "attribut_code" => "numeroAvenant"],

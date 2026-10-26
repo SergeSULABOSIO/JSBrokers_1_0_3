@@ -16,7 +16,7 @@ class RegimeTravailListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Régimes de travail",
-                "texte_principal" => ["attribut_code" => "periodeLibelle", "icone" => "streamline-flex:production-belt-time"],
+                "texte_principal" => ["attribut_code" => "periodeLibelle"],
                 "textes_secondaires" => [
                     ["attribut_code" => "joursLibelle"],
                     ["attribut_prefixe" => "Taux : ", "attribut_code" => "tauxLibelle"],

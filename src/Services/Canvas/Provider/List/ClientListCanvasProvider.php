@@ -21,7 +21,7 @@ class ClientListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Clients",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:account-group"],
+                "texte_principal" => ["attribut_code" => "nom"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     // Portefeuille d'affectation en tête (avec icône) : information de

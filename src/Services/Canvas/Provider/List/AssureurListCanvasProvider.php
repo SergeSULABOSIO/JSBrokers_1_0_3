@@ -21,7 +21,7 @@ class AssureurListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Assureurs",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:shield-check"],
+                "texte_principal" => ["attribut_code" => "nom"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_code" => "email"],

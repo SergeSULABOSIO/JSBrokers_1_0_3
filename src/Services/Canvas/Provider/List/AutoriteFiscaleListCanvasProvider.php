@@ -16,7 +16,7 @@ class AutoriteFiscaleListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Autorités Fiscales",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:bank"],
+                "texte_principal" => ["attribut_code" => "nom"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [["attribut_code" => "abreviation"]],
             ],

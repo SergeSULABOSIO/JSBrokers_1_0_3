@@ -21,7 +21,7 @@ class RisqueListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Risques",
-                "texte_principal" => ["attribut_code" => "nomComplet", "icone" => "risque"],
+                "texte_principal" => ["attribut_code" => "nomComplet"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Code: ", "attribut_code" => "code"],

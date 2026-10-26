@@ -21,7 +21,7 @@ class EntrepriseListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Entreprises",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:office-building"],
+                "texte_principal" => ["attribut_code" => "nom"],
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Licence: ", "attribut_code" => "licence"],
                 ],

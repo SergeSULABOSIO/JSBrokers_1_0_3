@@ -22,7 +22,7 @@ class ChargeCourtierListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Charges",
-                "texte_principal" => ["attribut_code" => "libelle", "icone" => "tabler:receipt-tax"],
+                "texte_principal" => ["attribut_code" => "libelle"],
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Code : ", "attribut_code" => "code"],
                     ["attribut_prefixe" => "Compte : ", "attribut_code" => "compteOhadaFull"],

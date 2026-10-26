@@ -44,7 +44,7 @@ class ProductionIntermediaireListCanvasProvider implements ListCanvasProviderInt
             // l'attend pour nommer la rubrique dans ses libellés d'accessibilité.
             'colonne_principale' => [
                 'titre_colonne' => 'Affaires produites',
-                'texte_principal' => ['attribut_code' => 'client', 'icone' => 'client'],
+                'texte_principal' => ['attribut_code' => 'client'],
                 'textes_secondaires' => [],
             ],
 

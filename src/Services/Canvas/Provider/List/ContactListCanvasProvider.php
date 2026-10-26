@@ -36,7 +36,7 @@ class ContactListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Contacts",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "contact"],
+                "texte_principal" => ["attribut_code" => "nom"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_code" => "fonction"],

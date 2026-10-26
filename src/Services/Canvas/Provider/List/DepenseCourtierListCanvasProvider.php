@@ -22,7 +22,7 @@ class DepenseCourtierListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Dépenses",
-                "texte_principal" => ["attribut_code" => "ligne_principale", "icone" => "hugeicons:dollar-send-02"],
+                "texte_principal" => ["attribut_code" => "ligne_principale"],
                 "textes_secondaires" => [
                     ["attribut_code" => "ligne_secondaire"],
                     ["attribut_prefixe" => "Statut : ", "attribut_code" => "statutLabel"],

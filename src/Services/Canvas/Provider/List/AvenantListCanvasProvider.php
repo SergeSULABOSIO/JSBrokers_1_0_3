@@ -24,7 +24,6 @@ class AvenantListCanvasProvider implements ListCanvasProviderInterface
                 "titre_colonne" => "Avenants",
                 "texte_principal" => [
                     "attribut_code" => "titrePrincipal",
-                    "icone" => "mdi:file-document-edit",
                 ],
                 // Badges rendus par _list_row à côté du texte principal, colorés par niveau
                 // (critique/élevée/modérée/faible). Texte vide = badge non rendu.

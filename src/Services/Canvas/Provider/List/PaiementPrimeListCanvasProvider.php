@@ -21,7 +21,7 @@ class PaiementPrimeListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Paiements de prime signalés",
-                "texte_principal" => ["attribut_code" => "reference", "icone" => "paiement"],
+                "texte_principal" => ["attribut_code" => "reference"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Payée le : ", "attribut_code" => "paidAt", "attribut_type" => "date"],

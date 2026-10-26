@@ -21,10 +21,7 @@ class ConditionPartageListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Conditions de Partage",
-                "texte_principal" => [
-                    "attribut_code" => "nom", 
-                    "icone" => "mdi:share-variant"
-                    ],
+                "texte_principal" => ["attribut_code" => "nom"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     // QUI TOUCHE, avant COMBIEN. Une liste de conditions dont on ne lit

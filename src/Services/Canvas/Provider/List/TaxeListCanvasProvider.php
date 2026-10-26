@@ -16,7 +16,7 @@ class TaxeListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Taxes",
-                "texte_principal" => ["attribut_code" => "code", "icone" => "mdi:percent-box"],
+                "texte_principal" => ["attribut_code" => "code"],
                 "textes_secondaires" => [
                     ["attribut_code" => "descriptionStripped", "attribut_taille_max" => 50],
                     ["attribut_prefixe" => "Redevable: ", "attribut_code" => "redevableString"],

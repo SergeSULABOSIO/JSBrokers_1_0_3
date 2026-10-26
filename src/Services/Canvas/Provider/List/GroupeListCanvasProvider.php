@@ -21,7 +21,7 @@ class GroupeListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Groupes de clients",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:account-multiple"],
+                "texte_principal" => ["attribut_code" => "nom"],
                 "textes_secondaires" => [
                     ["attribut_code" => "nombreClients", "attribut_label" => "Clients : "],
                     ["attribut_code" => "description", "attribut_taille_max" => 50],

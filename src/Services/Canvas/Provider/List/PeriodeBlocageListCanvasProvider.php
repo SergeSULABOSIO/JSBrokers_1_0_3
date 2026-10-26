@@ -16,7 +16,7 @@ class PeriodeBlocageListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Périodes de blocage",
-                "texte_principal" => ["attribut_code" => "libelle", "icone" => "gravity-ui:hand-stop"],
+                "texte_principal" => ["attribut_code" => "libelle"],
                 "textes_secondaires" => [
                     ["attribut_code" => "periodeLibelle"],
                 ],

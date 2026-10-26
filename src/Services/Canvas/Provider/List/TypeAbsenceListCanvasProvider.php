@@ -19,7 +19,7 @@ class TypeAbsenceListCanvasProvider implements ListCanvasProviderInterface
                 // DES CODES PLATS, JAMAIS DE CHEMIN POINTÉ : un canevas de liste ne sait
                 // lire qu'un attribut simple. Les libellés composés viennent de
                 // TypeAbsenceIndicatorStrategy.
-                "texte_principal" => ["attribut_code" => "libelle", "icone" => "gg:list"],
+                "texte_principal" => ["attribut_code" => "libelle"],
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Code : ", "attribut_code" => "code"],
                     // « Décompté du solde » est LA propriété qui distingue un congé annuel

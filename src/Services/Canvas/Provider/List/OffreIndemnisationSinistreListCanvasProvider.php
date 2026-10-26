@@ -21,7 +21,7 @@ class OffreIndemnisationSinistreListCanvasProvider implements ListCanvasProvider
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Offres d'indemnisation",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "icon-park-outline:funds"],
+                "texte_principal" => ["attribut_code" => "nom"],
                 "textes_secondaires" => [["attribut_code" => "beneficiaire"]],
             ],
             "colonnes_numeriques" => [
