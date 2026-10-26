@@ -93,6 +93,12 @@ class SearchCanvasProvider
                     continue 2; // On saute ce champ si son type n'est pas géré.
             }
 
+            // RECHERCHE RAPIDE : la barre simple le propose EN TÊTE, même au bout d'un chemin
+            // (ex. la police d'une tranche) — elle n'accepte sinon que les champs directs.
+            if (($field['rechercheRapide'] ?? false) === true) {
+                $criterion['Rapide'] = true;
+            }
+
             // Icône « de signification » du critère (alias IconCanvasProvider), pour le
             // dialogue de recherche avancée. Purement présentationnel.
             $criterion['Icone'] = $this->criterionIcon($criterion);

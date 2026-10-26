@@ -22,6 +22,7 @@ use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Services\JSBDynamicSearchService;
+use App\Services\Search\PoliceDeLaTranche;
 use App\Services\Search\TranchePaiementScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -1309,5 +1310,106 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
             $entreprise,
         );
         $this->assertSame([$trancheBId], $idsOf($impayeesAssureurB), 'Statut de paiement + assureur : intersection correcte.');
+    }
+
+    // ───────────────── LA POLICE D'UNE TRANCHE (demande de Serge, 2026-10-26) ─────────────────
+
+    /** Les tranches trouvées par un critère « police » (forme de la barre simple : LIKE, contient). */
+    private function parPolice(Entreprise $entreprise, string $terme, string $operateur = 'LIKE', array $autres = []): array
+    {
+        $resultat = $this->service()->search(
+            Tranche::class,
+            $autres + [PoliceDeLaTranche::CHEMIN => ['operator' => $operateur, 'value' => $terme]],
+            $entreprise,
+        );
+        $this->assertNull($resultat['status']['error']);
+
+        return $resultat;
+    }
+
+    /** @return list<int> */
+    private static function idsDe(array $resultat): array
+    {
+        return array_map(static fn (Tranche $t) => $t->getId(), $resultat['data']);
+    }
+
+    /**
+     * UN FRAGMENT DE LA RÉFÉRENCE SUFFIT, ET LE CABINET RESTE LA FRONTIÈRE. « POL-Cotation »
+     * figure dans les deux polices ; seule celle du cabinet ouvert remonte.
+     */
+    public function testUnFragmentDeLaReferenceTrouveLesTranchesDeLaPolice(): void
+    {
+        ['entreprise' => $entreprise, 'echue' => $echue, 'aEchoir' => $aEchoir, 'etrangere' => $etrangere] = $this->seed();
+
+        $resultat = $this->parPolice($entreprise, 'Paiements A');
+        $this->assertSame(2, $resultat['totalItems']);
+        $this->assertEqualsCanonicalizing([$echue->getId(), $aEchoir->getId()], self::idsDe($resultat));
+
+        $commun = $this->parPolice($entreprise, 'POL-Cotation');
+        $this->assertNotContains($etrangere->getId(), self::idsDe($commun), 'La police d\'un autre cabinet ne remonte jamais.');
+        $this->assertSame(0, $this->parPolice($entreprise, 'Paiements B')['totalItems']);
+    }
+
+    /** « Exact » (recherche avancée) : la référence entière, et rien d'autre. */
+    public function testLaReferenceExacteNeTrouvePasUnFragment(): void
+    {
+        ['entreprise' => $entreprise] = $this->seed();
+
+        $this->assertSame(2, $this->parPolice($entreprise, 'POL-Cotation Paiements A', '=')['totalItems']);
+        $this->assertSame(0, $this->parPolice($entreprise, 'Paiements A', '=')['totalItems']);
+    }
+
+    /**
+     * PAS DE DOUBLON. Tous les avenants d'une police portent sa référence : une jointure
+     * rendrait chaque tranche une fois PAR AVENANT, et le compte mentirait.
+     */
+    public function testUnePoliceAPlusieursAvenantsNeDoublePasLesTranches(): void
+    {
+        ['entreprise' => $entreprise, 'echue' => $echue] = $this->seed();
+        $em = $this->em();
+        $cotation = $em->getRepository(Tranche::class)->find($echue->getId())->getCotation();
+        $invite = $em->getRepository(Invite::class)->findOneBy(['entreprise' => $entreprise]);
+        $incorporation = (new Avenant())
+            ->setReferencePolice('POL-Cotation Paiements A')
+            ->setNumero('1')
+            ->setDescription('Incorporation (test)')
+            ->setStartingAt(new \DateTimeImmutable('-30 days'))
+            ->setEndingAt(new \DateTimeImmutable('+305 days'));
+        $incorporation->setCotation($cotation);
+        $incorporation->setEntreprise($entreprise);
+        $incorporation->setInvite($invite);
+        $em->persist($incorporation);
+        $em->flush();
+        $em->clear();
+        $entreprise = $em->getRepository(Entreprise::class)->find($entreprise->getId());
+
+        $resultat = $this->parPolice($entreprise, 'Paiements A');
+        $this->assertSame(2, $resultat['totalItems'], 'Deux tranches, pas quatre.');
+        $this->assertCount(2, array_unique(self::idsDe($resultat)));
+    }
+
+    /** La police se combine aux chips de paiement (chemin en mémoire des axes). */
+    public function testLaPoliceSeCombineAuxChipsDePaiement(): void
+    {
+        ['entreprise' => $entreprise, 'echue' => $echue, 'aEchoir' => $aEchoir] = $this->seed();
+
+        $impayees = $this->parPolice($entreprise, 'Paiements A', 'LIKE', self::PRIME_DUE);
+        $this->assertEqualsCanonicalizing([$echue->getId(), $aEchoir->getId()], self::idsDe($impayees));
+        $this->assertSame(0, $this->parPolice($entreprise, 'Paiements B', 'LIKE', self::PRIME_DUE)['totalItems']);
+    }
+
+    /**
+     * LE CRITÈRE EST DÉCLARÉ UNE FOIS, dans le canevas de la Tranche : le dialogue avancé le
+     * propose en texte (Contient / Commence par / Exact), la barre simple en recherche rapide.
+     */
+    public function testLeCanevasDeRechercheProposeLaPoliceEnRechercheRapide(): void
+    {
+        $criteres = static::getContainer()->get(\App\Services\Canvas\SearchCanvasProvider::class)->getCanvas(Tranche::class);
+        $police = array_values(array_filter($criteres, static fn (array $c) => $c['Nom'] === PoliceDeLaTranche::CHEMIN));
+
+        $this->assertCount(1, $police);
+        $this->assertSame('Police', $police[0]['Display']);
+        $this->assertSame('Text', $police[0]['Type']);
+        $this->assertTrue($police[0]['Rapide'] ?? false, 'Proposé d\'emblée par la barre simple.');
     }
 }

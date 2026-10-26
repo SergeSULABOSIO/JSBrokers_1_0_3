@@ -17,6 +17,7 @@ use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\Search\AvenantEcheanceScope;
 use App\Services\Search\CotationSouscriptionScope;
 use App\Services\Search\PisteTransformationScope;
+use App\Services\Search\PoliceDeLaTranche;
 use App\Services\Search\ProductionScope;
 use App\Services\Search\TranchePaiementScope;
 
@@ -132,6 +133,8 @@ final class OuvrirRubriqueTool implements AiToolInterface, AiToolConditionnel
                 // exprimée une fois doit piloter la réponse ÉCRITE et l'écran sans être
                 // retraduite. Deux jeux de noms auraient produit deux listes.
                 'echeance' => AvenantEcheanceScope::proprieteSchema(),
+                // LA POLICE D'UNE TRANCHE : le critère de la barre « Police » de l'écran.
+                'police' => PoliceDeLaTranche::proprieteSchema(),
                 'axes' => TranchePaiementScope::proprieteSchema(
                     'TRANCHE uniquement : ouvre la rubrique sur les mêmes groupes de chips.'
                 ),
@@ -274,6 +277,7 @@ final class OuvrirRubriqueTool implements AiToolInterface, AiToolConditionnel
             + TranchePaiementScope::critereRecherche($shortName, $axesTranche)
             + CotationSouscriptionScope::critereRecherche($shortName, $args['validation'] ?? null)
             + PisteTransformationScope::critereRecherche($shortName, $args['transformation'] ?? null)
+            + PoliceDeLaTranche::critereRecherche($shortName, $args['police'] ?? null)
             + ReversementScope::criteresDepuisArguments($shortName, $args)
             // LA PRODUCTION SE FILTRE PAR LE MÊME MOT que les propositions —
             // « validation » porte déjà souscrites / en_attente / caduques. Inventer un
@@ -388,6 +392,9 @@ final class OuvrirRubriqueTool implements AiToolInterface, AiToolConditionnel
             $filtres[] = CotationSouscriptionScope::libelle((string) $criteresRubrique[CotationSouscriptionScope::CRITERION_KEY]['value']);
         } elseif (isset($criteresRubrique[PisteTransformationScope::CRITERION_KEY])) {
             $filtres[] = PisteTransformationScope::libelle((string) $criteresRubrique[PisteTransformationScope::CRITERION_KEY]['value']);
+        }
+        if (isset($criteresRubrique[PoliceDeLaTranche::CHEMIN])) {
+            $filtres[] = sprintf('police « %s »', $criteresRubrique[PoliceDeLaTranche::CHEMIN]['value']);
         }
         foreach ([ReversementScope::CLE_JUSTIFICATIF, ReversementScope::CLE_PERIODE, ReversementScope::CLE_VIREMENT, ReversementScope::CLE_TYPE] as $cleReversement) {
             if (isset($criteresRubrique[$cleReversement])) {

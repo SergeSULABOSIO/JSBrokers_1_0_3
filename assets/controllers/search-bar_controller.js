@@ -1,6 +1,6 @@
 // assets/controllers/search-bar_controller.js
 import BaseController from './base_controller.js';
-import { construireResumeFiltres } from './search-bar-filtres.js';
+import { construireResumeFiltres, criteresDeLaBarreSimple } from './search-bar-filtres.js';
 import { positionnerMenu, indexApresTouche } from './menu-flottant.js';
 // L'ancienne copie locale (textContent → innerHTML) n'échappait ni " ni ' — or le résumé
 // place libellés et clés dans des ATTRIBUTS (title, aria-label, data-filter-key).
@@ -124,15 +124,8 @@ export default class extends BaseController {
      * NOUVEAU : Remplit le sélecteur de recherche simple avec les critères de type 'Text'.
      */
     populateSimpleSearchSelector() {
-        // La recherche simple accepte les critères texte ET les relations directes
-        // (recherchées en texte libre via LIKE sur leur champ d'affichage). Les critères
-        // à chemin (ex. « portefeuille.gestionnaire ») et les autres types (nombre, date,
-        // booléen) restent réservés à la recherche avancée.
-        const textCriteria = this.criteriaValue.filter(
-            c => (c.Type === 'Text' || c.Type === 'Relation')
-                && !String(c.Nom).includes('.')
-                && !String(c.Nom).startsWith('__') // critères synthétiques (ex. « Mon portefeuille »)
-        );
+        // Le choix et l'ordre : module pur (critère de recherche rapide en tête).
+        const textCriteria = criteresDeLaBarreSimple(this.criteriaValue);
         this.simpleSearchCriterionTarget.innerHTML = ''; // On vide le sélecteur
 
         textCriteria.forEach(criterion => {

@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 
 import {
     construireResumeFiltres,
+    criteresDeLaBarreSimple,
     formatterTexteFiltre,
     SEUIL_COMPTEUR,
 } from '../../assets/controllers/search-bar-filtres.js';
@@ -142,4 +143,27 @@ test('formatterTexteFiltre — texte et repli sans définition', () => {
         'Réf. Police : "POL-2026"',
     );
     assert.equal(formatterTexteFiltre('Réf. Police', 'POL-2026', null), 'Réf. Police : "POL-2026"');
+});
+
+// ── LES CRITÈRES DE LA BARRE SIMPLE (la police d'une tranche, 2026-10-26) ──
+test('criteresDeLaBarreSimple — un critère RAPIDE vient en tête, même au bout d’un chemin', () => {
+    const defs = [
+        { Nom: 'nom', Display: 'Nom', Type: 'Text' },
+        { Nom: 'cotation', Display: 'Cotation', Type: 'Relation' },
+        { Nom: 'cotation.assureur', Display: 'Assureur', Type: 'Relation' },
+        { Nom: 'cotation.avenants.referencePolice', Display: 'Police', Type: 'Text', Rapide: true },
+        { Nom: 'echeanceAt', Display: 'Échéance le', Type: 'DateTimeRange' },
+        { Nom: '__mon_portefeuille__', Display: 'Mon portefeuille', Type: 'Relation' },
+    ];
+    assert.deepEqual(criteresDeLaBarreSimple(defs).map((c) => c.Display), ['Police', 'Nom', 'Cotation']);
+});
+
+test('criteresDeLaBarreSimple — sans critère rapide, l’ordre du canevas, champs directs seulement', () => {
+    const defs = [
+        { Nom: 'nom', Display: 'Nom', Type: 'Text' },
+        { Nom: 'client.portefeuille', Display: 'Portefeuille', Type: 'Relation' },
+        { Nom: 'client', Display: 'Client', Type: 'Relation' },
+    ];
+    assert.deepEqual(criteresDeLaBarreSimple(defs).map((c) => c.Display), ['Nom', 'Client']);
+    assert.deepEqual(criteresDeLaBarreSimple(null), []);
 });

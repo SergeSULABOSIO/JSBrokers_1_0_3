@@ -19,6 +19,7 @@ use App\Services\JSBDynamicSearchService;
 use App\Services\Search\AvenantEcheanceScope;
 use App\Services\Search\CotationSouscriptionScope;
 use App\Services\Search\PisteTransformationScope;
+use App\Services\Search\PoliceDeLaTranche;
 use App\Services\Search\PortefeuilleCritereFactory;
 use App\Services\Search\PortefeuilleScope;
 use App\Services\Search\TranchePaiementScope;
@@ -145,6 +146,8 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
                     'description' => 'Numéro de page à restituer (défaut : 1).',
                 ],
                 'echeance' => AvenantEcheanceScope::proprieteSchema(),
+                // LA POLICE D'UNE TRANCHE : le critère de la barre « Police » de l'écran.
+                'police' => PoliceDeLaTranche::proprieteSchema(),
                 'axes' => TranchePaiementScope::proprieteSchema(
                     'TRANCHE uniquement, mêmes règles que les groupes de chips de la rubrique.'
                 ),
@@ -319,7 +322,8 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
         $criteresRubrique = AvenantEcheanceScope::critereRecherche($shortName, $args['echeance'] ?? null)
             + TranchePaiementScope::critereRecherche($shortName, $axesTranche)
             + CotationSouscriptionScope::critereRecherche($shortName, $args['validation'] ?? null)
-            + PisteTransformationScope::critereRecherche($shortName, $args['transformation'] ?? null);
+            + PisteTransformationScope::critereRecherche($shortName, $args['transformation'] ?? null)
+            + PoliceDeLaTranche::critereRecherche($shortName, $args['police'] ?? null);
         $filtreRubrique = null;
         if (isset($criteresRubrique[AvenantEcheanceScope::CRITERION_KEY])) {
             $filtreRubrique = AvenantEcheanceScope::libelle((string) $criteresRubrique[AvenantEcheanceScope::CRITERION_KEY]['value']);
@@ -331,6 +335,10 @@ final class RechercherEntitesTool implements AiToolInterface, AiToolDeComprehens
             $filtreRubrique = CotationSouscriptionScope::libelle((string) $criteresRubrique[CotationSouscriptionScope::CRITERION_KEY]['value']);
         } elseif (isset($criteresRubrique[PisteTransformationScope::CRITERION_KEY])) {
             $filtreRubrique = PisteTransformationScope::libelle((string) $criteresRubrique[PisteTransformationScope::CRITERION_KEY]['value']);
+        }
+        if (isset($criteresRubrique[PoliceDeLaTranche::CHEMIN])) {
+            $police = sprintf('Police « %s »', $criteresRubrique[PoliceDeLaTranche::CHEMIN]['value']);
+            $filtreRubrique = $filtreRubrique === null ? $police : $filtreRubrique . ' · ' . $police;
         }
 
         // PÉRIMÈTRE : par défaut le portefeuille de l'invité, comme la rubrique à l'écran

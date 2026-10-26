@@ -8,6 +8,7 @@ use App\Entity\Client;
 use App\Entity\Cotation;
 use App\Entity\Risque;
 use App\Entity\Tranche;
+use App\Services\Search\PoliceDeLaTranche;
 use App\Services\ServiceMonnaies;
 
 class TrancheEntityCanvasProvider implements EntityCanvasProviderInterface
@@ -38,6 +39,9 @@ class TrancheEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "cotation.assureur", "intitule" => "Assureur", "type" => "Relation", "targetEntity" => Assureur::class, "displayField" => "nom"],
                 ["code" => "cotation.piste.client", "intitule" => "Client", "type" => "Relation", "targetEntity" => Client::class, "displayField" => "nom"],
                 ["code" => "cotation.piste.risque", "intitule" => "Risque", "type" => "Relation", "targetEntity" => Risque::class, "displayField" => "nomComplet"],
+                // LA POLICE (demande de Serge, 2026-10-26) : un critère de RECHERCHE RAPIDE,
+                // proposé d'emblée par la barre simple. La fiche montre déjà « Réf. Police ».
+                ["code" => PoliceDeLaTranche::CHEMIN, "intitule" => PoliceDeLaTranche::LIBELLE, "type" => "Texte", "rechercheRapide" => true, "masqueDansFiche" => true],
                 ["code" => "montantFlat", "intitule" => "Montant Fixe", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
                 ["code" => "pourcentage", "intitule" => "Pourcentage", "type" => "Nombre", "unite" => "%"],
                 ["code" => "payableAt", "intitule" => "Payable le", "type" => "Date"],

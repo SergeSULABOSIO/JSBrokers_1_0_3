@@ -21,6 +21,7 @@ use App\Services\JSBDynamicSearchService;
 use App\Services\Search\AvenantEcheanceScope;
 use App\Services\Search\CotationSouscriptionScope;
 use App\Services\Search\PisteTransformationScope;
+use App\Services\Search\PoliceDeLaTranche;
 use App\Services\Search\PortefeuilleCritereFactory;
 use App\Services\Search\PortefeuilleScope;
 use App\Services\Search\TranchePaiementScope;
@@ -462,6 +463,45 @@ class CoherenceChipsAssistantTest extends KernelTestCase
         // Un vert sur des ensembles tous vides ne prouverait rien : le semis doit
         // réellement alimenter plusieurs combinaisons.
         $this->assertGreaterThan(2, $vusNonVides, 'Le semis doit peupler plusieurs combinaisons d\'axes.');
+    }
+
+    /**
+     * LA POLICE D'UNE TRANCHE : la barre « Police » de la rubrique et Ket comptent les MÊMES
+     * tranches (demande de Serge, 2026-10-26), et Ket ouvre la rubrique sur le même critère.
+     * La police d'un autre cabinet ne trouve rien, ni ici ni là.
+     */
+    public function testTranchesLaPoliceCoincideAvecLAssistant(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+        $scope = new AiScope($entreprise, $invite);
+        $factory = static::getContainer()->get(PortefeuilleCritereFactory::class);
+
+        foreach (['POL-J10' => true, 'J45' => true, 'POL-VOISIN' => false] as $police => $trouve) {
+            $chip = $this->service()->search(
+                Tranche::class,
+                PoliceDeLaTranche::critereRecherche('Tranche', $police) + $factory->pour('Tranche', $invite),
+                $entreprise,
+            );
+            $this->assertSame($trouve, $chip['totalItems'] > 0, "Police « {$police} » à l'écran.");
+
+            $compte = $this->compter(['entite' => 'Tranche', 'police' => $police], $scope);
+            $this->assertSame(AiToolResult::STATUS_OK, $compte->status);
+            $this->assertSame((int) $chip['totalItems'], $compte->data['count'], "Police « {$police} » : Ket compte comme l'écran.");
+
+            $ouverture = static::getContainer()->get(\App\Ai\Tool\OuvrirRubriqueTool::class)
+                ->execute(['entite' => 'Tranche', 'police' => $police], $scope);
+            $this->assertSame(
+                PoliceDeLaTranche::critereRecherche('Tranche', $police)[PoliceDeLaTranche::CHEMIN],
+                $ouverture->uiAction['criteres'][PoliceDeLaTranche::CHEMIN] ?? null,
+                "Police « {$police} » : la rubrique s'ouvre sur le critère de la barre.",
+            );
+            $this->assertNotEmpty($ouverture->data['filtres'], 'Le filtre posé se dit.');
+        }
+
+        // Hors de la rubrique Tranches, l'argument ne pose rien : il ne s'annonce pas non plus.
+        $pistes = static::getContainer()->get(\App\Ai\Tool\OuvrirRubriqueTool::class)
+            ->execute(['entite' => 'Piste', 'police' => 'POL-J10'], $scope);
+        $this->assertArrayNotHasKey(PoliceDeLaTranche::CHEMIN, $pistes->uiAction['criteres'] ?? []);
     }
 
     /**

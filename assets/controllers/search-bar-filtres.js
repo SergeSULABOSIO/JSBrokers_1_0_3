@@ -25,6 +25,30 @@
 export const SEUIL_COMPTEUR = 2;
 
 /**
+ * Les critères que propose la barre de recherche SIMPLE, dans l'ordre du sélecteur.
+ *
+ * Elle accepte les critères texte et les relations DIRECTES (une relation y est cherchée en
+ * texte libre sur son champ d'affichage). Les chemins (« portefeuille.gestionnaire ») et les
+ * autres types (nombre, date, booléen) restent à la recherche avancée, comme les critères
+ * synthétiques (« __mon_portefeuille__ »). Exception : un critère que le canevas déclare de
+ * RECHERCHE RAPIDE (`Rapide`, ex. la police d'une tranche) y figure même au bout d'un chemin,
+ * et EN TÊTE — c'est lui que la barre propose d'emblée.
+ *
+ * @param {Array<object>|null|undefined} definitions Le searchCanvas de la rubrique.
+ * @returns {Array<object>}
+ */
+export function criteresDeLaBarreSimple(definitions) {
+    const tous = Array.isArray(definitions) ? definitions : [];
+    const rapides = tous.filter((c) => c.Rapide === true && c.Type === 'Text');
+    const directs = tous.filter((c) => c.Rapide !== true
+        && (c.Type === 'Text' || c.Type === 'Relation')
+        && !String(c.Nom).includes('.')
+        && !String(c.Nom).startsWith('__'));
+
+    return [...rapides, ...directs];
+}
+
+/**
  * Construit le libellé lisible d'un filtre actif, en fonction du type de critère.
  * @param {string} displayName Libellé du critère (ex. « Client »).
  * @param {*} val La valeur du filtre (forme dépendante du type).

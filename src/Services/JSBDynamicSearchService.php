@@ -1174,6 +1174,21 @@ class JSBDynamicSearchService
 
                 $metadata = $this->em->getClassMetadata($qb->getRootEntities()[0]);
 
+                // SOUS-CAS 2.0 : un TEXTE au bout d'un chemin (ex. « cotation.avenants.referencePolice »,
+                // la police d'une tranche). Null : le chemin finit sur une relation, SOUS-CAS 2.1.
+                if (str_contains($actualField, '.')) {
+                    $pose = $this->texteAuBoutDuChemin($qb, $currentAlias, $actualField, $operator, $filterValue, (string) ($value['mode'] ?? 'contains'), $parameterName);
+                    if ($pose !== null) {
+                        if ($pose === false) {
+                            $this->logger->warning('[JSBDynamicSearch] Chemin de texte invalide ignoré.', [
+                                'entity' => $entityClass,
+                                'field'  => $actualField,
+                            ]);
+                        }
+                        continue;
+                    }
+                }
+
                 // SOUS-CAS 2.1 : Le champ est une relation, éventuellement à PLUSIEURS niveaux
                 // (ex: 'assure', ou chemin 'client.portefeuille', 'cotation.piste.client.portefeuille').
                 // On traverse chaque segment par un leftJoin, en dédupliquant les jointures via
@@ -1308,6 +1323,67 @@ class JSBDynamicSearchService
                 ))->setParameter($parameterName, $entity);
             }
         }
+    }
+
+    /**
+     * UN TEXTE AU BOUT D'UN CHEMIN — « les tranches dont la police contient 6645SDF ».
+     *
+     * Le chemin peut traverser une COLLECTION (cotation → avenants) : une jointure rendrait la
+     * ligne une fois par élément — tous les avenants d'une police portent sa référence, et la
+     * liste comme son compte auraient doublé. D'où une sous-requête EXISTS, corrélée à la ligne.
+     * Chaque segment est vérifié sur les métadonnées, jamais pris au navigateur ; un chemin qui
+     * traverse les tâches est refusé (leur frontière de visibilité ne s'y appliquerait pas).
+     *
+     * @return bool|null true : critère posé ; false : chemin invalide (ignoré) ; null : le
+     *                   chemin finit sur une RELATION, affaire du SOUS-CAS 2.1.
+     */
+    private function texteAuBoutDuChemin(QueryBuilder $qb, string $alias, string $chemin, string $operateur, mixed $terme, string $mode, string $parametre): ?bool
+    {
+        $segments = explode('.', $chemin);
+        $champ = array_pop($segments);
+        $meta = $this->em->getClassMetadata($qb->getRootEntities()[0]);
+        $sous = 'tc_' . $parametre;
+        $dql = sprintf('SELECT %1$s0.id FROM %2$s %1$s0', $sous, $meta->getName());
+
+        $traverseLesTaches = false;
+        foreach ($segments as $i => $segment) {
+            if (!$meta->hasAssociation($segment)) {
+                return false;
+            }
+            $cible = $meta->getAssociationTargetClass($segment);
+            $traverseLesTaches = $traverseLesTaches || TacheVisibiliteScope::estSoumise($cible);
+            $dql .= sprintf(' JOIN %1$s%2$d.%3$s %1$s%4$d', $sous, $i, $segment, $i + 1);
+            $meta = $this->em->getClassMetadata($cible);
+        }
+        // Une RELATION au bout : le SOUS-CAS 2.1, qui sait poser la frontière des tâches.
+        if ($meta->hasAssociation($champ)) {
+            return null;
+        }
+        if ($traverseLesTaches || !$meta->hasField($champ)) {
+            return false;
+        }
+
+        $riche = self::estRiche($meta, $champ);
+        $colonne = self::colonneCherchable($meta, $sous . \count($segments), $champ);
+        if ($operateur === 'LIKE') {
+            $valeur = self::motifLike($terme, $mode, $riche);
+            if ($valeur === null) {
+                $qb->andWhere('1 = 0'); // un terme réduit à rien ne trouve rien
+
+                return true;
+            }
+            $condition = self::conditionLike($colonne, $parametre);
+        } elseif ($operateur === '=') {
+            $valeur = $riche && \is_string($terme) ? self::termeNormalise($terme, true) : $terme;
+            $condition = sprintf('%s = :%s', $colonne, $parametre);
+        } else {
+            return false;
+        }
+
+        $qb->andWhere(sprintf('EXISTS (%s WHERE %s0 = %s AND %s)', $dql, $sous, $alias, $condition))
+            ->setParameter($parametre, $valeur);
+
+        return true;
     }
 
     /**
