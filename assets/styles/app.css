@@ -1814,7 +1814,8 @@ textarea:hover,
     color: #495057;
 }
 .jsb-state-badge--critique { background: #f8d7da; color: #842029; }
-.jsb-state-badge--elevee { background: #e69500; color: #ffffff; }
+/* Texte foncé sur l'orange : 6,6:1 (le blanc n'y faisait que 2,4:1 — chantier 5). */
+.jsb-state-badge--elevee { background: #e69500; color: var(--text-dark); }
 .jsb-state-badge--moderee { background: #fff3cd; color: #664d03; }
 .jsb-state-badge--faible { background: #e9ecef; color: #495057; }
 .jsb-state-badge--reglee { background: #d1e7dd; color: #0f5132; }
@@ -6262,7 +6263,7 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 .jsb-attach-drop:focus-visible,
 .jsb-attach-drop.is-over { border-color: #0047AB; background: #f4f8ff; color: #0047AB; }
 .jsb-attach-drop-icon { color: #0047AB; }
-.jsb-attach-drop-titre { font-weight: 600; color: #0d2440; }
+.jsb-attach-drop-titre { font-weight: 600; color: var(--cobalt-dark); }
 .jsb-attach-drop-aide { font-size: .82rem; }
 
 .jsb-attach-liste { list-style: none; margin: .9rem 0 0; padding: 0; }

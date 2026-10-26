@@ -33,7 +33,9 @@
     <style>
         .soa-docs-overlay {
             position: fixed; inset: 0; z-index: 10050;
-            background: rgba(13, 36, 64, .55);
+            /* Voile du cobalt foncé #003380 (chantier 5) : valeurs écrites, ce gabarit est
+               aussi rendu par la page publique du SOA, sans app.css ni ses jetons. */
+            background: rgba(0, 51, 128, .55);
             display: flex; align-items: center; justify-content: center;
             padding: 1rem;
         }
@@ -46,7 +48,7 @@
             display: flex; align-items: center; justify-content: space-between;
             gap: .75rem; padding: .9rem 1.25rem; border-bottom: 3px solid #0047AB;
         }
-        .soa-docs-header h5 { margin: 0; font-size: 1rem; font-weight: 700; color: #0d2440; }
+        .soa-docs-header h5 { margin: 0; font-size: 1rem; font-weight: 700; color: #003380; }
         .soa-docs-header-title { display: flex; align-items: center; gap: .6rem; min-width: 0; }
         .soa-docs-header-icon { flex-shrink: 0; display: inline-flex; color: #0047AB; }
         .soa-docs-close {
@@ -54,7 +56,7 @@
             color: #5a6268; cursor: pointer; padding: .25rem .5rem; border-radius: 6px;
             min-width: 44px; min-height: 40px;
         }
-        .soa-docs-close:hover, .soa-docs-close:focus { background: #eef2f7; color: #0d2440; }
+        .soa-docs-close:hover, .soa-docs-close:focus { background: #eef2f7; color: #003380; }
         /* Bloc d'introduction : pastille + titre + description (pattern des pickers
            clients/portefeuilles — jsb-picker-intro d'app.css, repris ici car les
            pages standalone/publiques ne chargent pas app.css). */

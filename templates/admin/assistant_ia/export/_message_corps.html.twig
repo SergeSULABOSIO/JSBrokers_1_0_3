@@ -15,7 +15,7 @@
       l'autoescape de Twig, que le HTML naît. Un |raw rouvrirait l'injection
       pour n'importe quel contenu de message.
 
-   Charte : cobalt #0047AB, titres #0d2440, corps #343a40, bordures #dee2e6.
+   Charte : cobalt #0047AB, titres #003380, corps #343a40, bordures #dee2e6.
    Les pastilles portent LE TEXTE (jamais la couleur seule) — WCAG 1.4.1.
    ═══════════════════════════════════════════════════════════════════════════ #}
 
@@ -49,7 +49,7 @@
 
 {% for bloc in blocs %}
     {% if bloc.type == 'titre' %}
-        <p style="margin:18px 0 8px;font-size:15px;font-weight:700;color:#0d2440;">{{ md.inline(bloc.inline, badgeStyles) }}</p>
+        <p style="margin:18px 0 8px;font-size:15px;font-weight:700;color:#003380;">{{ md.inline(bloc.inline, badgeStyles) }}</p>
 
     {% elseif bloc.type == 'paragraphe' %}
         <p style="margin:0 0 10px;font-size:13px;line-height:1.55;color:#343a40;">{{ md.inline(bloc.inline, badgeStyles) }}</p>
@@ -81,7 +81,7 @@
                 <thead>
                     <tr>
                         {% for cellule in bloc.entetes %}
-                            <th style="text-align:{{ alignements[loop.index0]|default('left') }};padding:{{ cellule_pad }};background:#f1f3f5;border:1px solid #dee2e6;font-weight:700;color:#0d2440;word-break:break-word;">{{ md.inline(cellule, badgeStyles) }}</th>
+                            <th style="text-align:{{ alignements[loop.index0]|default('left') }};padding:{{ cellule_pad }};background:#f1f3f5;border:1px solid #dee2e6;font-weight:700;color:#003380;word-break:break-word;">{{ md.inline(cellule, badgeStyles) }}</th>
                         {% endfor %}
                     </tr>
                 </thead>
@@ -99,7 +99,7 @@
                                largeur de l'écran et c'est tout l'e-mail qui défile
                                horizontalement. La coupure n'intervient que si le mot ne
                                tient pas : sur un écran large, rien ne change. #}
-                            <td style="text-align:{{ alignements[loop.index0]|default('left') }};padding:{{ cellule_pad }};border:1px solid #dee2e6;vertical-align:top;word-break:break-word;{% if estTotaux %}background:#f1f3f5;font-weight:700;color:#0d2440;{% endif %}">{{ md.inline(cellule, badgeStyles) }}</td>
+                            <td style="text-align:{{ alignements[loop.index0]|default('left') }};padding:{{ cellule_pad }};border:1px solid #dee2e6;vertical-align:top;word-break:break-word;{% if estTotaux %}background:#f1f3f5;font-weight:700;color:#003380;{% endif %}">{{ md.inline(cellule, badgeStyles) }}</td>
                         {% endfor %}
                     </tr>
                 {% endfor %}
@@ -117,13 +117,13 @@
            l'export image, qui capture la bulle réelle. #}
         <table cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:0 0 6px;font-size:12px;color:#343a40;">
             {% if bloc.titre is not empty %}
-                <caption style="caption-side:top;text-align:left;padding:0 0 6px;font-size:13px;font-weight:700;color:#0d2440;">Graphique — {{ bloc.titre }}</caption>
+                <caption style="caption-side:top;text-align:left;padding:0 0 6px;font-size:13px;font-weight:700;color:#003380;">Graphique — {{ bloc.titre }}</caption>
             {% endif %}
             <thead>
                 <tr>
-                    <th style="text-align:left;padding:6px 8px;background:#f1f3f5;border:1px solid #dee2e6;font-weight:700;color:#0d2440;">&nbsp;</th>
+                    <th style="text-align:left;padding:6px 8px;background:#f1f3f5;border:1px solid #dee2e6;font-weight:700;color:#003380;">&nbsp;</th>
                     {% for serie in bloc.series %}
-                        <th style="text-align:right;padding:6px 8px;background:#f1f3f5;border:1px solid #dee2e6;font-weight:700;color:#0d2440;word-break:break-word;">
+                        <th style="text-align:right;padding:6px 8px;background:#f1f3f5;border:1px solid #dee2e6;font-weight:700;color:#003380;word-break:break-word;">
                             {{ serie.label }}{% if bloc.unite is not empty %} ({{ bloc.unite }}){% endif %}
                         </th>
                     {% endfor %}

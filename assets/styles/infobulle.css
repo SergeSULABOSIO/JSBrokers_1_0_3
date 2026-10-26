@@ -6,7 +6,8 @@
  * fichier seul. L'application le lie après app.css (segments/_feuilles_de_l_application.html.twig).
  *
  * Style « Pistes » partout (décision de Serge) : titres de section, libellés gris, montants à
- * droite, états sémantiques. Le bleu des titres (#0d6efd) est hors charte : chantier 5.
+ * droite, états sémantiques. Titres de section en gris clair #adb5bd (chantier 5, décision de
+ * Serge : le bleu Bootstrap n'y faisait que 3,6:1 sur le fond sombre).
  */
 
 /* L'INFOBULLE SOMBRE, style « Pistes » (décision de Serge, chantier 3) : celle de toute
@@ -24,7 +25,7 @@
 .jsb-ctx-tip table { width: 100%; border-collapse: collapse; }
 .jsb-ctx-tip td { padding: 3px 10px; vertical-align: top; overflow-wrap: anywhere; }
 .jsb-ctx-tip td:first-child:not([colspan]) { color: #adb5bd; white-space: nowrap; padding-right: 6px; }
-.jsb-ctx-tip .tip-section { color: #0d6efd; font-weight: 600; padding-top: 6px; padding-bottom: 2px; border-top: 1px solid #3d4349; font-size: .68rem; letter-spacing: .03em; text-transform: uppercase; }
+.jsb-ctx-tip .tip-section { color: #adb5bd; font-weight: 600; padding-top: 6px; padding-bottom: 2px; border-top: 1px solid #3d4349; font-size: .68rem; letter-spacing: .03em; text-transform: uppercase; }
 .jsb-ctx-tip .tip-section:first-child { border-top: none; padding-top: 3px; }
 .jsb-ctx-tip .tip-risque { color: #fbbf24; }
 .jsb-ctx-tip .tip-libelle { color: #9ca3af; font-style: italic; font-size: .68rem; padding-top: 1px; padding-bottom: 3px; }

@@ -69,7 +69,7 @@
            Le libellé et l'aide vivent HORS du bloc — le repère `top:50%` de
            l'icône vise le centre du bloc, qu'un texte interne décalerait. #}
         <div style="padding: .75rem 1.25rem 0;">
-            <label for="aimsg-recherche" class="form-label fw-semibold mb-0" style="color:#0d2440;">
+            <label for="aimsg-recherche" class="form-label fw-semibold mb-0" style="color:var(--cobalt-dark);">
                 Rechercher un destinataire
             </label>
         </div>
@@ -142,7 +142,7 @@
             {% endif %}
 
             <fieldset class="border-0 p-0 m-0">
-                <legend class="fs-6 fw-semibold mb-1" style="color:#0d2440;">
+                <legend class="fs-6 fw-semibold mb-1" style="color:var(--cobalt-dark);">
                     Destinataires
                     <span class="fw-normal text-muted small">(aucun, un ou plusieurs)</span>
                 </legend>
@@ -208,7 +208,7 @@
                    n'en sélectionner aucune et ne saisir qu'une adresse, ou les
                    deux à la fois. #}
                 <div class="mt-3 pt-2" style="border-top:1px solid #dee2e6;">
-                    <label for="aimsg-libre" class="form-label fw-semibold mb-0" style="color:#0d2440;">
+                    <label for="aimsg-libre" class="form-label fw-semibold mb-0" style="color:var(--cobalt-dark);">
                         Autres adresses <span class="fw-normal text-muted small">(facultatif)</span>
                     </label>
                     <span class="text-muted small d-block mb-1" id="aimsg-libre-aide">
@@ -237,7 +237,7 @@
                reproduit. La capture est faite par le navigateur ; si elle échoue,
                l'envoi bascule sur le PDF plutôt que d'être perdu. #}
             <fieldset class="border-0 p-0 m-0 mt-3">
-                <legend class="fs-6 fw-semibold mb-1" style="color:#0d2440;">Pièce jointe</legend>
+                <legend class="fs-6 fw-semibold mb-1" style="color:var(--cobalt-dark);">Pièce jointe</legend>
                 <div class="d-flex flex-wrap gap-3">
                     {% for valeur, label in {'image': 'Image (rendu fidèle)', 'pdf': 'PDF', 'word': 'Word (.doc)', 'markdown': 'Markdown (.md)', '': 'Aucune'} %}
                         <div class="form-check">
@@ -255,7 +255,7 @@
             </fieldset>
 
             <div class="mt-3">
-                <label for="aimsg-message" class="form-label fw-semibold" style="color:#0d2440;">
+                <label for="aimsg-message" class="form-label fw-semibold" style="color:var(--cobalt-dark);">
                     Message d'accompagnement <span class="text-muted fw-normal">(facultatif)</span>
                 </label>
                 {# --top : sur un champ multi-lignes, l'icône s'aligne sur la

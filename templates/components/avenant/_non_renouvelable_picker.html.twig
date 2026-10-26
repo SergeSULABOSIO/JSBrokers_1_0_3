@@ -85,8 +85,8 @@
                 {# Champ au pattern maison : libellé en gras, aide AVANT le champ
                    (aria-describedby), puis le champ — comme le picker de mouvement. #}
                 <fieldset class="border-0 p-0 m-0 mb-3">
-                    <legend class="fs-6 fw-semibold mb-1" style="color:#0d2440;">Motif</legend>
-                    <label for="nr-motif" class="form-label fw-semibold mb-0" style="color:#0d2440;">
+                    <legend class="fs-6 fw-semibold mb-1" style="color:var(--cobalt-dark);">Motif</legend>
+                    <label for="nr-motif" class="form-label fw-semibold mb-0" style="color:var(--cobalt-dark);">
                         Pourquoi cette police ne sera-t-elle pas renouvelée&nbsp;?
                         <span class="fw-normal text-muted small">(obligatoire)</span>
                     </label>
@@ -105,7 +105,7 @@
             {# APERÇU — ce que la validation écrira, rafraîchi par le serveur à chaque frappe.
                Source unique avec l'assistante. #}
             <section aria-labelledby="nr-apercu-titre" aria-live="polite">
-                <h6 id="nr-apercu-titre" class="fw-semibold mb-2" style="color:#0d2440;">Ce qui sera enregistré</h6>
+                <h6 id="nr-apercu-titre" class="fw-semibold mb-2" style="color:var(--cobalt-dark);">Ce qui sera enregistré</h6>
                 <div data-non-renouvelable-picker-target="apercu">
                     {{ include('components/avenant/_non_renouvelable_apercu.html.twig', {apercu: apercu}) }}
                 </div>

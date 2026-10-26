@@ -63,7 +63,7 @@
                 </p>
             {% else %}
                 <fieldset class="border-0 p-0 m-0">
-                    <legend class="fs-6 fw-semibold mb-2" style="color:#0d2440;">Destinataire</legend>
+                    <legend class="fs-6 fw-semibold mb-2" style="color:var(--cobalt-dark);">Destinataire</legend>
                     {% for d in destinataires %}
                         <div class="form-check mb-2">
                             <input class="form-check-input"
@@ -82,7 +82,7 @@
                 </fieldset>
 
                 <div class="mt-3">
-                    <label for="soa-envoi-message" class="form-label fw-semibold" style="color:#0d2440;">
+                    <label for="soa-envoi-message" class="form-label fw-semibold" style="color:var(--cobalt-dark);">
                         Message d'accompagnement <span class="text-muted fw-normal">(facultatif)</span>
                     </label>
                     <textarea id="soa-envoi-message"
@@ -98,7 +98,7 @@
                partage est visible, pas à mémoriser). Liste bornée aux 5 derniers. #}
             {% if historique is not empty %}
                 <section class="mt-3" aria-labelledby="soa-envoi-historique-titre">
-                    <h6 id="soa-envoi-historique-titre" class="fw-semibold mb-2" style="color:#0d2440;">
+                    <h6 id="soa-envoi-historique-titre" class="fw-semibold mb-2" style="color:var(--cobalt-dark);">
                         Derniers envois
                     </h6>
                     <table class="table table-sm mb-0" style="font-size:.82rem;">

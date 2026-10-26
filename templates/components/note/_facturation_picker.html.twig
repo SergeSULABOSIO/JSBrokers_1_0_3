@@ -107,7 +107,7 @@
                 </p>
             {% else %}
                 <fieldset class="jsb-picker-carte">
-                    <legend class="fs-6" style="color:#0d2440;">{{ credit ? 'Commissions à créditer' : 'Commissions à facturer' }}</legend>
+                    <legend class="fs-6" style="color:var(--cobalt-dark);">{{ credit ? 'Commissions à créditer' : 'Commissions à facturer' }}</legend>
                     <div class="table-responsive">
                         <table class="jsb-picker-table jsb-picker-table--lignes-cliquables"
                                aria-label="{{ credit ? 'Commissions à créditer' : 'Commissions qu’il reste à facturer' }}">
@@ -176,7 +176,7 @@
 
             {% if groupe and groupe.ecartes is not empty %}
                 <fieldset class="jsb-picker-carte">
-                    <legend class="fs-6" style="color:#0d2440;">Déjà facturé</legend>
+                    <legend class="fs-6" style="color:var(--cobalt-dark);">Déjà facturé</legend>
                     <p class="text-muted small mb-2">
                         Ces échéances ne sont plus facturables : une note les porte déjà. Ce qui reste
                         dû s'encaisse sur cette note ; pour en changer le montant, ouvrez-la et corrigez-la.
@@ -202,7 +202,7 @@
 
             {% if not credit and notesARegler is not empty %}
                 <fieldset class="jsb-picker-carte">
-                    <legend class="fs-6" style="color:#0d2440;">À encaisser</legend>
+                    <legend class="fs-6" style="color:var(--cobalt-dark);">À encaisser</legend>
                     <p class="text-muted small mb-2">
                         Ces notes réclament déjà la commission ; il reste à en obtenir le règlement.
                     </p>
@@ -234,14 +234,14 @@
 
             {% if groupe and groupe.lignes is not empty %}
                 <fieldset class="jsb-picker-carte">
-                    <legend class="fs-6" style="color:#0d2440;">La note</legend>
+                    <legend class="fs-6" style="color:var(--cobalt-dark);">La note</legend>
                     {# CHAMPS AU PATTERN MAISON — celui du picker de reversement : libellé en
                        gras, aide AVANT le champ (aria-describedby), puis champ à icône
                        incrustée `.jsb-picker-field`, de largeur BORNÉE. Un champ étiré sur
                        toute la fenêtre ne dit rien de ce qu'on attend de lui. #}
                     <div class="jsb-picker-champs">
                         <div>
-                            <label for="jsb-fact-destinataire" class="form-label fw-semibold mb-0" style="color:#0d2440;">À qui l'adresser</label>
+                            <label for="jsb-fact-destinataire" class="form-label fw-semibold mb-0" style="color:var(--cobalt-dark);">À qui l'adresser</label>
                             <span class="text-muted small d-block mb-1" id="jsb-fact-destinataire-aide">
                                 Le destinataire ordinaire d'une commission de courtage est l'assureur.
                             </span>
@@ -262,7 +262,7 @@
                             </div>
                         </div>
                         <div>
-                            <label for="jsb-fact-objet" class="form-label fw-semibold mb-0" style="color:#0d2440;">Objet de la note</label>
+                            <label for="jsb-fact-objet" class="form-label fw-semibold mb-0" style="color:var(--cobalt-dark);">Objet de la note</label>
                             <span class="text-muted small d-block mb-1" id="jsb-fact-objet-aide">
                                 Déduit de la police. C'est ce que lira celui qui reçoit la note.
                             </span>
@@ -281,7 +281,7 @@
                             </div>
                         </div>
                         <div class="jsb-picker-champs--pleine">
-                            <label for="jsb-fact-description" class="form-label fw-semibold mb-0" style="color:#0d2440;">Précision (facultatif)</label>
+                            <label for="jsb-fact-description" class="form-label fw-semibold mb-0" style="color:var(--cobalt-dark);">Précision (facultatif)</label>
                             <span class="text-muted small d-block mb-1" id="jsb-fact-description-aide">
                                 Une mention à porter sur la note — un rappel de convention, un délai.
                             </span>
@@ -302,7 +302,7 @@
 
                 {% if not credit %}
                 <fieldset class="jsb-picker-carte">
-                    <legend class="fs-6" style="color:#0d2440;">Où vous faire payer</legend>
+                    <legend class="fs-6" style="color:var(--cobalt-dark);">Où vous faire payer</legend>
                     {% if comptes is empty %}
                         <p class="text-muted small mb-0">
                             Aucun compte bancaire enregistré : la note ne dira pas où virer.
@@ -329,10 +329,10 @@
                 {% endif %}
 
                 <fieldset class="jsb-picker-carte">
-                    <legend class="fs-6" style="color:#0d2440;">Signature</legend>
+                    <legend class="fs-6" style="color:var(--cobalt-dark);">Signature</legend>
                     <div class="jsb-picker-champs">
                         <div>
-                            <label for="jsb-fact-signataire" class="form-label fw-semibold mb-0" style="color:#0d2440;">Signataire</label>
+                            <label for="jsb-fact-signataire" class="form-label fw-semibold mb-0" style="color:var(--cobalt-dark);">Signataire</label>
                             <span class="text-muted small d-block mb-1" id="jsb-fact-signataire-aide">
                                 Le nom qui figurera au bas de la note. Le vôtre, par défaut.
                             </span>
@@ -348,7 +348,7 @@
                             </div>
                         </div>
                         <div>
-                            <label for="jsb-fact-titre" class="form-label fw-semibold mb-0" style="color:#0d2440;">Titre du signataire</label>
+                            <label for="jsb-fact-titre" class="form-label fw-semibold mb-0" style="color:var(--cobalt-dark);">Titre du signataire</label>
                             <span class="text-muted small d-block mb-1" id="jsb-fact-titre-aide">
                                 La qualité de celui qui signe — elle engage le cabinet.
                             </span>

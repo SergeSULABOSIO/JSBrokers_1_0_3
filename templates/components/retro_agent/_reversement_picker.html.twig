@@ -88,7 +88,7 @@
                 </p>
             {% else %}
                 <fieldset class="jsb-picker-carte">
-                    <legend class="fs-6" style="color:#0d2440;">Affaires à régler</legend>
+                    <legend class="fs-6" style="color:var(--cobalt-dark);">Affaires à régler</legend>
                     <div class="table-responsive">
                         <table class="jsb-picker-table jsb-picker-table--lignes-cliquables"
                                aria-label="Affaires avec un solde exigible">
@@ -151,7 +151,7 @@
                 </fieldset>
 
                 <fieldset class="jsb-picker-carte">
-                    <legend class="fs-6" style="color:#0d2440;">Le versement</legend>
+                    <legend class="fs-6" style="color:var(--cobalt-dark);">Le versement</legend>
                     {# CHAMPS AU PATTERN MAISON — le même que le picker de mouvements et
                        celui des destinataires de l'assistant : libellé en gras, aide AVANT
                        le champ (aria-describedby), puis champ à icône incrustée
@@ -165,7 +165,7 @@
                        textes d'aide à lire en travers, ce que l'empilement corrigeait. #}
                     <div class="jsb-picker-champs">
                         <div>
-                            <label for="rra-date" class="form-label fw-semibold mb-0" style="color:#0d2440;">Date</label>
+                            <label for="rra-date" class="form-label fw-semibold mb-0" style="color:var(--cobalt-dark);">Date</label>
                             <span class="text-muted small d-block mb-1" id="rra-date-aide">
                                 Date de sortie des fonds. Par défaut&nbsp;: aujourd'hui.
                             </span>
@@ -180,7 +180,7 @@
                             </div>
                         </div>
                         <div>
-                            <label for="rra-reference" class="form-label fw-semibold mb-0" style="color:#0d2440;">Référence</label>
+                            <label for="rra-reference" class="form-label fw-semibold mb-0" style="color:var(--cobalt-dark);">Référence</label>
                             <span class="text-muted small d-block mb-1" id="rra-ref-aide">
                                 Proposée d'office. Remplacez-la par la référence de votre virement.
                             </span>
@@ -200,7 +200,7 @@
                             </div>
                         </div>
                         <div class="jsb-picker-champs--pleine">
-                            <label for="rra-compte" class="form-label fw-semibold mb-0" style="color:#0d2440;">Compte débité</label>
+                            <label for="rra-compte" class="form-label fw-semibold mb-0" style="color:var(--cobalt-dark);">Compte débité</label>
                             <span class="text-muted small d-block mb-1" id="rra-compte-aide">
                                 Le premier compte est retenu d'office. Choisissez la caisse pour un
                                 versement en espèces.
@@ -238,7 +238,7 @@
                    lot (cf. LotDeVersement), et les trois lignes le montrent. #}
                 <fieldset class="jsb-picker-carte"
                           data-reversement-retro-picker-target="zonePiece">
-                    <legend class="fs-6" style="color:#0d2440;">Pièce justificative</legend>
+                    <legend class="fs-6" style="color:var(--cobalt-dark);">Pièce justificative</legend>
                     <span class="text-muted small d-block mb-2">
                         {%- if edition and edition.pieces is not empty %}
                             Ce virement est déjà justifié. Retirez une pièce pour la remplacer
@@ -304,7 +304,7 @@
                 </fieldset>
 
                 <section class="jsb-picker-carte" aria-live="polite">
-                    <h6 class="jsb-picker-carte-titre" style="color:#0d2440;">Ce qui sera enregistré</h6>
+                    <h6 class="jsb-picker-carte-titre" style="color:var(--cobalt-dark);">Ce qui sera enregistré</h6>
                     <p class="mb-0 text-muted small" data-reversement-retro-picker-target="apercu">
                         Aucune affaire cochée.
                     </p>
