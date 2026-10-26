@@ -110,10 +110,10 @@ class PisteType extends AbstractType
 
             ->add('exercice', NumberType::class, [
                 'label' => "Exercice",
-                // DÉFAUT : l'exercice en cours. Une piste se crée presque toujours pour
-                // l'année courante, et ce champ obligatoire faisait sinon poser une
-                // question dont la réponse est au calendrier.
-                'data' => (int) date('Y'),
+                // DÉFAUT : l'exercice en cours, posé par l'ENTITÉ neuve (Piste::__construct,
+                // horloge de référence) — Ket le lit au même endroit. Surtout pas l'option
+                // `data` : elle l'emporte sur la valeur de l'objet, et la modification d'une
+                // piste d'un exercice passé la ramenait à l'année en cours (chantier 5).
                 'grouping' => false,
                 'attr' => [
                     'placeholder' => "Année",

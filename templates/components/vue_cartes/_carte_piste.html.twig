@@ -37,7 +37,7 @@
             ['Nom', entity.nom],
             ['Client', client ?: '—'],
             ['Risque', entity.risque ? entity.risque.nomComplet : '—', 'tip-risque'],
-            ['Dernière activité', entity.derniereActivite ? entity.derniereActivite|date('d/m/Y') : '—'],
+            ['Dernière activité', entity.derniereActivite ? entity.derniereActivite|format_datetime('short', 'none', locale: app.user.locale) : '—'],
         ],
         texte: description|length > 90 ? description|slice(0, 89) ~ '…' : description,
     },

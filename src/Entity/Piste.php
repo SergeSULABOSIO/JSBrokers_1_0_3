@@ -185,6 +185,10 @@ class Piste implements OwnerAwareInterface
 
     public function __construct()
     {
+        // L'EXERCICE D'UNE PISTE NEUVE : l'année de l'horloge de référence (APP_TIMEZONE, posé
+        // au démarrage du noyau) — chantier 5. Doctrine ne rappelle pas le constructeur au
+        // chargement : une piste existante garde le sien.
+        $this->exercice = (int) (new \DateTimeImmutable())->format('Y');
         $this->taches = new ArrayCollection();
         $this->cotations = new ArrayCollection();
         $this->tranchesRegularisees = new ArrayCollection();

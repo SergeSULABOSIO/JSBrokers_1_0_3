@@ -108,7 +108,7 @@ class PisteController extends AbstractController
                     }
 
                     $piste->setTypeAvenant(Piste::AVENANT_SOUSCRIPTION);
-                    $piste->setExercice((int) date('Y'));
+                    // L'exercice : celui de l'horloge, posé par Piste::__construct (chantier 5).
                     if ($piste->getRisque() && $piste->getClient()) {
                         $piste->setNom(mb_substr($piste->getRisque()->getNomComplet() . ' — ' . $piste->getClient()->getNom(), 0, 255));
                     } elseif ($piste->getClient()) {
@@ -178,7 +178,7 @@ class PisteController extends AbstractController
                 }
 
                 $piste->setTypeAvenant(Piste::AVENANT_RENOUVELLEMENT);
-                $piste->setExercice((int) date('Y'));
+                // L'exercice : celui de l'horloge, posé par Piste::__construct (chantier 5).
             }
         );
     }

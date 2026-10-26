@@ -318,6 +318,51 @@ class ClientCreerPisteActionTest extends WebTestCase
     }
 
     /**
+     * UNE PISTE NEUVE NAÎT DANS L'EXERCICE DE L'HORLOGE DE RÉFÉRENCE (chantier 5) — l'année
+     * d'APP_TIMEZONE, posée par l'entité elle-même : l'écran, Ket et les pistes dérivées
+     * lisent la même source, au lieu de trois `date('Y')` éparpillés.
+     */
+    public function testUnePisteNeuveNaitDansLExerciceDeLHorloge(): void
+    {
+        self::assertSame((int) (new \DateTimeImmutable())->format('Y'), (new Piste())->getExercice());
+    }
+
+    /**
+     * MODIFIER UNE PISTE NE RÉÉCRIT PAS SON EXERCICE (chantier 5).
+     *
+     * Le défaut « année en cours » était l'option `data` du champ, qui l'emporte TOUJOURS sur
+     * la valeur de l'objet : ouvrir une piste d'un exercice passé affichait l'année en cours,
+     * et l'enregistrer la déplaçait d'exercice sans que personne l'ait demandé.
+     */
+    public function testModifierUnePisteGardeSonExercice(): void
+    {
+        [$entreprise, $invite, $client, , $risque] = $this->seed();
+        $passe = (int) (new \DateTimeImmutable())->format('Y') - 2;
+
+        $piste = (new Piste())
+            ->setNom('Piste d\'un exercice passé')
+            ->setClient($client)
+            ->setRisque($risque)
+            ->setTypeAvenant(Piste::AVENANT_SOUSCRIPTION)
+            ->setDescriptionDuRisque('Description')
+            ->setExercice($passe);
+        $piste->setEntreprise($entreprise);
+        $piste->setInvite($invite);
+        $this->em()->persist($piste);
+        $this->em()->flush();
+
+        $this->connecter(self::OWNER_EMAIL);
+        $this->client->request('GET', sprintf('/admin/piste/api/get-form/%d', $piste->getId()));
+        self::assertResponseIsSuccessful();
+
+        $champ = (new \Symfony\Component\DomCrawler\Crawler((string) $this->client->getResponse()->getContent()))
+            ->filter('input[name="exercice"]');
+        self::assertCount(1, $champ, 'Le champ Exercice doit être rendu.');
+        self::assertSame((string) $passe, $champ->attr('value'),
+            'Le formulaire de modification doit montrer l\'exercice de la piste, pas l\'année en cours.');
+    }
+
+    /**
      * LE CLIENT DEJA CONNU N'EST PAS REDEMANDE.
      *
      * Le geste a nomme le client — c'est un clic droit SUR lui — et l'entete du dialogue

@@ -451,8 +451,8 @@ final class ReconstitueurDeTranche
                 'nom' => $this->nomDeLAffaire($ligne),
                 'client' => $client,
                 'risque' => $risque,
-                // ⚠ L'EXERCICE SUIT LA DATE D'EFFET, PAS L'ANNÉE COURANTE. `PisteType`
-                // propose bien l'année en cours par défaut — juste pour une saisie du
+                // ⚠ L'EXERCICE SUIT LA DATE D'EFFET, PAS L'ANNÉE COURANTE. Une piste neuve
+                // naît bien dans l'année en cours (Piste::__construct) — juste pour une saisie du
                 // jour, faux pour une reprise : rapatrier en 2027 des polices de 2025 les
                 // rangerait toutes dans le mauvais exercice, et les états par période
                 // deviendraient inexploitables sur toute la reprise.

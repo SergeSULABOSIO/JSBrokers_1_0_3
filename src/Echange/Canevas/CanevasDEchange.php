@@ -71,6 +71,9 @@ final class CanevasDEchange
     /** @var array<string, RessourceDEchange>|null mémoïsation du canevas complet */
     private ?array $canevas = null;
 
+    /** @var array<class-string, object|null> une instance neuve par classe (défauts du constructeur) */
+    private array $neuves = [];
+
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly WorkspaceAccessResolver $accessResolver,
@@ -442,12 +445,41 @@ final class CanevasDEchange
         if ($descripteur['aFormulaireData'] ?? false) {
             return false;
         }
+        // Un défaut posé par l'ENTITÉ NEUVE aussi (ex. l'exercice d'une piste : l'année de
+        // l'horloge, Piste::__construct — chantier 5) : l'import crée l'entité par son
+        // constructeur, la cellule vide garde ce défaut.
+        if ($this->porteUnDefautANaissance($meta, $champ)) {
+            return false;
+        }
         if ($descripteur['requisFormulaire'] ?? false) {
             return true;
         }
 
         try {
             return $meta->isNullable($champ) === false;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    private function porteUnDefautANaissance(ClassMetadata $meta, string $champ): bool
+    {
+        $classe = $meta->getName();
+        if (!array_key_exists($classe, $this->neuves)) {
+            try {
+                $constructeur = $meta->getReflectionClass()->getConstructor();
+                $this->neuves[$classe] = $constructeur === null || $constructeur->getNumberOfRequiredParameters() === 0
+                    ? new $classe()
+                    : null;
+            } catch (\Throwable) {
+                $this->neuves[$classe] = null;
+            }
+        }
+        if ($this->neuves[$classe] === null) {
+            return false;
+        }
+        try {
+            return $meta->getFieldValue($this->neuves[$classe], $champ) !== null;
         } catch (\Throwable) {
             return false;
         }

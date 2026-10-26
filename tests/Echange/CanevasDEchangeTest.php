@@ -40,6 +40,23 @@ class CanevasDEchangeTest extends KernelTestCase
     }
 
     /** Une ressource sans colonne serait une feuille vide : le dérivateur a échoué en silence. */
+    /**
+     * UN DÉFAUT POSÉ PAR L'ENTITÉ NEUVE REND LA COLONNE FACULTATIVE (chantier 5). L'exercice
+     * d'une piste naît avec l'année de l'horloge (Piste::__construct) : la cellule vide d'un
+     * import le garde, le dictionnaire ne doit pas l'annoncer « obligatoire ».
+     */
+    public function testLExerciceDUnePisteEstFacultatifALImport(): void
+    {
+        $pistes = array_values(array_filter(
+            $this->canevas()->toutes(),
+            static fn ($r) => $r->fqcn === \App\Entity\Piste::class,
+        ));
+        self::assertCount(1, $pistes);
+        $exercice = $pistes[0]->colonne('exercice');
+        self::assertNotNull($exercice);
+        self::assertFalse($exercice->obligatoire, 'Une piste neuve porte déjà son exercice.');
+    }
+
     public function testChaqueRessourceProduitDesColonnes(): void
     {
         foreach ($this->canevas()->toutes() as $code => $ressource) {
