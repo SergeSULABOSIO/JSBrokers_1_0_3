@@ -43,9 +43,14 @@ class DepenseType extends AbstractType
                 'scale' => 2,
                 'attr'  => ['placeholder' => 'Ex. 250.00', 'data-icon' => 'monnaie'],
             ])
+            // LA DEVISE DE JOSEARA EST LE DOLLAR (décision de Serge, 2026-10-26) : sa comptabilité
+            // est tenue en USD, comme ses ventes de tokens. Affichée, jamais modifiable — un champ
+            // `disabled` ignore toute valeur reçue, la dépense garde celle de l'entité.
             ->add('devise', TextType::class, [
-                'label' => 'Devise',
-                'attr'  => ['placeholder' => 'USD', 'maxlength' => 3, 'style' => 'text-transform:uppercase;', 'data-icon' => 'monnaie'],
+                'label'    => 'Devise',
+                'disabled' => true,
+                'help'     => 'La comptabilité de Joseara est tenue en dollars (USD).',
+                'attr'     => ['data-icon' => 'monnaie'],
             ])
             ->add('tauxTva', NumberType::class, [
                 'label'    => 'TVA déductible (%)',

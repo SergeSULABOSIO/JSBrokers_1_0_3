@@ -431,8 +431,9 @@ Inscrits le 2026-10-16 (décisions de Serge), après l'inventaire fait pour la s
      (`Piste::__construct`, année de l'horloge de référence) : l'écran, Ket (source `entite`) et
      l'import le lisent au même endroit ; le dictionnaire `.jsbx` le tient pour facultatif.
    - Une date affichée passe par `format_datetime(..., locale: app.user.locale)`, jamais `|date('d/m/Y')`.
-   - **QUESTION OUVERTE, à Serge** : le champ « Devise » en texte libre des dépenses
-     (`DepenseType`) contredit la monnaie de travail unique — non touché sans sa décision.
+   - Le champ « Devise » des dépenses est celui de JOSEARA (Console, `Depense`), pas d'un cabinet
+     (les dépenses d'un cabinet sont dans sa monnaie de travail) : **USD fixe, non modifiable**
+     (décision de Serge, 2026-10-26 — la comptabilité de Joseara est en dollars, comme ses tokens).
 6. ✅ **FAIT (2026-10-21) — État vide.** Le SERVEUR dit pourquoi une liste est vide
    (`App\Service\Liste\CauseDeListeVide`, `ControllerUtilsTrait::etatVideParametres`) et rend
    l'état vide, au premier affichage comme à chaque recherche (`etatVide` de la réponse) :

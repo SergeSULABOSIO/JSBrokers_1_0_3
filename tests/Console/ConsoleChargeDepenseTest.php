@@ -185,7 +185,6 @@ class ConsoleChargeDepenseTest extends WebTestCase
         $form['depense[charge]'] = (string) $charge->getId();
         $form['depense[dateDepense]'] = '2026-06-20';
         $form['depense[montant]'] = '250.00';
-        $form['depense[devise]'] = 'USD';
         $form['depense[beneficiaire]'] = 'Hébergeur Cloud';
         $form['depense[reference]'] = self::DEPENSE_REF;
         $form['depense[moyenPaiement]'] = Depense::MOYEN_BANQUE;
@@ -230,6 +229,40 @@ class ConsoleChargeDepenseTest extends WebTestCase
             $this->em()->getRepository(Depense::class)->findOneBy(['reference' => self::DEPENSE_REF]),
             'La dépense doit être supprimée.',
         );
+    }
+
+    /**
+     * LA DEVISE DE JOSEARA EST LE DOLLAR (décision de Serge, 2026-10-26) : sa comptabilité est
+     * tenue en USD, comme ses ventes de tokens. Le champ s'affiche, ne se modifie pas, et le
+     * serveur ignore toute autre valeur reçue.
+     */
+    public function testLaDeviseDUneDepenseEstLeDollarEtNeSeModifiePas(): void
+    {
+        $charge = $this->createChargeFixture();
+        $this->client->loginUser($this->user(self::ADMIN));
+
+        $crawler = $this->client->request('GET', '/console/depenses/new');
+        $champ = $crawler->filter('input[name="depense[devise]"]');
+        $this->assertCount(1, $champ);
+        $this->assertSame('USD', $champ->attr('value'));
+        $this->assertNotNull($champ->attr('disabled'), 'Le champ Devise ne se modifie pas.');
+
+        $form = $crawler->filter('form')->form();
+        $valeurs = $form->getPhpValues();
+        $valeurs['depense']['charge'] = (string) $charge->getId();
+        $valeurs['depense']['dateDepense'] = '2026-06-20';
+        $valeurs['depense']['montant'] = '99.00';
+        $valeurs['depense']['devise'] = 'EUR'; // forcé à la main : doit être ignoré
+        $valeurs['depense']['reference'] = self::DEPENSE_REF;
+        $valeurs['depense']['moyenPaiement'] = Depense::MOYEN_BANQUE;
+        $valeurs['depense']['statut'] = Depense::STATUT_PAYEE;
+        $this->client->request('POST', $form->getUri(), $valeurs);
+        $this->assertResponseRedirects('/console/depenses');
+
+        $this->em()->clear();
+        $depense = $this->em()->getRepository(Depense::class)->findOneBy(['reference' => self::DEPENSE_REF]);
+        $this->assertNotNull($depense);
+        $this->assertSame('USD', $depense->getDevise());
     }
 
     public function testDepensesListExposesKpisAndFilters(): void
