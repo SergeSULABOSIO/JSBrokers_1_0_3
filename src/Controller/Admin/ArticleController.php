@@ -54,12 +54,6 @@ class ArticleController extends AbstractController
         return $this->buildParentAssociationMapFromEntity(Article::class);
     }
 
-    #[Route('/test', name: 'test')]
-    public function edit(): Response
-    {
-        return $this->render('components/article/editor.html.twig', []);
-    }
-
     #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index(Request $request): Response
     {

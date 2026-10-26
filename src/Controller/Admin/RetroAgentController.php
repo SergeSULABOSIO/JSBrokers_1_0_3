@@ -660,29 +660,6 @@ class RetroAgentController extends AbstractController
     }
 
     /**
-     * Consultation : soi-même toujours, un autre agent seulement si gestionnaire d'invités.
-     * L'appartenance à l'entreprise ACTIVE est vérifiée d'abord — sans quoi la règle
-     * « soi-même » ne dirait rien du périmètre.
-     */
-    private function assertPeutConsulter(Invite $agent): void
-    {
-        $connecte = $this->getInvite();
-        // D'autrui : 404, sans le nommer (cf. AppartenanceAuCabinet).
-        $this->appartenance()->exigerLeCabinetOuvert($agent, 'Cet agent');
-
-        if ($agent->getId() === $connecte->getId()) {
-            return; // Ses propres rétrocommissions : toujours consultables.
-        }
-
-        if (!$this->accessResolver->canManageInvites($connecte)) {
-            throw $this->createAccessDeniedException(
-                "Seul le propriétaire de l'espace ou un gestionnaire des invités peut consulter les "
-                . "rétrocommissions d'un autre agent.",
-            );
-        }
-    }
-
-    /**
      * VERSER est autre chose que CONSULTER : personne ne se paie soi-même. Le décaissement
      * exige donc le privilège de gestion, même sur sa propre fiche.
      */

@@ -20,7 +20,8 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
  *             n'apprend rien.
  *  - LIMITE : trop d'envois depuis cette IP, ou vers cette adresse. On le dit.
  *  - PASSE  : on envoie.
- * Les deux portes (la vitrine et /admin/demande_contact) passent par lui.
+ * La porte du contact est la vitrine (SecurityController) ; la seconde, /admin/demande_contact,
+ * sans gabarit ni formulaire qui y envoie, a été supprimée au chantier 7.
  *
  * Un refus du limiteur journalise l'IP RETENUE (canal « contact »), sans rien du contenu
  * du formulaire : c'est ce qui permet de vérifier, en production, que l'IP est bien celle

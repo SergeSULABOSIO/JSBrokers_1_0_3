@@ -62,12 +62,6 @@ class PisteController extends AbstractController
         return $this->buildParentAssociationMapFromEntity(Piste::class);
     }
 
-    #[Route('/test', name: 'test')]
-    public function edit(): Response
-    {
-        return $this->render('components/piste/editor.html.twig', []);
-    }
-
     #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index(Request $request): Response
     {

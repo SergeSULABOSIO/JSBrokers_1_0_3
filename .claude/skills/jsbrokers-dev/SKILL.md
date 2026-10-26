@@ -443,9 +443,14 @@ Inscrits le 2026-10-16 (décisions de Serge), après l'inventaire fait pour la s
    « gestionnaire des invités » — décision de Serge ; seul le propriétaire supprime le cabinet
    et achète des tokens). Les boutons portent les clés à retirer
    (`button_2_cles`) ; le navigateur ne décide rien. Test : `ListeVideExpliqueeTest`.
-7. **Routes et code morts** : `/admin/piste/test` (`PisteController.php:65-69`) ;
-   `/admin/demande_contact` répond 500 en GET (gabarit absent) — le POST, lui, passe par
-   `GardeDuFormulaireDeContact` ; `RetroAgentController::assertPeutConsulter`, jamais appelée.
+7. ✅ **FAIT (2026-10-26) — Routes et code morts.** `/admin/piste/test`, `/admin/article/test`
+   et `/admin/demande_contact` supprimées (gabarit absent : 500 ; la vitrine reste la seule porte
+   du contact) ; `RetroAgentController::assertPeutConsulter`, orpheline depuis `e80694c2`,
+   supprimée — **décision de Serge : le RÔLE « Rétros intermédiaires » est la frontière**, pas
+   « chacun ses rétros ». Gardes : `RoutesMortesTest`, `GabaritsRendusExistentTest` (tout
+   gabarit nommé en toutes lettres dans `render`/`renderView`/`htmlTemplate` existe).
+   ⚠ L'IDE dit `ArticleController::checkForDuplicates` morte : FAUX, elle est appelée par
+   `method_exists` (`ControllerUtilsTrait`) — prouver la mort avant de supprimer.
 8. **Mascottes.** Partages (Paiement et PaiementPrime ; Chargement et ChargementPourPrime ;
    DepenseCourtier et ReversementRetroAgent ; Invite et ProductionIntermediaire) et alias
    d'action utilisés comme mascotte (cinq Roles* sur `action:role`, ParametresConge sur
