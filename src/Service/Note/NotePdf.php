@@ -55,7 +55,7 @@ final class NotePdf
         // connecté (la console, ou un autre cabinet ouvert). Un cabinet sans monnaie, cas
         // anormal, ne fait pas échouer le rendu (et l'archive avec lui) : USD, la monnaie
         // de référence de la plateforme.
-        $monnaie = ($entreprise !== null ? $this->serviceMonnaies->getMonnaieAffichagePourEntreprise($entreprise)?->getCode() : null) ?? 'USD';
+        $monnaie = ($entreprise !== null ? $this->serviceMonnaies->getMonnaieAffichagePourEntreprise($entreprise)?->getCode() : null) ?? ServiceMonnaies::MONNAIE_PAR_DEFAUT;
         $logo = $entreprise?->getThumbnail()
             ? $this->dossierDesLogos . '/' . $entreprise->getThumbnail()
             : $this->projectDir . '/public/images/entreprises/logofav.png';

@@ -21,6 +21,6 @@ class CurrencyExtension extends AbstractExtension
     {
         // Sans monnaie de travail configurée : USD, le défaut d'un cabinet (jamais l'euro,
         // qu'aucun cabinet ne reçoit).
-        return $this->serviceMonnaies->getCodeMonnaieAffichage() ?? 'USD';
+        return $this->serviceMonnaies->getCodeMonnaieAffichage();
     }
 }

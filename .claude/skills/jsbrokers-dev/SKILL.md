@@ -420,6 +420,11 @@ Inscrits le 2026-10-16 (décisions de Serge), après l'inventaire fait pour la s
      monnaie lue UNE fois par tableau, jamais retenue dans un service (le worker sert plusieurs
      cabinets) ; les exemples du prompt portent `[MONNAIE]`, remplacé par le code du cabinet.
      L'export Excel lit l'unité devant ou derrière le nombre.
+   - **La monnaie d'un cabinet qui n'en a configuré aucune : USD, écrit UNE fois**
+     (`ServiceMonnaies::MONNAIE_PAR_DEFAUT`, décision de Serge du 2026-10-26).
+     `getCodeMonnaieAffichage()` rend toujours une chaîne ; aucun appelant ne réécrit
+     `?? 'USD'` (garde `MonnaieParDefautTest`). Le cabinet connu (SOA, PDF, outils de Ket),
+     on lit SA monnaie (`getMonnaieAffichagePourEntreprise`), jamais celle de la session.
    - **Couleurs : la charte, par ses jetons** (skill `charte-couleurs`). `#0d2440` → cobalt
      foncé ; titres de l'infobulle `#adb5bd` ; texte foncé sur l'orange `#e69500`. ⚠ Un gabarit
      rendu SANS app.css (e-mails, export DomPDF des messages de Ket, picker des documents du SOA

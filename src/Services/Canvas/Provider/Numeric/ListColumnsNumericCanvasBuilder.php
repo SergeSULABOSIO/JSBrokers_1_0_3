@@ -92,9 +92,8 @@ final class ListColumnsNumericCanvasBuilder
         $retenues = [];
         foreach ($this->listCanvasProvider->getCanvas($classeEntite)['colonnes_numeriques'] ?? [] as $colonne) {
             $code = $colonne['attribut_code'] ?? null;
-            // La comparaison est au '%' LITTÉRAL, jamais « différent de la monnaie » :
-            // getCodeMonnaieAffichage() rend null quand aucune monnaie n'est configurée,
-            // et ce test-là écarterait alors TOUTES les colonnes.
+            // La comparaison est au '%' LITTÉRAL, jamais « différent de la monnaie » : une
+            // colonne se reconnaît à ce qu'elle EST (un taux), pas à ce qu'elle n'est pas.
             if ($code === null || ($colonne['attribut_unité'] ?? null) === '%') {
                 continue;
             }

@@ -1391,7 +1391,7 @@ class AiContextBuilder
     /** Le code de la monnaie du cabinet ; USD quand aucune n'est configurée (le défaut d'un cabinet). */
     private function codeMonnaie(?string $monnaie): string
     {
-        return trim((string) $monnaie) !== '' ? trim((string) $monnaie) : 'USD';
+        return trim((string) $monnaie) !== '' ? trim((string) $monnaie) : ServiceMonnaies::MONNAIE_PAR_DEFAUT;
     }
 
     private function monnaieDuCabinet(Entreprise $entreprise): string
@@ -1404,7 +1404,7 @@ class AiContextBuilder
             return trim((string) $travail->getCode());
         }
 
-        return 'USD';
+        return ServiceMonnaies::MONNAIE_PAR_DEFAUT;
     }
 
     /**

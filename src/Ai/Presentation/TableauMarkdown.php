@@ -39,8 +39,9 @@ final class TableauMarkdown
 
     public function __construct(
         private readonly ServiceNombres $nombres,
-        // La monnaie de travail du cabinet (chantier 5) : un montant la porte. Absente
-        // (tests, hors cabinet, aucune monnaie configurée) : le nombre seul.
+        // La monnaie de travail du cabinet (chantier 5) : un montant la porte — USD si le cabinet
+        // n'en a configuré aucune (ServiceMonnaies::MONNAIE_PAR_DEFAUT). Service absent
+        // (tests unitaires) : le nombre seul.
         private readonly ?\App\Services\ServiceMonnaies $monnaies = null,
     ) {
     }
@@ -70,7 +71,7 @@ final class TableauMarkdown
         $affichees = array_slice($lignes, 0, self::MAX_LIGNES);
         // Lue UNE fois par tableau, et jamais retenue dans le service : le même processus
         // sert plusieurs cabinets.
-        $monnaie = $this->monnaies?->getCodeMonnaieAffichage() ?: null;
+        $monnaie = $this->monnaies?->getCodeMonnaieAffichage();
 
         $corps = [];
         foreach ($affichees as $ligne) {

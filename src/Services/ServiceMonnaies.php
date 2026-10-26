@@ -13,6 +13,13 @@ use Symfony\Bundle\SecurityBundle\Security;
 
 class ServiceMonnaies
 {
+    /**
+     * LA MONNAIE D'UN CABINET QUI N'EN A CONFIGURÉ AUCUNE : le dollar — celui que sa création
+     * lui pose et que Ket annonce. Écrit ICI seulement (décision de Serge, 2026-10-26) : seize
+     * écrans le réécrivaient chacun, pendant que d'autres montraient le nombre seul.
+     */
+    public const MONNAIE_PAR_DEFAUT = 'USD';
+
     public function __construct(
         private Security $security,
         private EntityManagerInterface $entityManager,
@@ -72,14 +79,12 @@ class ServiceMonnaies
         return null;
     }
 
-    public function getCodeMonnaieAffichage()
+    /** Le code de la monnaie de travail du cabinet connecté ; à défaut, MONNAIE_PAR_DEFAUT. */
+    public function getCodeMonnaieAffichage(): string
     {
-        /** @var Monnaie $monnaieAffichage */
-        $monnaie = $this->getMonnaieAffichage();
-        if ($monnaie) {
-            return $monnaie->getCode();
-        }
-        return null;
+        $code = trim((string) $this->getMonnaieAffichage()?->getCode());
+
+        return $code !== '' ? $code : self::MONNAIE_PAR_DEFAUT;
     }
 
     public function getCodeMonnaieLocale(): ?string
@@ -93,7 +98,7 @@ class ServiceMonnaies
                 }
             }
         }
-        return "USD";
+        return self::MONNAIE_PAR_DEFAUT;
     }
 
     // ================= Variantes scopées par ENTREPRISE (utilisables hors requête) =================

@@ -164,20 +164,13 @@ class SoaContextBuilder
         // Hors session (rendu public), la monnaie d'affichage est résolue par
         // l'entreprise émettrice et non par l'utilisateur connecté.
         //
-        // ⚠ ET JAMAIS VIDE. `getCodeMonnaieAffichage()` s'appuie sur l'utilisateur
-        // connecté : il rend `null` partout où il n'y en a pas — worker Messenger,
-        // ligne de commande, et donc les réponses de Ket. Un relevé de compte dont
-        // les montants sortent sans monnaie n'est pas un relevé : « 18 500,00 » ne
-        // dit pas si le client doit des dollars ou des francs. On retombe donc sur
-        // l'entreprise, puis sur l'USD — le même repli que la branche publique.
-        $monnaie = ($invite !== null || $entreprise === null)
-            ? $this->serviceMonnaies->getCodeMonnaieAffichage()
-            : null;
-
-        if (($monnaie === null || $monnaie === '') && $entreprise !== null) {
-            $monnaie = $this->serviceMonnaies->getMonnaieAffichagePourEntreprise($entreprise)?->getCode();
-        }
-        $monnaie = ($monnaie === null || $monnaie === '') ? 'USD' : $monnaie;
+        // ⚠ LA MONNAIE DU CABINET ÉMETTEUR, LUE SUR LUI. `getCodeMonnaieAffichage()` s'appuie
+        // sur l'utilisateur connecté, absent d'une ligne de commande : le relevé d'un cabinet
+        // en CDF y serait sorti en USD, son défaut. Le cabinet connu, on lit donc SA monnaie,
+        // quel que soit le contexte ; à défaut, ServiceMonnaies::MONNAIE_PAR_DEFAUT.
+        $monnaie = $entreprise !== null
+            ? ($this->serviceMonnaies->getMonnaieAffichagePourEntreprise($entreprise)?->getCode() ?: ServiceMonnaies::MONNAIE_PAR_DEFAUT)
+            : $this->serviceMonnaies->getCodeMonnaieAffichage();
 
         // LE TAUX DE RÈGLEMENT DU CLIENT, calculé une fois. `null` quand rien n'est
         // dû : il n'y a alors aucun prorata à appliquer, et les deux tableaux ne

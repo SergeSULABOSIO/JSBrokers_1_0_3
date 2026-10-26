@@ -20,7 +20,7 @@ use Symfony\Component\Translation\LocaleSwitcher;
  */
 class BarreDesTotauxServeurTest extends KernelTestCase
 {
-    private function barre(?string $monnaie = 'USD'): BarreDesTotaux
+    private function barre(string $monnaie = 'USD'): BarreDesTotaux
     {
         static::bootKernel();
         $monnaies = $this->createMock(ServiceMonnaies::class);
@@ -75,11 +75,15 @@ class BarreDesTotauxServeurTest extends KernelTestCase
         $this->langue('fr');
     }
 
-    public function testSansMonnaieConfigureeLeMontantResteLisible(): void
+    /**
+     * SANS MONNAIE CONFIGURÉE, LE CABINET COMPTE EN USD (décision de Serge, 2026-10-26) :
+     * ServiceMonnaies rend son défaut, la barre l'affiche comme toute autre monnaie.
+     */
+    public function testSansMonnaieConfigureeLeMontantEstEnDollars(): void
     {
-        $outil = $this->barre(null);
+        $outil = $this->barre(ServiceMonnaies::MONNAIE_PAR_DEFAUT);
         $this->langue('fr');
-        self::assertSame('1 545,67', $outil->composer(self::PAGE)['totaux']['primeTotale']);
+        self::assertSame('USD 1 545,67', $outil->composer(self::PAGE)['totaux']['primeTotale']);
     }
 
     public function testUnePageVideNaRienATotaliser(): void

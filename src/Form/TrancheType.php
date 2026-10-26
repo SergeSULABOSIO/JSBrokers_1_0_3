@@ -79,8 +79,7 @@ class TrancheType extends AbstractType
                 'required' => false,
                 // La monnaie de travail du cabinet, comme tous les montants (et non « USD »
                 // en dur, qui mentait à un cabinet travaillant dans une autre monnaie).
-                // Aucune monnaie configurée : aucun symbole, plutôt qu'un « USD » qui mentirait.
-                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage() ?: false,
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                 'grouping' => true,
                 'attr' => [
                     'placeholder' => "Montant fixe",

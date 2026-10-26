@@ -193,7 +193,7 @@ final class DocumentComptableTool implements AiToolInterface, AiToolConditionnel
             'exercices' => $exercices,
             // La monnaie de TRAVAIL du cabinet — celle de ses écritures, jamais convertie —
             // et non « USD » en dur, qui mentait à un cabinet travaillant dans une autre.
-            'monnaie'   => $this->serviceMonnaies?->getMonnaieAffichagePourEntreprise($scope->entreprise)?->getCode() ?? 'USD',
+            'monnaie'   => $this->serviceMonnaies?->getMonnaieAffichagePourEntreprise($scope->entreprise)?->getCode() ?? \App\Services\ServiceMonnaies::MONNAIE_PAR_DEFAUT,
             'donnees'   => $donnees,
         ]);
     }
