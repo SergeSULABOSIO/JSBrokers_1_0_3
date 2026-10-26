@@ -560,12 +560,14 @@ Inscrits le 2026-10-22 (décisions de Serge) :
     cabinet, copie de pièce jointe et rapport de Ket dans `var/tmp/cabinets/<id>/` (8ᵉ
     emplacement), export envoyé puis effacé même coupé, purge par l'âge des exports et des
     fichiers de passage. Règles au §4 (« fichier de passage »).
-20. **Barre d'outils des listes : un bouton désactivé dit pourquoi** (accepté par Serge le
-    2026-10-24, après le chantier 3). `toolbar_controller.js` (`setButtonDisabled`, ~212) pose
-    `disabled` : Bootstrap lui retire le pointeur (`pointer-events: none`) et il ne prend pas le
-    focus — la raison du refus (son `title`, lu par l'infobulle unique) ne s'affiche jamais. Aligner
-    sur `barre-actions.js` (barre des dialogues) : `aria-disabled`, clic et Entrée/Espace bloqués à
-    la main, style désactivé conservé ; E2E souris + clavier.
+20. ✅ **FAIT (2026-10-26) — Un bouton désactivé de la barre d'outils dit pourquoi.**
+    `toolbar_controller.js::setButtonDisabled` posait `disabled` (ni survol ni focus, sauté par
+    les flèches de la barre) et `.is-disabled` coupait les gestes du pointeur : la raison ne
+    s'affichait jamais ; réactivé, le bouton perdait même son `title` — son libellé. Désormais,
+    comme `barre-actions.js` : `aria-disabled`, libellé mémorisé (`data-libelle`) et raison
+    ajoutée (« Ajouter — … »), geste refusé par `toolbar#notify` et `context-menu#notify`, bouton
+    survolable. Règle : **jamais `disabled` sur un bouton qui doit expliquer son refus.** Garde-fou
+    `tests/js/barre-outils-desactivee.test.mjs` ; E2E souris + clavier (Conditions de partage).
 21. ✅ **FAIT (2026-10-26) — Plus de redirection ouverte.** `/translate/{locale}/{currentURL}`
     redirigeait vers toute adresse reçue (trois variantes prouvées : absolue, `//` sans schéma,
     encodée), après avoir écrit la langue de l'utilisateur connecté. La route ne servait plus

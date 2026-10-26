@@ -113,7 +113,7 @@ class CongeMailTest extends KernelTestCase
         $em->persist($ca);
 
         $dotation = (new MouvementConge())
-            ->setAgent($agent)->setExercice(2026)->setTypeAbsence($ca)
+            ->setAgent($agent)->setExercice(self::exercice())->setTypeAbsence($ca)
             ->setNature(MouvementConge::NATURE_DOTATION)->setQuantite('20.0');
         $dotation->setEntreprise($ent);
         $em->persist($dotation);
@@ -124,13 +124,29 @@ class CongeMailTest extends KernelTestCase
         return ['entreprise' => $ent, 'valideur' => $valideur, 'agent' => $agent, 'ca' => $ca];
     }
 
+    /**
+     * Le lundi de la demande : CALCULÉ, trois semaines au moins devant aujourd'hui, pour que le
+     * préavis soit toujours tenu (une date de début en dur a fait tomber ce test le
+     * 2026-10-26). La demande court du lundi au vendredi : cinq jours ouvrables.
+     */
+    private static function lundi(): \DateTimeImmutable
+    {
+        return (new \DateTimeImmutable('today'))->modify('monday next week')->modify('+21 days');
+    }
+
+    /** L'exercice du compteur : celui de la demande. */
+    private static function exercice(): int
+    {
+        return (int) self::lundi()->format('Y');
+    }
+
     /** Une demande soumise, avec sa ligne d'historique. */
     private function soumettre(array $s): DemandeConge
     {
         $demande = new DemandeConge();
         $demande->setAgent($s['agent'])->setTypeAbsence($s['ca']);
-        $demande->setDateDebut(new \DateTimeImmutable('2026-11-02'));
-        $demande->setDateFin(new \DateTimeImmutable('2026-11-06'));
+        $demande->setDateDebut(self::lundi());
+        $demande->setDateFin(self::lundi()->modify('+4 days'));
         $demande->setMotif('Vacances en famille.');
         $demande->setEntreprise($s['entreprise']);
         $this->em()->persist($demande);
@@ -160,7 +176,7 @@ class CongeMailTest extends KernelTestCase
 
     private function contexte(DemandeConge $demande, HistoriqueDemande $transition, array $s): CongeMailContext
     {
-        $solde = static::getContainer()->get(CalculateurSolde::class)->pour($s['agent'], 2026);
+        $solde = static::getContainer()->get(CalculateurSolde::class)->pour($s['agent'], self::exercice());
         $jours = $demande->nbJoursFloat();
 
         return new CongeMailContext(
@@ -173,7 +189,7 @@ class CongeMailTest extends KernelTestCase
             instantaneLe: new \DateTimeImmutable('2026-09-09 10:30'),
             lienApplication: 'https://example.test/espacedetravail/1/1',
             titre: 'Demande de congé à valider',
-            intro: 'Alice Mukendi demande un congé du 02/11/2026 au 06/11/2026.',
+            intro: sprintf('Alice Mukendi demande un congé du %s au %s.', self::lundi()->format('d/m/Y'), self::lundi()->modify('+4 days')->format('d/m/Y')),
             icone: 'conge',
         );
     }
@@ -192,7 +208,7 @@ class CongeMailTest extends KernelTestCase
         self::assertStringContainsString('<svg', $html, "L'icône doit être rendue en SVG inline.");
         self::assertStringContainsString('cid:', $html, 'Le logo doit être embarqué (CID).');
         self::assertStringContainsString('Alice Mukendi', $html);
-        self::assertStringContainsString('02/11/2026', $html);
+        self::assertStringContainsString(self::lundi()->format('d/m/Y'), $html);
         self::assertStringContainsString('Vacances en famille.', $html);
     }
 
@@ -208,7 +224,7 @@ class CongeMailTest extends KernelTestCase
         $demande = $this->soumettre($s);
         $transition = $demande->getHistoriques()->first();
 
-        $solde = static::getContainer()->get(CalculateurSolde::class)->pour($s['agent'], 2026);
+        $solde = static::getContainer()->get(CalculateurSolde::class)->pour($s['agent'], self::exercice());
         self::assertSame(20.0, $solde->acquis);
         self::assertSame(5.0, $solde->engage);
         self::assertSame(15.0, $solde->disponible());
@@ -217,7 +233,7 @@ class CongeMailTest extends KernelTestCase
 
         self::assertStringContainsString('20,0', $html, "L'acquis doit figurer tel quel.");
         self::assertStringContainsString('15,0', $html, 'Le disponible doit figurer tel quel.');
-        self::assertStringContainsString('Compteur 2026', $html);
+        self::assertStringContainsString('Compteur ' . self::exercice(), $html);
     }
 
     /** RG-16 : les soldes sont un instantané daté, et le mail le dit. */
@@ -287,7 +303,7 @@ class CongeMailTest extends KernelTestCase
 
         $html = $this->rendre($this->contexte($demande, $demande->getHistoriques()->first(), $s));
 
-        self::assertStringNotContainsString('Compteur 2026', $html);
+        self::assertStringNotContainsString('Compteur ' . self::exercice(), $html);
         self::assertStringContainsString('ne touche pas au compteur', $html);
     }
 

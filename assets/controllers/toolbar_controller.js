@@ -202,6 +202,12 @@ export default class extends Controller {
      * @param {boolean} disabled
      * @param {string} raison - infobulle affichée à l'état inactif.
      * @private
+     *
+     * `aria-disabled` et JAMAIS `disabled` (chantier 20) : un bouton `disabled` ne prend ni le
+     * survol ni le focus — sa raison ne s'affichait jamais. Comme la barre des dialogues
+     * (barre-actions.js) : le bouton reste survolable et focalisable, son infobulle dit
+     * « Ajouter — <raison> », et `notify` refuse le geste. Le libellé d'origine (le `title`
+     * du gabarit) est mémorisé : réactivé, le bouton le retrouve au lieu de le perdre.
      */
     setButtonDisabled(target, disabled, raison = '') {
         if (!target) return;
@@ -209,9 +215,12 @@ export default class extends Controller {
         target.setAttribute('aria-disabled', disabled ? 'true' : 'false');
         const bouton = target.matches('button, a') ? target : target.querySelector('button, a');
         if (bouton) {
-            bouton.disabled = disabled;
-            if (disabled && raison) bouton.setAttribute('title', raison);
-            else bouton.removeAttribute('title');
+            bouton.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+            if (bouton.dataset.libelle === undefined) {
+                bouton.dataset.libelle = bouton.getAttribute('title') ?? bouton.dataset.infobulleTitre ?? '';
+            }
+            const libelle = bouton.dataset.libelle;
+            bouton.setAttribute('title', disabled && raison ? (libelle ? `${libelle} — ${raison}` : raison) : libelle);
         }
     }
 
@@ -249,6 +258,11 @@ export default class extends Controller {
      */
     notify(event) {
         const button = event.currentTarget;
+        // Un bouton inactif (aria-disabled) reste survolable pour dire pourquoi — il ne joue pas.
+        if (button.getAttribute('aria-disabled') === 'true' || button.closest('[aria-disabled="true"]')) {
+            event.preventDefault();
+            return;
+        }
         const eventName = button.dataset.toolbarEventNameParam;
 
         if (!eventName) {

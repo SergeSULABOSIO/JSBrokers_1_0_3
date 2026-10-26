@@ -133,18 +133,20 @@ export default class extends Controller {
         // « Ajouter » reste VISIBLE mais INACTIF pour les entités qui n'existent que
         // rattachées à une autre (cf. `creation_interdite`, même drapeau que la barre
         // d'outils). Le masquer laisserait croire à un droit manquant ; grisé avec son
-        // infobulle, il dit où créer. Le raccourci « A » suit : il ne fait que cliquer
-        // ce bouton, qu'un `disabled` neutralise.
+        // infobulle, il dit où créer — LE MOTIF DE LA RUBRIQUE (`creation_interdite_message`,
+        // comme la barre d'outils). Le clic et le raccourci « A » sont refusés par `notify` et
+        // `handleKeyboardShortcuts` (aria-disabled), chantier 20.
         if (this.hasBtAjouterTarget) {
-            const creationInterdite = this.entityFormCanvas?.parametres?.creation_interdite === true;
+            const parametres = this.entityFormCanvas?.parametres || {};
+            const creationInterdite = parametres.creation_interdite === true;
             this.btAjouterTarget.classList.toggle('is-disabled', creationInterdite);
             this.btAjouterTarget.setAttribute('aria-disabled', creationInterdite ? 'true' : 'false');
             if (creationInterdite) {
-                this.btAjouterTarget.setAttribute('title', "Une condition de partage se crée depuis la fiche d'un partenaire, d'un invité ou d'une piste.");
+                this.btAjouterTarget.setAttribute('title', parametres.creation_interdite_message
+                    || "Cet enregistrement se crée depuis la fiche à laquelle il est rattaché.");
             } else {
                 this.btAjouterTarget.removeAttribute('title');
             }
-            if ('disabled' in this.btAjouterTarget) this.btAjouterTarget.disabled = creationInterdite;
         }
 
         console.log(this.nomControleur + " - organizeButtons - Code: 8888 - Selection:", selectos, "Length:", selectos.length, "Single:", isSingleSelection, "Has:", hasSelection);
@@ -382,9 +384,15 @@ export default class extends Controller {
      */
     notify(event) {
         event.stopPropagation();
+        const button = event.currentTarget;
+        // Une entrée inactive (« Ajouter » quand la création est interdite) : survolable pour
+        // dire pourquoi, elle ne joue pas — le menu reste ouvert (chantier 20).
+        if (button.getAttribute('aria-disabled') === 'true') {
+            event.preventDefault();
+            return;
+        }
         this.hideContextMenu();
 
-        const button = event.currentTarget;
         // CORRECTION : On récupère les données depuis l'élément <li>
         const eventName = button.dataset.contextMenuEventNameParam || button.dataset.eventName;
 

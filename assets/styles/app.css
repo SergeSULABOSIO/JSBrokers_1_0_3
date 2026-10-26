@@ -969,10 +969,12 @@ textarea:hover,
 .context-toolbar .btn-default .toolbar-icon {
     color: #495057; /* contraste ≥ 6.3:1 sur fond blanc — WCAG 1.4.11 */
 }
-.context-toolbar .btn-default:hover {
+/* Un bouton INACTIF (aria-disabled, chantier 20) reste survolable pour dire pourquoi, mais ne
+   prend pas l'air actif : pas de fond ni d'icône cobalt au survol. */
+.context-toolbar .btn-default:not([aria-disabled="true"]):hover {
     background-color: rgba(0, 71, 171, 0.08); /* cobalt #0047AB à 8% */
 }
-.context-toolbar .btn-default:hover .toolbar-icon {
+.context-toolbar .btn-default:not([aria-disabled="true"]):hover .toolbar-icon {
     color: #0047AB; /* Cobalt Joseara — identité de marque au survol */
 }
 
@@ -1182,10 +1184,11 @@ textarea:hover,
     outline: none;
 }
 
-/* --- Survol & focus clavier (identiques pour cohérence) --- */
-.context-menu [role="menuitem"]:hover,
+/* --- Survol & focus clavier (identiques pour cohérence) — une entrée inactive (aria-disabled)
+   ne se peint pas en cobalt au survol : elle dit pourquoi, elle ne promet pas. --- */
+.context-menu [role="menuitem"]:not([aria-disabled="true"]):hover,
 .context-menu [role="menuitem"]:focus,
-.context-menu li:not(.separator):not(.specific-actions-wrapper):hover {
+.context-menu li:not(.separator):not(.specific-actions-wrapper):not([aria-disabled="true"]):hover {
     background-color: #0047AB;  /* Cobalt Joseara — identité de marque */
     color: #ffffff;
 }
@@ -3896,7 +3899,9 @@ tr.row-selected:hover > td {
 [data-toolbar-target].is-disabled,
 [data-context-menu-target].is-disabled {
     opacity: 0.65;
-    pointer-events: none;
+    /* SURVOLABLE (chantier 20) : les gestes du pointeur ne sont PAS coupés, sinon l'infobulle
+       qui dit pourquoi ne s'affiche jamais. Le geste est refusé par le code (toolbar#notify,
+       context-menu#notify), comme dans la barre des dialogues. */
     cursor: not-allowed;
 }
 

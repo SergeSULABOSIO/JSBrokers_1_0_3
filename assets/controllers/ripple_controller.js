@@ -30,6 +30,10 @@ export default class extends Controller {
      */
     createRipple(event) {
         const button = this.element;
+        // Un bouton inactif (aria-disabled) ne joue pas : pas d'onde qui le ferait croire.
+        if (button.getAttribute('aria-disabled') === 'true') {
+            return;
+        }
         const circle = document.createElement('span');
         const diameter = Math.max(button.clientWidth, button.clientHeight);
         const radius = diameter / 2;
