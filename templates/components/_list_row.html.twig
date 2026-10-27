@@ -188,7 +188,7 @@
     {% else %}
     {# Colonnes numeriques des listes principales : autant que le canevas en declare. #}
         {% for colonne in listeCanvas.colonnes_numeriques %}
-            <td class="text-end fw-bold td-numeric">
+            <td class="text-end fw-bold td-numeric td-numeric--contenu">
                 <small>
                     {% set valeur_numerique = attribute(entity, colonne.attribut_code) %}
                     {% if valeur_numerique is null or valeur_numerique is same as('') %}

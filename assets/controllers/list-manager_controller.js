@@ -5,6 +5,7 @@ import { estListePrincipale, doitAnnoncerLePremierRendu } from './premier-rendu.
 import { etatChipPreset, chipVisible, resoudreClicChip } from './chip-preset-etat.js';
 import { positionnerMenu } from './menu-flottant.js';
 import { DefilementChips } from './chips-defilement.js';
+import { largeursAFiger } from './colonnes-figees.js';
 
 /**
  * @class ListManagerController
@@ -789,11 +790,41 @@ export default class extends BaseController {
         const { originatorId } = event.detail || {};
         if (originatorId === this.element.id) {
             this._chargementEnCours = true;
+            this._figerLesColonnes();
             this.donneesTarget.innerHTML = this._getListSkeletonHtml();
             // On s'assure que le conteneur de la liste est visible et que le message d'état vide est caché.
             this.listContainerTarget.classList.remove('d-none');
             this.emptyStateContainerTarget.classList.add('d-none');
         }
+    }
+
+    /**
+     * Fige la largeur de chaque entête le temps du squelette (règle : `colonnes-figees.js`) :
+     * les colonnes de montants prennent la largeur de leur contenu, et un squelette n'en a
+     * pas — sans cela, la liste sautait à chaque recherche.
+     * @private
+     */
+    _figerLesColonnes() {
+        const entetes = [...this.listContainerTarget.querySelectorAll('thead th')];
+        const largeurs = largeursAFiger(
+            entetes.map((th) => th.getBoundingClientRect().width),
+            this._colonnesFigees === true,
+        );
+        if (!largeurs) return;
+        // La largeur que l'entête portait déjà (la case « Tout sélectionner » a la sienne) est
+        // rendue telle quelle à la libération.
+        this._largeursDOrigine = entetes.map((th) => [th, th.style.width]);
+        // Par le CSSOM, que la politique de sécurité autorise (un attribut `style=`, non).
+        entetes.forEach((th, i) => { th.style.width = `${largeurs[i]}px`; });
+        this._colonnesFigees = true;
+    }
+
+    /** Rend aux colonnes la largeur de leur contenu, une fois les lignes revenues. @private */
+    _libererLesColonnes() {
+        if (!this._colonnesFigees) return;
+        (this._largeursDOrigine || []).forEach(([th, largeur]) => { th.style.width = largeur; });
+        this._largeursDOrigine = null;
+        this._colonnesFigees = false;
     }
 
     /**
@@ -831,6 +862,7 @@ export default class extends BaseController {
 
         this._chargementEnCours = false;
         this.donneesTarget.innerHTML = html;
+        this._libererLesColonnes();
 
         const hasRows = this.donneesTarget.querySelector('tr') !== null;
 

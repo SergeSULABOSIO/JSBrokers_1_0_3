@@ -274,8 +274,10 @@
                                 {% endif %}
                             </th>
                         {% else %}
+                            {# Largeur = le plus large montant (`th-numeric--contenu`) : la
+                               colonne principale, qui se lit en mots, prend le reste. #}
                             {% for colonne in listeCanvas.colonnes_numeriques | default([]) %}
-                                <th scope="col" style="width:150px" class="th-numeric">
+                                <th scope="col" class="th-numeric th-numeric--contenu">
                                     <div class='text-secondary m-2'>{{ colonne.titre_colonne | default('Valeur') }}</div>
                                 </th>
                             {% endfor %}

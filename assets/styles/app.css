@@ -2284,6 +2284,8 @@ textarea:hover,
     flex: 1 1 auto;
     min-height: 0;
     overflow: auto;
+    /* Sa largeur décide de l'écart entre deux montants (`jsb-tableau`, plus bas). */
+    container: jsb-tableau / inline-size;
 }
 
 /* L'état vide occupe la même place que le tableau qu'il remplace. */
@@ -2402,6 +2404,26 @@ tr.row-selected:hover > td {
 /* NOUVEAU : Alignement pour les en-têtes de colonnes numériques */
 .table-enhanced .th-numeric {
     text-align: right;
+}
+/* LES MONTANTS D'UNE LISTE PRENNENT LA LARGEUR DE LEUR CONTENU (2026-10-27). Sous
+   `table-layout: auto`, 1 % se lit « le moins possible » : la colonne vaut son plus large
+   montant (jamais replié, cf. `.td-numeric`), et la colonne principale prend le reste. Les
+   150 px fixes d'avant la réduisaient à 107 px, Ket ouvert à 1 358 px.
+   L'ENTÊTE, LUI, SE REPLIE sur ses mots : mesuré sur les Invités, un entête tenu sur une
+   ligne élargissait sa colonne au-delà de ses montants — défilement horizontal et une
+   colonne perdue, Ket ouvert.
+   UN ESPACE SÉPARE DEUX MONTANTS QUAND LA PLACE LE PERMET : ajustées au plus près, des
+   colonnes se lisaient « USD 0,00 USD 0,00 USD 0,00 » — une seule suite de chiffres. Sous
+   1 000 px de liste (Ket ouvert à 1 366 px), la marge coûtait une colonne visible : là, on
+   garde l'écart d'avant. Seuil tiré des mesures, décision de Serge du 2026-10-27. */
+.table-enhanced .th-numeric--contenu {
+    width: 1%;
+}
+@container jsb-tableau (min-width: 1000px) {
+    .table-enhanced .th-numeric--contenu,
+    .table-enhanced .td-numeric--contenu {
+        padding-left: 0.75rem;
+    }
 }
 .table-enhanced .td-numeric {
     white-space: nowrap;               /* Jamais de montant replié sur deux lignes ("USD" / "1 160,00") */
