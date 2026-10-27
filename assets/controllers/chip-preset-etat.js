@@ -20,7 +20,8 @@ import { conteneurVisible } from './visibilite-conditions.js';
  * Deux familles de chips coexistent, et elles ne se lisent pas de la même façon :
  *
  *  — le chip à VALEUR (« Sans pièce », « Ce mois ») est actif quand le critère porte SA
- *    valeur ; l'option vide (« Tous ») l'est quand le critère est absent ;
+ *    valeur ; l'option vide (« Tous ») l'est quand le critère est absent — ou, dans un
+ *    groupe SANS « Tous », l'option que le canevas déclare comme son défaut ;
  *  — le chip-SÉLECTEUR (« Choisir un agent… ») ne porte aucune valeur : il va les chercher
  *    au clic. Le comparer à une valeur absente le rendait actif quand RIEN n'était filtré —
  *    en même temps que « Tous » —, et il ne nommait jamais l'agent retenu. Un filtre qu'on
@@ -32,8 +33,10 @@ import { conteneurVisible } from './visibilite-conditions.js';
 
 /**
  * @param {{valeurAttendue: string|null, estSelecteur: boolean, libelleDefaut: string,
- *         prefixe?: string}} chip - `prefixe` n'est posé que lorsqu'un même critère
- *        accepte plusieurs FAMILLES de valeurs (bénéficiaire agent / partenaire).
+ *         prefixe?: string, parDefaut?: boolean}} chip - `prefixe` n'est posé que lorsqu'un
+ *        même critère accepte plusieurs FAMILLES de valeurs (bénéficiaire agent / partenaire).
+ *        `parDefaut` : l'option que le canevas déclare comme défaut d'un groupe sans
+ *        « Toutes » (`groupe.defaut`, tenu par `ChipsCoherenceContratTest`).
  * @param {{value?: *, label?: string}|string|number|null|undefined} critere - le critère
  *        courant pour la CLÉ de ce chip (tel que stocké par le cerveau).
  * @returns {{actif: boolean, libelle: string|null}} `libelle` null = ne pas y toucher.
@@ -44,6 +47,13 @@ export function etatChipPreset(chip, critere) {
         : String(critere ?? '');
 
     if (!chip.estSelecteur) {
+        // UN GROUPE SANS « TOUTES » A UN DÉFAUT que le serveur applique quand rien n'est posé
+        // (le statut de Production intermédiaires). C'est ce défaut qui le DIT : sans lui,
+        // aucun chip ne s'allumait — ou un « Toutes » mentait.
+        if (valeur === '' && chip.parDefaut) {
+            return { actif: true, libelle: null };
+        }
+
         return { actif: valeur === String(chip.valeurAttendue ?? ''), libelle: null };
     }
 

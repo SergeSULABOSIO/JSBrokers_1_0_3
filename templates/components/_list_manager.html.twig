@@ -142,6 +142,9 @@
                                     data-criterion-key="{{ groupe.critere }}"
                                     data-criterion-value="{{ option.value }}"
                                     data-criterion-label="{{ option.titre_complet | default(option.label) }}"
+                                    {# Le DÉFAUT d'un groupe sans « Toutes » : le serveur l'applique
+                                       quand rien n'est posé, ce chip le dit (chip-preset-etat.js). #}
+                                    {% if groupe.defaut is defined and option.value == groupe.defaut %}data-criterion-defaut="true"{% endif %}
                                     {% if option.titre_complet is defined %}aria-label="{{ option.titre_complet }}" title="{{ option.titre_complet }}"{% endif %}
                                         {# R1 — LA CONDITION DE PRÉSENCE de cette option, dans la
                                        grammaire du moteur des dialogues (`in`, `any`, `all`,

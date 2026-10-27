@@ -142,8 +142,39 @@ class ChipsCoherenceContratTest extends KernelTestCase
         self::assertStringContainsString('dataset.visibilityConditions', $controleur);
         self::assertStringContainsString('dataset.selecteurImplique', $controleur);
 
-        $gabarit = (string) file_get_contents(__DIR__ . '/../../templates/components/_List_manager.html.twig');
+        // Casse EXACTE du fichier : sous Linux, `_List_manager` n'existe pas.
+        $gabarit = (string) file_get_contents(__DIR__ . '/../../templates/components/_list_manager.html.twig');
         self::assertStringContainsString('data-visibility-conditions=', $gabarit);
         self::assertStringContainsString('data-selecteur-implique=', $gabarit);
+    }
+
+    /**
+     * UN GROUPE A UN DÉFAUT OU UN « TOUTES », JAMAIS LES DEUX.
+     *
+     * Le défaut (`groupe.defaut`) s'allume quand le critère est vide — comme l'option vide.
+     * Un groupe qui déclarerait les deux allumerait deux chips ensemble ; un défaut absent
+     * des options n'en allumerait aucun. Les deux déclarations vivent dans le canevas : rien
+     * d'autre que ce test ne les tient d'accord, sur TOUTES les listes.
+     */
+    public function testUnDefautDeclareEstUneOptionEtExclutLOptionVide(): void
+    {
+        self::bootKernel();
+        $proprietes = new \ReflectionProperty(\App\Services\Canvas\ListCanvasProvider::class, 'providers');
+        $fournisseurs = $proprietes->getValue(static::getContainer()->get(\App\Services\Canvas\ListCanvasProvider::class));
+
+        $vus = 0;
+        foreach ($fournisseurs as $fournisseur) {
+            foreach ($fournisseur->getCanvas()['filtres_predefinis'] ?? [] as $groupe) {
+                if (!isset($groupe['defaut'])) {
+                    continue;
+                }
+                ++$vus;
+                $valeurs = array_map(static fn (array $o) => (string) ($o['value'] ?? ''), $groupe['options']);
+                $nom = $fournisseur::class . ' / ' . $groupe['critere'];
+                self::assertContains((string) $groupe['defaut'], $valeurs, "$nom : le défaut n'est aucune option.");
+                self::assertNotContains('', $valeurs, "$nom : un défaut ET une option vide s'allumeraient ensemble.");
+            }
+        }
+        self::assertGreaterThan(0, $vus, 'Au moins un groupe déclare un défaut (Production intermédiaires).');
     }
 }

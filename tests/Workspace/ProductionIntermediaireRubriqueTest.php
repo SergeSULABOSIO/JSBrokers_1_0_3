@@ -323,6 +323,46 @@ class ProductionIntermediaireRubriqueTest extends WebTestCase
     }
 
     /**
+     * LE CHIP STATUT DIT CE QUE MONTRE LE SERVEUR.
+     *
+     * Le statut est une partition à valeur unique : sans critère, le serveur montre les
+     * SOUSCRITES (`ProductionScope::statutDemande`). Le groupe offrait pourtant « Toutes »,
+     * allumé au chargement — un filtre qui promettait tout en montrant une partie. Le
+     * groupe n'a plus de « Toutes », et c'est son défaut, déclaré par le canevas, qui
+     * s'allume quand rien n'est posé.
+     */
+    public function testLeStatutParDefautEstAnnonceEtToutesNExistePas(): void
+    {
+        $ids = $this->semer();
+        $this->connecter(self::OWNER_EMAIL);
+
+        $this->client->request('GET', $this->url($ids));
+        $html = (string) $this->client->getResponse()->getContent();
+
+        // Chaque balise du groupe, lue ATTRIBUT PAR ATTRIBUT : l'ordre des attributs dans le
+        // gabarit ne fait ni passer ni échouer le test (les valeurs entre guillemets sont
+        // sautées : `click->x#y` contient un « > »).
+        $cle = preg_quote(ProductionScope::CLE_STATUT, '/');
+        preg_match_all('/<(?:[^>"]|"[^"]*")*data-criterion-key="' . $cle . '"(?:[^>"]|"[^"]*")*>/', $html, $balises);
+        $defautParValeur = [];
+        foreach ($balises[0] as $balise) {
+            preg_match_all('/([\w-]+)="([^"]*)"/', $balise, $attributs, PREG_SET_ORDER);
+            $lus = array_column($attributs, 2, 1);
+            if (array_key_exists('data-criterion-value', $lus)) {
+                $defautParValeur[$lus['data-criterion-value']] = ($lus['data-criterion-defaut'] ?? null) === 'true';
+            }
+        }
+
+        self::assertNotEmpty($defautParValeur, 'Les chips du statut sont rendus.');
+        self::assertArrayNotHasKey('', $defautParValeur, 'Le statut ne peut pas valoir « Toutes » : le serveur ne mélange jamais les affaires.');
+        self::assertSame(
+            [ProductionScope::STATUT_PAR_DEFAUT],
+            array_keys(array_filter($defautParValeur)),
+            'Seul le chip du statut par défaut se déclare comme tel.',
+        );
+    }
+
+    /**
      * SANS BÉNÉFICIAIRE, AUCUNE LIGNE — et c'est une réponse.
      *
      * La production se calcule affaire par affaire par le moteur de partage. La calculer

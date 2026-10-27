@@ -212,6 +212,41 @@ class NavigationRubriqueToolsTest extends KernelTestCase
     }
 
     /**
+     * UN DÉFAUT DU SERVEUR EST UN FILTRE, ET IL SE DIT. Sans statut, la production ne
+     * montre que les souscrites (`ProductionScope::statutDemande`) : annoncer une rubrique
+     * « ENTIÈRE » serait le mensonge de l'incident, côté Ket — l'écran, lui, l'allume
+     * depuis C0 de la refonte de la colonne 3.
+     */
+    public function testLaProductionSansStatutAnnonceSonDefaut(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+
+        $result = $this->ouvrir()->execute(
+            ['entite' => \App\Services\Search\ProductionScope::ENTITE],
+            new AiScope($e, $owner),
+        );
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertContains('Souscrites (par défaut)', $result->data['filtres'] ?? []);
+        $this->assertStringContainsString('FILTRÉE', $result->data['note']);
+        // Le défaut n'est pas transmis comme un critère : le serveur l'applique seul.
+        $this->assertArrayNotHasKey('criteres', $result->uiAction);
+    }
+
+    /** Un statut DEMANDÉ s'annonce tel quel, sans la mention « par défaut ». */
+    public function testLaProductionAvecStatutAnnonceCeStatut(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+
+        $result = $this->ouvrir()->execute(
+            ['entite' => \App\Services\Search\ProductionScope::ENTITE, 'validation' => 'en_attente'],
+            new AiScope($e, $owner),
+        );
+
+        $this->assertSame(['En attente'], $result->data['filtres']);
+    }
+
+    /**
      * ON NE DEVINE JAMAIS, et surtout on n'ouvre pas la liste entière en lot de
      * consolation : ce serait reproduire l'incident sous couvert de serviabilité.
      */

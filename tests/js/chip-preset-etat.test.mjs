@@ -37,6 +37,22 @@ test('l’option « Tous » est active quand le critère est absent (non-régres
     assert.equal(etatChipPreset(aValeur('groupe'), undefined).actif, false);
 });
 
+test('un groupe sans « Toutes » allume SON DÉFAUT quand le critère est absent (le serveur l’applique)', () => {
+    // Production intermédiaires : le statut est une partition à valeur unique ; sans critère,
+    // le serveur montre les souscrites (ProductionScope::statutDemande). Le chip qui le DIT
+    // est celui que le canevas déclare comme défaut — sinon aucun chip ne s'allumait, ou
+    // pire, un « Toutes » mentait.
+    const parDefaut = { valeurAttendue: 'souscrites', estSelecteur: false, libelleDefaut: '', parDefaut: true };
+    const autre = { valeurAttendue: 'en_attente', estSelecteur: false, libelleDefaut: '' };
+
+    assert.equal(etatChipPreset(parDefaut, undefined).actif, true);
+    assert.equal(etatChipPreset(parDefaut, { value: '' }).actif, true);
+    assert.equal(etatChipPreset(autre, undefined).actif, false);
+    // Une autre valeur posée éteint le défaut.
+    assert.equal(etatChipPreset(parDefaut, { value: 'en_attente' }).actif, false);
+    assert.equal(etatChipPreset(autre, { value: 'en_attente' }).actif, true);
+});
+
 test('un critère rendu en valeur nue reste comparable', () => {
     // Le cerveau stocke un objet, mais rien ne garantit la forme d'un critère venu
     // d'ailleurs : durcir la comparaison masquerait des chips qui marchent aujourd'hui.

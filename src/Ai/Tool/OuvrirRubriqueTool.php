@@ -403,10 +403,15 @@ final class OuvrirRubriqueTool implements AiToolInterface, AiToolConditionnel
         }
         // UN FILTRE QU'ON POSE SANS LE DIRE se lit comme une liste entière : la
         // production a ses deux chips, et ils s'annoncent comme tous les autres.
-        foreach ([ProductionScope::CLE_STATUT, ProductionScope::CLE_TYPE] as $cleProduction) {
-            if (isset($criteresRubrique[$cleProduction])) {
-                $filtres[] = ProductionScope::libelle($cleProduction, (string) $criteresRubrique[$cleProduction]['value']);
-            }
+        // Le STATUT n'est jamais absent : sans demande, le serveur applique son défaut
+        // (`statutDemande`) — c'est un filtre comme un autre, il se dit « par défaut ».
+        if ($shortName === ProductionScope::ENTITE) {
+            $filtres[] = isset($criteresRubrique[ProductionScope::CLE_STATUT])
+                ? ProductionScope::libelle(ProductionScope::CLE_STATUT, (string) $criteresRubrique[ProductionScope::CLE_STATUT]['value'])
+                : ProductionScope::libelle(ProductionScope::CLE_STATUT, ProductionScope::statutDemande([])) . ' (par défaut)';
+        }
+        if (isset($criteresRubrique[ProductionScope::CLE_TYPE])) {
+            $filtres[] = ProductionScope::libelle(ProductionScope::CLE_TYPE, (string) $criteresRubrique[ProductionScope::CLE_TYPE]['value']);
         }
         $criteres += $criteresRubrique;
 

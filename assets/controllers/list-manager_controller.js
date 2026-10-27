@@ -560,7 +560,8 @@ export default class extends BaseController {
     /**
      * Synchronise l'état actif des chips sur les critères de recherche courants :
      * un chip est actif si la valeur du critère correspond ; l'option de valeur vide
-     * (« Toutes ») est active quand le critère est absent. Chaque chip est résolu contre
+     * (« Toutes ») — ou le défaut déclaré d'un groupe sans « Toutes » — est active quand
+     * le critère est absent. Chaque chip est résolu contre
      * SA propre clé : les groupes ne se marchent pas dessus.
      * @param {object} criteria
      * @private
@@ -581,6 +582,7 @@ export default class extends BaseController {
                 cle: chip.dataset.criterionKey,
                 valeurAttendue: chip.dataset.criterionValue ?? '',
                 estSelecteur: Boolean(chip.dataset.selecteurEntite),
+                parDefaut: chip.dataset.criterionDefaut === 'true',
                 prefixe: chip.dataset.selecteurPrefixe || '',
                 conditions: this._jsonDuChip(chip.dataset.visibilityConditions),
                 libelleDefaut: chip.dataset.selecteurLibelleDefaut || (texte ? texte.textContent : ''),

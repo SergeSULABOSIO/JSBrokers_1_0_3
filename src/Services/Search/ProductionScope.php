@@ -168,19 +168,23 @@ final class ProductionScope
     }
 
     /**
-     * Les options d'un chip ordinaire, plus son « Tous ».
+     * Les options d'un chip ordinaire, plus son « Tous » (sauf `null`).
      *
      * @param array<string, string> $icones valeur => alias d'icône
      *
      * @return array<int, array<string, string>>
      */
-    public static function optionsChips(string $cle, array $icones, string $libelleTous): array
+    public static function optionsChips(string $cle, array $icones, ?string $libelleTous): array
     {
         $options = [];
         foreach (self::GROUPES[$cle] ?? [] as $valeur => $libelle) {
             $options[] = ['value' => $valeur, 'label' => $libelle, 'icon' => $icones[$valeur] ?? 'action:filter'];
         }
-        $options[] = ['value' => '', 'label' => $libelleTous, 'icon' => 'action:filter'];
+        // `null` : le groupe n'a PAS de « Tous » — c'est une partition à valeur unique, que le
+        // serveur ne lève jamais (le statut). Offrir « Tous » promettrait ce qu'il refuse.
+        if ($libelleTous !== null) {
+            $options[] = ['value' => '', 'label' => $libelleTous, 'icon' => 'action:filter'];
+        }
 
         return $options;
     }

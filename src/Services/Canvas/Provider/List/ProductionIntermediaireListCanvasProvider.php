@@ -55,6 +55,9 @@ class ProductionIntermediaireListCanvasProvider implements ListCanvasProviderInt
                     // et donc que l'identifiant d'une ligne reste un entier.
                     'critere' => ProductionScope::CLE_STATUT,
                     'libelle' => 'Statut',
+                    // Sans critère, le serveur montre les souscrites (`statutDemande`) : ce
+                    // chip-là s'allume, et le groupe n'offre pas de « Toutes » qu'il refuserait.
+                    'defaut' => ProductionScope::STATUT_PAR_DEFAUT,
                     'options' => ProductionScope::optionsChips(
                         ProductionScope::CLE_STATUT,
                         [
@@ -62,7 +65,7 @@ class ProductionIntermediaireListCanvasProvider implements ListCanvasProviderInt
                             'en_attente' => 'action:ongoing',
                             'caduques' => 'action:cancel',
                         ],
-                        'Toutes',
+                        null,
                     ),
                 ],
                 [
