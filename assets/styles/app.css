@@ -989,6 +989,76 @@ textarea:hover,
     color: #a02020;
 }
 
+/* ══ LA ZONE DE LA LISTE ET SON RAIL D'OUTILS (refonte de la colonne 3, 2026-10-27) ══
+   Mesuré à l'étape 0 : à 1 358 × 595, la barre d'outils et la recherche partageaient une
+   rangée de 59 px au-dessus du tableau. La barre devient un RAIL vertical, à gauche de la
+   liste ; la recherche garde sa rangée, seule. La zone est la référente du rail, et le
+   conteneur dont la largeur règle la barre du bas (`jsb-zone`).
+   Mesuré aussi (Edge, 2026-10-27) : `container-type` ne capture pas les éléments
+   `position: fixed` (menus, infobulle) — ils restent posés par rapport à l'écran. */
+.jsb-zone-liste {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    container: jsb-zone / inline-size;
+    /* 34,8 px de bouton + sa marge : la colonne que chaque liste réserve au rail. */
+    --jsb-rail-w: 44px;
+    /* UNE hauteur pour la barre du bas ET le pied du rail : ils ne peuvent pas diverger. */
+    --jsb-barre-bas-h: 40px;
+}
+.context-toolbar--rail {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: var(--jsb-barre-bas-h);
+    width: var(--jsb-rail-w);
+    /* AU-DESSUS DE L'ENTÊTE COLLANTE DU TABLEAU (100). Le rail fait un contexte
+       d'empilement : son z-index PLAFONNE les menus qu'il contient (« Plus », familles
+       d'actions), qui s'ouvrent par-dessus la colonne du tableau. À 5, mesuré : « Paramètres »
+       et « Quitter » passaient sous l'entête, inatteignables. Le rail ne chevauche jamais
+       l'entête de la rubrique (1020), posée au-dessus de lui. */
+    z-index: 110;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: center;
+    /* 2 px entre deux boutons : le pire cas courant (12 outils) tient dans 595 px de haut
+       avec « Plus » (calcul du plan, sur les hauteurs mesurées). */
+    gap: 2px;
+    padding: 4px 0;
+    max-width: none;
+    background-color: var(--bg-white, #ffffff);
+    border-right: 1px solid var(--border-light, #dee2e6);
+}
+/* Un panneau d'onglet SANS liste (squelette d'un onglet contextuel qui se charge, message
+   d'échec) n'a pas de colonne réservée au rail : il se décale de sa largeur, sinon le
+   rail en masquait le début. */
+.jsb-zone-liste [data-view-manager-target="tabContentContainer"] > :not(template):not(:has(> .jsb-list-manager)) {
+    padding-left: var(--jsb-rail-w);
+}
+.context-toolbar--rail .context-toolbar__groupe {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.context-toolbar--rail .toolbar-separator {
+    width: 24px;
+    height: 1px;
+    margin: 3px 0;
+}
+
+/* « Plus » : le menu de la coquille commune, aux entrées en <button>. */
+.jsb-menu-plus [role="menuitem"] {
+    width: calc(100% - 8px);
+    background-color: transparent;
+    border: 0;
+    font: inherit;
+    text-align: left;
+}
+.jsb-menu-plus__icone { width: 18px; height: 18px; }
+
 /* --- Séparateur vertical entre groupes --- */
 .toolbar-separator {
     width: 1px;
@@ -1035,6 +1105,26 @@ textarea:hover,
 }
 .toolbar-groupe-bouton[aria-expanded="true"] {
     background-color: rgba(0, 71, 171, 0.12);
+}
+/* DANS LE RAIL, le bouton d'une famille a la largeur des autres (la marge du chevron le
+   faisait déborder du rail de 2 px), et son chevron, dans le coin, pointe vers la DROITE —
+   là où le menu s'ouvre. */
+.context-toolbar--rail .toolbar-groupe-bouton {
+    padding-right: 0.4rem !important;
+}
+.context-toolbar--rail .toolbar-groupe-bouton::after {
+    top: auto;
+    right: 2px;
+    bottom: 3px;
+    border-top: 3.5px solid transparent;
+    border-bottom: 3.5px solid transparent;
+    border-left: 4px solid #6c757d;
+    border-right: 0;
+    transform: none;
+}
+.context-toolbar--rail .toolbar-groupe-bouton:hover::after,
+.context-toolbar--rail .toolbar-groupe-bouton[aria-expanded="true"]::after {
+    border-left-color: #0047AB;
 }
 
 /* POSITION FIXE, POSÉE PAR LE CONTRÔLEUR (menu-flottant.js). En `absolute`, le menu
@@ -1342,9 +1432,12 @@ textarea:hover,
     overflow: clip;
     overflow-clip-margin: 3px;
     /* Conteneur de requête pour la dégradation progressive ci-dessous. Posé sur la
-       LIGNE et non sur .jsb-search-bar : `container-type` implique `contain: layout`,
-       qui ferait de l'élément le bloc conteneur des descendants `position: fixed` — le
-       volet des filtres (frère de la ligne) doit rester ancré au viewport. */
+       LIGNE et non sur .jsb-search-bar : on a craint que `container-type` implique
+       `contain: layout`, qui ferait de l'élément le bloc conteneur des descendants
+       `position: fixed` — le volet des filtres (frère de la ligne) doit rester ancré au
+       viewport. MESURÉ le 2026-10-27 sous Edge : ce n'est pas le cas (un enfant `fixed`
+       reste posé par rapport à l'écran) ; non vérifié sous Firefox et Safari — la
+       précaution reste, elle ne coûte rien. Voir `.jsb-zone-liste`. */
     container-type: inline-size;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -2268,11 +2361,137 @@ textarea:hover,
    s'allongerait indéfiniment au lieu de faire défiler son tableau. */
 [role="tabpanel"]:has(> .jsb-list-manager) { height: 100%; }
 
+/* LA LISTE EST UNE GRILLE (refonte de la colonne 3, 2026-10-27). Colonne 1 : la place du
+   RAIL d'outils, posé par-dessus depuis la zone de la liste (`.jsb-zone-liste`) — une
+   seule barre d'outils pour tous les onglets de la rubrique. Colonne 2 : les chips, le
+   tableau (seul à défiler) ou l'état vide. Dernière rangée : la BARRE DU BAS (état,
+   pagination, totaux), sur toute la largeur, sous le rail. */
 .jsb-list-manager {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: var(--jsb-rail-w) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) var(--jsb-barre-bas-h);
     height: 100%;
     min-height: 0;
+}
+.jsb-list-manager > * { grid-column: 2; min-width: 0; }
+.jsb-list-manager > .jsb-preset-filters-bar { grid-row: 1; }
+.jsb-list-manager > .table-scroll-wrapper,
+.jsb-list-manager > [data-list-manager-target="emptyStateContainer"] { grid-row: 2; }
+.jsb-list-manager > .jsb-list-controls-bar {
+    grid-column: 1 / -1;
+    grid-row: -2;
+    /* LA BARRE DU BAS : une ligne, de hauteur fixe (celle que le rail laisse libre). À
+       gauche l'état, puis la pagination ; à droite les totaux. Quand la place manque, les
+       paliers plus bas abrègent les LIBELLÉS — jamais un montant, jamais une monnaie. */
+    flex-wrap: nowrap;
+    height: var(--jsb-barre-bas-h);
+    min-height: 0;
+    padding: 0 0.75rem;
+    border-bottom: 0;
+    border-top: 1px solid var(--border-light, #dee2e6);
+}
+/* L'état cède la place le premier, PAR PARTIES ENTIÈRES : une partie qui ne tient plus
+   passe à la ligne suivante, hors de la vue (hauteur d'une ligne). On lit « 20/25 », ou
+   rien — jamais « … sur 2 », un nombre coupé qui ment (mesuré à 1 358 px, Ket ouvert).
+   Une partie seule trop longue (un message d'action) se termine par « … ». Une partie
+   repoussée reste lue par les lecteurs d'écran ; celles que masque le palier 3 (heure,
+   entité, onglet) ne le sont plus — elles redisent ce que l'écran nomme déjà. */
+.jsb-list-manager > .jsb-list-controls-bar > .jsb-list-controls-bar__display {
+    flex: 0 1 auto;
+    min-width: 0;
+    flex-wrap: wrap;
+    height: var(--jsb-control-h);
+    overflow: hidden;
+}
+.jsb-list-manager > .jsb-list-controls-bar > .jsb-list-controls-bar__display > span {
+    line-height: var(--jsb-control-h);
+    white-space: nowrap;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.jsb-etat__court { display: none; }
+.jsb-list-manager > .jsb-list-controls-bar > .jsb-list-controls-bar__totals { margin-left: auto; }
+.jsb-list-manager .jsb-list-summary { flex-wrap: nowrap; }
+/* UN MONTANT NE SE COUPE NI NE SE REPLIE. */
+.jsb-list-summary__item,
+.jsb-list-summary__item-value {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+/* Libellé court : caché tant que le long tient (paliers de la barre du bas). */
+.jsb-libelle-court { display: none; }
+/* Le compteur de la pagination se dispose ici, pas par des utilitaires Bootstrap : leur
+   `!important` empêchait le palier 4 de le masquer (mesuré : 378 px au lieu de 193). */
+.jsb-pagination__compteur {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* ── LES PALIERS DE LA BARRE DU BAS, dans l'ordre décidé (plan du 2026-10-27) ──────────
+   Seuils tirés des largeurs MESURÉES (état 344 px, pagination 481 px dont un compteur de
+   181 px, totaux 490 px) et de montants réalistes (« USD 1 234 567,89 », totaux ≈ 635 px) :
+   chaque palier s'applique quand la largeur du palier précédent, état entier, ne tient
+   plus. Entre deux paliers, l'état cède sa fin (« … »). Rien d'autre ne se coupe. */
+@container jsb-zone (max-width: 1499.98px) {
+    /* 1. « Totaliser : » — le sélecteur garde son nom accessible. */
+    .jsb-list-manager .jsb-list-summary__label { display: none; }
+}
+@container jsb-zone (max-width: 1439.98px) {
+    /* 2. « Total de la page » → « Page », « Sélection » → « Sél. » ; le long reste lu. */
+    .jsb-list-manager .jsb-libelle-long {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+    .jsb-list-manager .jsb-libelle-court { display: inline; }
+    /* Le mot « Page » de la pagination part avec : deux « Page » côte à côte (« Page [1] / 2 »
+       et « Page USD … ») se lisaient comme un seul numéro de page. */
+    .jsb-list-manager .jsb-pagination__mot { display: none; }
+}
+@container jsb-zone (max-width: 1349.98px) {
+    /* 3. L'heure, l'entité et l'onglet (avec leur « › ») : l'onglet actif et le titre les
+       disent déjà. Le compte (« … sur N ») devient la première partie : c'est lui que la
+       pagination compacte (palier 4) suppose visible. */
+    .jsb-list-manager .jsb-etat__heure,
+    .jsb-list-manager .jsb-etat__entite,
+    .jsb-list-manager .jsb-etat__onglet { display: none; }
+}
+@container jsb-zone (max-width: 1229.98px) {
+    /* 4. Pagination compacte « ‹ [1] / 2 › » : le compteur répète l'état (« … sur N »),
+       les boutons gardent leur nom accessible. */
+    .jsb-list-manager .jsb-pagination__compteur,
+    .jsb-list-manager .jsb-pagination__mot,
+    .jsb-list-manager .jsb-pagination__texte { display: none; }
+}
+@container jsb-zone (max-width: 939.98px) {
+    /* 5. Le sélecteur du totaliseur rétrécit : c'est le NOM d'un attribut qui s'abrège. Et
+       l'état passe à sa forme courte (« 20/25 », « 0 sél. ») ; la longue reste lue. */
+    .jsb-list-manager .jsb-list-summary__select { max-width: 110px; }
+    .jsb-list-manager .jsb-etat__long {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+    .jsb-list-manager .jsb-etat__court { display: inline; }
+}
+@container jsb-zone (max-width: 767.98px) {
+    /* 6. Deux lignes : état et pagination, puis les totaux à droite. Le rail et la grille
+       lisent la même hauteur. */
+    .context-toolbar--rail,
+    .jsb-list-manager { --jsb-barre-bas-h: 72px; }
+    .jsb-list-manager > .jsb-list-controls-bar {
+        flex-wrap: wrap;
+        align-content: center;
+        row-gap: 0.25rem;
+    }
 }
 
 /* LA ZONE DÉFILANTE, et la seule. `overflow: auto` sur les DEUX axes : quand les
@@ -2286,6 +2505,10 @@ textarea:hover,
     overflow: auto;
     /* Sa largeur décide de l'écart entre deux montants (`jsb-tableau`, plus bas). */
     container: jsb-tableau / inline-size;
+    /* Référente des éléments `position: absolute` qu'elle contient (les `.visually-hidden`
+       des colonnes de la vue Cartes) : sans elle, leur débordement remontait jusqu'à la
+       zone de la liste et faisait défiler TOUT le panneau (mesuré, Pistes, Ket ouvert). */
+    position: relative;
 }
 
 /* L'état vide occupe la même place que le tableau qu'il remplace. */

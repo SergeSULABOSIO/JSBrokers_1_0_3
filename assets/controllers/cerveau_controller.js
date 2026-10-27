@@ -1409,13 +1409,16 @@ export default class extends Controller {
         const rubricName = wsState?.__rubricName || this.displayState.rubricName || 'Inconnu';
         const tabName = this.displayState.activeTabName;
 
+        // L'HEURE ET L'ENTITÉ portent chacune leur classe : quand la barre du bas manque de
+        // place (refonte de la colonne 3), elles s'effacent les premières, avec leur « › » —
+        // l'onglet et le titre disent déjà la rubrique.
         let messageParts = [
-            `<span class="fw-bold text-dark">${timestamp}</span>`,
-            `<span class="fw-bold text-dark">${rubricName}</span>`
+            `<span class="fw-bold text-dark jsb-etat__heure">${timestamp}</span>`,
+            `<span class="fw-bold text-dark jsb-etat__entite">${rubricName}</span>`
         ];
 
         if (tabName && tabName.toLowerCase() !== 'principal') {
-            messageParts.push(`<span class="fw-bold text-dark">${tabName}</span>`);
+            messageParts.push(`<span class="fw-bold text-dark jsb-etat__onglet">${tabName}</span>`);
         }
 
         // Si une action transitoire est fournie, elle est affichée. Sinon, on affiche les
@@ -1427,13 +1430,19 @@ export default class extends Controller {
             if (total !== null && total !== undefined) {
                 const page = this.displayState.pageItemCount ?? 0;
                 messageParts.push(
-                    `<span><strong class="text-dark">${page}</strong> affiché(s) sur <strong class="text-dark">${total}</strong></span>`
+                    // Deux formes, la barre du bas choisit : « 20/25 » quand la place manque —
+                    // jamais « … sur 2 » coupé au milieu d'un nombre. La longue reste lue.
+                    `<span class="jsb-etat__compte"><span class="jsb-etat__long"><strong class="text-dark">${page}</strong> affiché(s) sur <strong class="text-dark">${total}</strong></span><span class="jsb-etat__court" aria-hidden="true"><strong class="text-dark">${page}</strong>/<strong class="text-dark">${total}</strong></span></span>`
                 );
             }
-            messageParts.push(`<span>${selectionCount} sélection(s)</span>`);
+            messageParts.push(`<span class="jsb-etat__selection"><span class="jsb-etat__long">${selectionCount} sélection(s)</span><span class="jsb-etat__court" aria-hidden="true">${selectionCount} sél.</span></span>`);
         }
 
-        const messageHtml = messageParts.join('<span class="mx-2 text-muted">›</span>');
+        // Le « › » qui SUIT une partie vit DANS elle : il s'efface avec elle.
+        const separateur = '<span class="mx-2 text-muted fw-normal">›</span>';
+        const messageHtml = messageParts
+            .map((partie, i) => (i < messageParts.length - 1 ? partie.replace(/<\/span>$/, `${separateur}</span>`) : partie))
+            .join('');
         this.broadcast('app:display.update', { html: messageHtml });
     }
 

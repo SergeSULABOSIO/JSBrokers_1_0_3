@@ -983,12 +983,15 @@ export default class extends BaseController {
         // compteur/quantité. Inline (comme les chevrons ci-dessus) pour éviter un aller-retour
         // réseau à chaque changement de page.
         const iconCount = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg>`;
+        // Les classes `jsb-pagination__*` désignent ce que la barre du bas efface quand la place
+        // manque (refonte de la colonne 3) : le compteur — l'état dit déjà « … sur N » —, le
+        // mot « Page », le texte des boutons (leur `aria-label` reste).
         // Wrapper compact : largeur naturelle, pas de padding vertical (la hauteur est
         // gouvernée par le socle .jsb-control-pill du conteneur). Plus de justify-between
         // (la pagination ne s'étire plus), simple gap entre le décompte et la navigation.
         this.paginationContainerTarget.innerHTML = `
             <div class="d-inline-flex align-items-center small gap-3">
-                <span class="text-muted text-nowrap d-inline-flex align-items-center gap-1">
+                <span class="jsb-pagination__compteur text-muted text-nowrap">
                     ${iconCount}
                     <strong style="color:#0047AB;">${rangeFrom}&nbsp;–&nbsp;${rangeTo}</strong>
                     &nbsp;sur&nbsp;
@@ -996,7 +999,7 @@ export default class extends BaseController {
                 </span>
                 <div class="jsb-pagination-nav d-flex align-items-center gap-2 flex-wrap justify-content-end">
                     <label class="d-flex align-items-center gap-1 text-muted mb-0" style="white-space:nowrap;">
-                        Page
+                        <span class="jsb-pagination__mot">Page</span>
                         <input type="number"
                                inputmode="numeric"
                                class="form-control form-control-sm text-center"
@@ -1010,11 +1013,11 @@ export default class extends BaseController {
                         <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
                                 data-pagination-page="${currentPage - 1}"
                                 ${currentPage <= 1 ? 'disabled' : ''}
-                                aria-label="Page précédente">${iconPrev} Préc.</button>
+                                aria-label="Page précédente">${iconPrev}<span class="jsb-pagination__texte">Préc.</span></button>
                         <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
                                 data-pagination-page="${currentPage + 1}"
                                 ${currentPage >= totalPages ? 'disabled' : ''}
-                                aria-label="Page suivante">Suiv. ${iconNext}</button>
+                                aria-label="Page suivante"><span class="jsb-pagination__texte">Suiv.</span>${iconNext}</button>
                     </nav>
                 </div>
             </div>`;

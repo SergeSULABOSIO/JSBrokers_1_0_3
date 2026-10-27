@@ -1,6 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 import { actionsVisibles, urlAction } from './actions-groupees.js';
 import { BarreActions } from './barre-actions.js';
+import { MenuContextuel } from './menu-contextuel.js';
 
 /**
  * Nombre maximal d'entrées d'actions spécifiques affichées EN LIGNE dans la barre.
@@ -39,7 +40,9 @@ export default class extends Controller {
         'bttoutcocher',
         'btouvrir',
         'specificActionsSeparator', // NOUVEAU : Séparateur
-        'specificActionsContainer'  // NOUVEAU : Conteneur pour les boutons
+        'specificActionsContainer', // NOUVEAU : Conteneur pour les boutons
+        'btplus',                   // « Plus » : Sélectionner tout, Actualiser, Paramètres, Quitter
+        'menuPlus',
     ];
 
     /**
@@ -93,6 +96,17 @@ export default class extends Controller {
             barre: this.element,
         });
 
+        // « PLUS » PASSE PAR LA COQUILLE COMMUNE (menu-contextuel.js) : clavier, Échap, clic
+        // dehors, un seul menu ouvert dans la page. Une entrée jouée referme le menu ; son
+        // geste, lui, est celui qu'elle avait au rail (`notify`, même événement du Cerveau).
+        if (this.hasMenuPlusTarget && !this.menuPlus) {
+            // `hidden` (et non un `style=` en ligne) : rendu masqué par le serveur.
+            this.menuPlus = new MenuContextuel(this.menuPlusTarget, { affichage: 'hidden' });
+            this.menuPlusTarget.addEventListener('click', (event) => {
+                if (event.target.closest('[role="menuitem"]')) this.menuPlus.fermer();
+            });
+        }
+
         this.initializeToolbarState();
         this.setupEventListeners();
 
@@ -129,6 +143,31 @@ export default class extends Controller {
         document.removeEventListener('app:context.changed', this.boundHandleContextUpdate);
         this.barreActions?.detruire();
         this.barreActions = null;
+        this.menuPlus?.fermer({ rendreLeFocus: false });
+    }
+
+    /**
+     * Ouvre ou referme « Plus », à DROITE de son bouton : dans un rail vertical, un menu
+     * ouvert dessous recouvrirait les boutons suivants.
+     * @param {MouseEvent} event
+     */
+    basculerPlus(event) {
+        if (!this.menuPlus) return;
+        if (this.menuPlus.estOuvert()) {
+            this.menuPlus.fermer();
+            return;
+        }
+        const r = this.btplusTarget.getBoundingClientRect();
+        this.menuPlus.ouvrir({
+            ancre: { left: r.right, right: r.right, top: r.top, bottom: r.top },
+            alignement: 'gauche',
+            declencheur: this.btplusTarget,
+            // Le focus revient au bouton à la fermeture, même quand le clic ne l'y avait pas
+            // posé (certains navigateurs ne focalisent pas un bouton cliqué).
+            retour: this.btplusTarget,
+            // Au clavier (Entrée, Espace : `detail` vaut 0), le focus va à la première entrée.
+            viaClavier: event.detail === 0,
+        });
     }
 
     /**
@@ -188,7 +227,9 @@ export default class extends Controller {
      */
     toggleButton(target, show) {
         if (!target) return;
-        target.style.display = show ? 'block' : 'none';
+        // Visible : on rend la main à la feuille de style (rail en colonne, entrée de menu en
+        // ligne) au lieu d'imposer un `display` qui défait leur mise en page.
+        target.style.display = show ? '' : 'none';
     }
 
     /**

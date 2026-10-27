@@ -37,6 +37,7 @@ class ComposantsUniquesTest extends TestCase
         'templates/admin/entreprise/index.html.twig' => 'coquille : cartes de cabinet',
         'templates/admin/soa/soa_client_workspace.html.twig' => 'coquille : relevé de compte',
         'templates/components/_context_menu.html.twig' => 'coquille : listes de l’espace de travail',
+        'templates/components/_toolbar.html.twig' => 'coquille : « Plus » du rail d’outils (toolbar_controller.js)',
         'templates/console/base.html.twig' => 'coquille : lignes de la console',
         'templates/components/_assistant_ia_chat.html.twig' => 'coquille : bulles de Ket ; menu-bouton d’entête (se déplie en plein écran)',
         'templates/components/dashboard/_block_bordereaux.html.twig' => 'coquille : tableau de bord',

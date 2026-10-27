@@ -1,6 +1,7 @@
 import { grouperActions } from './actions-groupees.js';
 import { positionnerMenu } from './menu-flottant.js';
 import { CircuitIcones } from './circuit-icones.js';
+import { indexVise } from './barre-clavier.js';
 
 /**
  * BARRE D'ACTIONS SPÉCIFIQUES — rendu PARTAGÉ par la barre d'outils du workspace et
@@ -161,13 +162,11 @@ export class BarreActions {
         const index = arrets.indexOf(event.target.closest?.('button'));
         if (index === -1) return;
 
-        const cible = {
-            ArrowRight: arrets[(index + 1) % arrets.length],
-            ArrowLeft: arrets[(index - 1 + arrets.length) % arrets.length],
-            Home: arrets[0],
-            End: arrets[arrets.length - 1],
-        }[event.key];
-        if (!cible) return;
+        // ↑/↓ pour une barre VERTICALE (le rail de la colonne 3), ←/→ sinon (barre-clavier.js).
+        const vertical = this.barre.getAttribute('aria-orientation') === 'vertical';
+        const vise = indexVise(event.key, index, arrets.length, vertical);
+        if (vise === null) return;
+        const cible = arrets[vise];
 
         event.preventDefault();
         this.courant = cible;
@@ -366,8 +365,12 @@ export class BarreActions {
 
     /** Pose le menu d'une famille sous son bouton, en coordonnées viewport. @private */
     _positionnerMenu(button, menu) {
+        const r = button.getBoundingClientRect();
+        // Dans une barre VERTICALE (le rail de la colonne 3), le menu s'ouvre à DROITE du
+        // bouton : dessous, il recouvrirait les boutons suivants.
+        const vertical = this.barre.getAttribute('aria-orientation') === 'vertical';
         const { left, top } = positionnerMenu({
-            ancre: button.getBoundingClientRect(),
+            ancre: vertical ? { left: r.right, right: r.right, top: r.top, bottom: r.top } : r,
             menu: { largeur: menu.offsetWidth, hauteur: menu.offsetHeight },
             viewport: { largeur: window.innerWidth, hauteur: window.innerHeight },
             // À GAUCHE : le menu s'ouvre du côté où le bouton commence, dans le sens du
