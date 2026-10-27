@@ -2,6 +2,7 @@ import { Controller } from '@hotwired/stimulus';
 import { actionsVisibles, urlAction } from './actions-groupees.js';
 import { BarreActions } from './barre-actions.js';
 import { MenuContextuel } from './menu-contextuel.js';
+import { DefilementRail } from './rail-defilement.js';
 
 /**
  * Nombre maximal d'entrées d'actions spécifiques affichées EN LIGNE dans la barre.
@@ -43,6 +44,7 @@ export default class extends Controller {
         'specificActionsContainer', // NOUVEAU : Conteneur pour les boutons
         'btplus',                   // « Plus » : Sélectionner tout, Actualiser, Paramètres, Quitter
         'menuPlus',
+        'defilant',                 // la zone du rail qui défile en dernier recours
     ];
 
     /**
@@ -107,6 +109,11 @@ export default class extends Controller {
             });
         }
 
+        // Le rail défile en DERNIER RECOURS, et le dit (flèches, fondus) — rail-defilement.js.
+        if (this.hasDefilantTarget && !this.defilementRail) {
+            this.defilementRail = new DefilementRail(this.element, this.defilantTarget);
+        }
+
         this.initializeToolbarState();
         this.setupEventListeners();
 
@@ -144,6 +151,25 @@ export default class extends Controller {
         this.barreActions?.detruire();
         this.barreActions = null;
         this.menuPlus?.fermer({ rendreLeFocus: false });
+        this.defilementRail?.detruire();
+        this.defilementRail = null;
+    }
+
+    /**
+     * Une flèche du rail : une « page » vers le haut ou le bas.
+     * @param {{params: {sens: number}}} event
+     */
+    defiler(event) {
+        this.defilementRail?.avancer(Number(event.params.sens) < 0 ? -1 : 1);
+    }
+
+    /**
+     * Une flèche n'est pas focalisable : la presser renverrait le focus sur la page. On le
+     * laisse là où il était (le bouton du rail qu'on parcourait).
+     * @param {MouseEvent} event
+     */
+    garderLeFocus(event) {
+        event.preventDefault();
     }
 
     /**

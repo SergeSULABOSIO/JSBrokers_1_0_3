@@ -19,6 +19,9 @@
   {# Valeur Stimulus Object : repli '{}' littéral (jamais `{}` Twig → json `[]`). #}
   data-toolbar-entity-form-canvas-value="{{ entityFormCanvas is defined and entityFormCanvas is not empty ? entityFormCanvas|json_encode : '{}' }}"
 >
+    {# LA ZONE QUI DÉFILE, EN DERNIER RECOURS (rail-defilement.js) : quand le rail ne tient
+       plus en hauteur. Les flèches, plus bas, sont en surcouche et ne prennent aucune place. #}
+    <div class="context-toolbar__defilant" data-toolbar-target="defilant">
     {# Groupe 1 : Actions sur la sélection (visibilité selon la sélection) #}
     <div class="context-toolbar__groupe" role="group" aria-label="Actions sur la sélection">
         <button
@@ -126,4 +129,16 @@
             <span class="flex-grow-1">Quitter la rubrique</span>
         </button>
     </div>
+    </div>
+    {# Flèches du défilement : des AIDES À LA SOURIS, décoratives pour les technologies
+       d'assistance — au clavier, ↑/↓ parcourent le rail et le navigateur fait défiler
+       jusqu'au bouton focalisé. Ni bouton ni arrêt clavier, donc. #}
+    <span class="context-toolbar__fleche context-toolbar__fleche--avant" aria-hidden="true"
+          data-action="mousedown->toolbar#garderLeFocus click->toolbar#defiler" data-toolbar-sens-param="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+    </span>
+    <span class="context-toolbar__fleche context-toolbar__fleche--apres" aria-hidden="true"
+          data-action="mousedown->toolbar#garderLeFocus click->toolbar#defiler" data-toolbar-sens-param="1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
 </div>

@@ -1022,15 +1022,69 @@ textarea:hover,
     z-index: 110;
     flex-direction: column;
     flex-wrap: nowrap;
-    align-items: center;
-    /* 2 px entre deux boutons : le pire cas courant (12 outils) tient dans 595 px de haut
-       avec « Plus » (calcul du plan, sur les hauteurs mesurées). */
-    gap: 2px;
-    padding: 4px 0;
+    gap: 0;
+    padding: 0;
     max-width: none;
     background-color: var(--bg-white, #ffffff);
     border-right: 1px solid var(--border-light, #dee2e6);
 }
+/* LA ZONE QUI DÉFILE, EN DERNIER RECOURS (rail-defilement.js). Mesuré : le pire cas courant
+   (9 boutons) tient à 595 px de haut ; plus bas, ou au-delà de 4 actions, elle défile —
+   molette, doigt et focus clavier nativement. Barre de défilement masquée : ce sont les
+   flèches et les fondus qui disent ce qui reste. */
+.context-toolbar__defilant {
+    flex: 1 1 auto;
+    min-height: 0;
+    /* TOUTE LA LARGEUR DU RAIL : la règle de base de la barre centre ses enfants, et la zone
+       ne faisait plus que la largeur d'un bouton — son `overflow-x: hidden` rognait alors
+       les côtés du contour de focus (mesuré : 34,8 px au lieu de 43). */
+    align-self: stretch;
+    /* Le navigateur amène le bouton focalisé HORS des flèches (24 px), pas sous elles. */
+    scroll-padding-block: 26px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* 2 px entre deux boutons : le pire cas courant tient dans 595 px de haut avec
+       « Plus » (calcul du plan, sur les hauteurs mesurées). */
+    gap: 2px;
+    padding: 4px 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+.context-toolbar__defilant::-webkit-scrollbar { display: none; }
+/* UN BOUTON NE S'ÉCRASE PAS POUR TENIR. Les boutons de la barre sont en `overflow: hidden`
+   (leur effet d'onde) : comme éléments flex, leur hauteur minimale tombe alors à zéro, et
+   ils rétrécissaient au lieu de laisser la zone défiler — mesuré : « Plus » à 13 px de haut
+   au lieu de 35, à 480 px de fenêtre. */
+.context-toolbar__defilant > *,
+.context-toolbar--rail .context-toolbar__groupe > * { flex-shrink: 0; }
+/* Les flèches, EN SURCOUCHE (elles ne prennent aucune place), avec leur fondu. */
+.context-toolbar__fleche {
+    position: absolute;
+    left: 0;
+    right: 0;
+    /* 24 px : la taille minimale d'une cible (WCAG 2.5.8). */
+    height: 24px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted, #6c757d);
+    cursor: pointer;
+    z-index: 1;
+}
+.context-toolbar__fleche svg { width: 14px; height: 14px; }
+.context-toolbar__fleche:hover { color: var(--cobalt, #0047AB); }
+.context-toolbar__fleche--avant {
+    top: 0;
+    background: linear-gradient(to bottom, var(--bg-white, #ffffff) 55%, transparent);
+}
+.context-toolbar__fleche--apres {
+    bottom: 0;
+    background: linear-gradient(to top, var(--bg-white, #ffffff) 55%, transparent);
+}
+.context-toolbar--rail.is-defile-avant .context-toolbar__fleche--avant,
+.context-toolbar--rail.is-defile-apres .context-toolbar__fleche--apres { display: flex; }
 /* Un panneau d'onglet SANS liste (squelette d'un onglet contextuel qui se charge, message
    d'échec) n'a pas de colonne réservée au rail : il se décale de sa largeur, sinon le
    rail en masquait le début. */

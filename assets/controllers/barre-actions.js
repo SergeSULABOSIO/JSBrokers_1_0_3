@@ -171,7 +171,11 @@ export class BarreActions {
         event.preventDefault();
         this.courant = cible;
         this.rafraichirNavigation();
-        cible.focus();
+        // D'ABORD amener le bouton dans la vue (rail qui défile : la marge de défilement le
+        // garde hors des flèches), PUIS le focaliser : le focus part avant le défilement
+        // automatique, et l'infobulle se mesurait sur l'ancienne position.
+        cible.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        cible.focus({ preventScroll: true });
     }
 
     /** Demande au cerveau, en avance, les icônes absentes du cache. */

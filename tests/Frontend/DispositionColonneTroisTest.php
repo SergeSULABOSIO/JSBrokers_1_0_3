@@ -173,6 +173,49 @@ class DispositionColonneTroisTest extends TestCase
         self::assertStringContainsString("getAttribute('aria-orientation') === 'vertical'", $barre);
     }
 
+    /**
+     * LE RAIL DÉFILE EN DERNIER RECOURS, ET LE DIT (décision de Serge).
+     *
+     * Jamais un bouton qui saute dans « Plus » selon la hauteur : la zone du rail défile.
+     * Les flèches sont des aides à la souris, décoratives pour l'assistance — au clavier,
+     * ↑/↓ parcourent le rail et le navigateur fait défiler jusqu'au bouton focalisé. Elles
+     * ne doivent donc pas devenir des arrêts clavier de la barre.
+     */
+    public function testLeRailDefileEnDernierRecours(): void
+    {
+        $defilant = self::regle('.context-toolbar__defilant');
+        self::assertMatchesRegularExpression('/overflow-y:\s*auto;/', $defilant);
+        self::assertMatchesRegularExpression('/min-height:\s*0;/', $defilant);
+        // Toute la largeur du rail : centrée, la zone rognait le contour de focus (mesuré).
+        self::assertMatchesRegularExpression('/align-self:\s*stretch;/', $defilant);
+        // Le bouton focalisé est amené hors des flèches.
+        self::assertMatchesRegularExpression('/scroll-padding-block:\s*\d+px;/', $defilant);
+        // Un bouton ne s'écrase pas pour tenir (mesuré : « Plus » à 13 px de haut).
+        self::assertMatchesRegularExpression('/\.context-toolbar__defilant > \*,\s*\.context-toolbar--rail \.context-toolbar__groupe > \*\s*\{\s*flex-shrink:\s*0;/', self::feuille());
+        // Une flèche est une cible : 24 px au moins (WCAG 2.5.8).
+        preg_match('/height:\s*(\d+)px;/', self::regle('.context-toolbar__fleche'), $hauteur);
+        self::assertGreaterThanOrEqual(24, (int) ($hauteur[1] ?? 0));
+
+        $x = self::barre();
+        $zone = $x->query('//*[@data-toolbar-target="defilant"]')->item(0);
+        self::assertNotNull($zone);
+        // Tous les boutons du rail sont DANS la zone qui défile, « Plus » compris.
+        foreach (['btajouter', 'btsupprimer', 'btplus', 'specificActionsContainer'] as $cible) {
+            $element = $x->query('//*[@data-toolbar-target="' . $cible . '"]')->item(0);
+            self::assertSame(1, $x->query('ancestor::*[@data-toolbar-target="defilant"]', $element)->length, "$cible défile avec le rail.");
+        }
+
+        $fleches = $x->query('//*[contains(concat(" ", normalize-space(@class), " "), " context-toolbar__fleche ")]');
+        self::assertSame(2, $fleches->length);
+        foreach ($fleches as $fleche) {
+            self::assertSame('span', $fleche->nodeName, 'Une flèche n’est pas un bouton : elle deviendrait un arrêt clavier de la barre.');
+            self::assertSame('true', $fleche->getAttribute('aria-hidden'));
+            // En surcouche : hors de la zone qui défile, et sans place dans le flux.
+            self::assertSame(0, $x->query('ancestor::*[@data-toolbar-target="defilant"]', $fleche)->length);
+        }
+        self::assertMatchesRegularExpression('/position:\s*absolute;/', self::regle('.context-toolbar__fleche'));
+    }
+
     /** Un panneau sans liste (squelette, échec) se décale du rail au lieu d'être masqué. */
     public function testUnPanneauSansListeNEstPasMasqueParLeRail(): void
     {
