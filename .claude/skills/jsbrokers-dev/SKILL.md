@@ -284,9 +284,12 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
 
 ## 5. Procédure de test
 
-- **PHPUnit, dossier par dossier** (`tests/<Dossier>`) : un seul processus atteint 3 Go. **UNE
-  suite à la fois** (verrou `var/suite-par-dossier.lock`) ; ne modifier AUCUN fichier du projet
-  pendant qu'elle tourne. Rediriger la sortie dans un fichier et lire le verdict, pas un `tail`.
+- **PHPUnit, dossier par dossier** : `bin/phpunit-par-dossier.sh [Dossier…]` (un seul
+  processus atteint 3 Go) ; verdicts dans `var/suite-par-dossier.log`. **UNE suite à la fois** :
+  le verrou `var/suite-par-dossier.lock` garde le PID de la suite, refuse un second lancement et
+  se reprend seul si ce PID est mort. Pour arrêter : `bin/phpunit-par-dossier.sh arreter` (tue la
+  boucle ET le PHP) — **jamais** lever le verrou à la main (deux suites mêlées le 2026-10-13 et le
+  2026-10-27). Ne modifier AUCUN fichier du projet pendant qu'elle tourne.
 - **`mocksess`** (renommage de session refusé par Windows) : artefact connu — relancer le fichier
   seul, lire `X-Debug-Exception`, puis le dossier.
 - **Node** : `node --test tests/js/` pour tout JS.
