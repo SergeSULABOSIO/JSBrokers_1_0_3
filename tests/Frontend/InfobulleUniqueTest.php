@@ -71,10 +71,14 @@ class InfobulleUniqueTest extends TestCase
     {
         $barre = (string) file_get_contents(self::racine() . '/templates/components/_toolbar.html.twig');
         $dialogue = (string) file_get_contents(self::racine() . '/assets/controllers/dialog-manager_controller.js');
-        foreach (['barre du workspace' => $barre, 'barre du dialogue' => $dialogue] as $ou => $source) {
+        foreach (['rail du workspace' => $barre, 'barre du dialogue' => $dialogue] as $ou => $source) {
             self::assertMatchesRegularExpression('/data-controller="[^"]*\binfobulle\b[^"]*"/', $source, $ou);
             self::assertStringContainsString('data-infobulle-source-value="titre"', $source, $ou);
-            self::assertStringContainsString('data-infobulle-placement-value="bouton"', $source, $ou);
         }
+        // La barre du dialogue est horizontale : sous le bouton. Le rail est vertical : À DROITE
+        // (dessous, la bulle recouvrait le bouton suivant), après un délai d'intention (2026-10-28).
+        self::assertStringContainsString('data-infobulle-placement-value="bouton"', $dialogue);
+        self::assertStringContainsString('data-infobulle-placement-value="droite"', $barre);
+        self::assertStringContainsString('data-infobulle-delai-value="300"', $barre);
     }
 }

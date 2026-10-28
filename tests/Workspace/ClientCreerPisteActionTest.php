@@ -174,7 +174,7 @@ class ClientCreerPisteActionTest extends WebTestCase
      * Elle a d'abord vécu à plat, seule de son espèce : une famille coûte un clic de plus,
      * et c'était cher pour le geste qu'on vient précisément faire. « Créer un sinistre »
      * l'a rejointe, et à deux elles remplissaient la barre — quatre entrées, soit le
-     * plafond exact au-delà duquel le surplus tombe dans « Autres actions ».
+     * budget exact d'une rubrique (voir le test suivant).
      *
      * La famille leur rend cette place, et elle vaut CONVENTION : toute action de création
      * future rejoint « Créer… » plutôt que d'ouvrir une famille de plus. Rien n'est perdu
@@ -210,14 +210,16 @@ class ClientCreerPisteActionTest extends WebTestCase
     }
 
     /**
-     * ⚠ LA BARRE D'OUTILS N'AFFICHE QUE QUATRE ENTRÉES EN LIGNE.
+     * ⚠ LA RUBRIQUE GARDE AU PLUS QUATRE ENTRÉES D'ACTIONS.
      *
      * Le client en portait huit à plat — sept visibles à la fois pour un client rattaché
-     * à un portefeuille et doté d'un lien SOA. Une neuvième ajoutée en queue serait
-     * tombée dans « Autres actions », c'est-à-dire hors de la barre demandée.
+     * à un portefeuille et doté d'un lien SOA. La barre horizontale d'alors repliait le
+     * surplus dans « Autres actions » ; le rail vertical de la colonne 3 n'a plus de repli
+     * (2026-10-28), mais chaque entrée de plus l'allonge, et au-delà de sa hauteur il défile.
+     * Quatre entrées reste donc le BUDGET d'une rubrique.
      *
      * Le regroupement en familles ramène l'affichage à trois entrées. Ce test ne compte
-     * pas des boutons : il vérifie que le PLAFOND ne peut plus être franchi en silence.
+     * pas des boutons : il vérifie que le budget ne peut plus être franchi en silence.
      *
      * ⚠ « Créer une piste » et « Créer un sinistre » ne comptent QUE POUR UNE : si une
      * création future sortait de la famille « Créer… », ce test le dirait.
@@ -239,8 +241,8 @@ class ClientCreerPisteActionTest extends WebTestCase
             4,
             count($entrees),
             sprintf(
-                'La barre d\'outils n\'affiche que quatre entrées en ligne ; au-delà, le '
-                . 'surplus tombe dans « Autres actions ». Entrées actuelles : %s.',
+                'Une rubrique garde au plus quatre entrées d\'actions ; au-delà, le rail '
+                . 's\'allonge et défile. Entrées actuelles : %s.',
                 implode(', ', array_keys($entrees)),
             ),
         );

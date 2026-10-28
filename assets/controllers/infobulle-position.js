@@ -69,3 +69,21 @@ export function positionCentreeSous(cadre, bulle, ecran) {
 
     return { left: dansLEcran(left, bulle.largeur, ecran.largeur), top: dansLEcran(top, bulle.hauteur, ecran.hauteur) };
 }
+
+/**
+ * À DROITE D'UN BOUTON DU RAIL D'OUTILS (décision de Serge, 2026-10-28) : centrée sur la hauteur
+ * du bouton, à sa droite — à sa gauche s'il manque de place. Dessous, dans un rail vertical,
+ * elle recouvrait le bouton suivant.
+ *
+ * @param {{left: number, right: number, top: number, height: number}} cadre
+ * @param {{largeur: number, hauteur: number}} bulle
+ * @param {{largeur: number, hauteur: number}} ecran
+ * @returns {{left: number, top: number}}
+ */
+export function positionADroite(cadre, bulle, ecran) {
+    let left = cadre.right + MARGE;
+    if (left + bulle.largeur > ecran.largeur - MARGE) left = cadre.left - bulle.largeur - MARGE;
+    const top = cadre.top + cadre.height / 2 - bulle.hauteur / 2;
+
+    return { left: dansLEcran(left, bulle.largeur, ecran.largeur), top: dansLEcran(top, bulle.hauteur, ecran.hauteur) };
+}

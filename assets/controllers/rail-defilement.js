@@ -2,9 +2,9 @@
  * LE RAIL D'OUTILS DÉFILE EN DERNIER RECOURS.
  *
  * Le rail de la colonne 3 tient dans le cas courant (mesuré : 9 boutons à 595 px de haut).
- * Au-delà — fenêtre plus basse, plus de 4 actions —, sa zone défile (décision de Serge :
- * le défilement en dernier recours, jamais un bouton qui saute dans un menu selon la
- * hauteur). La molette, le doigt et le focus clavier le font nativement ; ce module ne fait
+ * Au-delà — fenêtre plus basse, beaucoup d'actions —, sa zone défile en dernier recours (les
+ * outils de la rubrique, eux, partent d'abord dans « Plus » : rail-outils.js, décision de
+ * Serge du 2026-10-28). La molette, le doigt et le focus clavier le font nativement ; ce module ne fait
  * que DIRE qu'il reste quelque chose au-dessus ou au-dessous — flèches et fondus en
  * surcouche, qui ne prennent aucune place (leçon de chips-defilement.js : une flèche dans
  * le flux faisait défiler ce qui tenait).

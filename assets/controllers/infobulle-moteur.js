@@ -1,4 +1,4 @@
-import { positionAuCurseur, positionCentreeSous, positionSousLElement } from './infobulle-position.js';
+import { positionADroite, positionAuCurseur, positionCentreeSous, positionSousLElement } from './infobulle-position.js';
 import { lireSections, normaliserSections, rangees } from './infobulle-contenu.js';
 
 /**
@@ -56,7 +56,23 @@ const etat = {
     minuterie: null,
     parLeClavier: false,
     observateur: null,
+    // Une ouverture EN ATTENTE (délai d'intention) : partagée comme la bulle, pour qu'un menu
+    // qui s'ouvre (`fermerInfobulle`) l'annule aussi — sinon la bulle surgissait par-dessus lui.
+    intention: null,
+    cibleEnAttente: null,
 };
+
+/** Abandonne l'ouverture en attente, et rend à sa cible le `title` natif mis de côté. */
+function renoncer() {
+    clearTimeout(etat.intention);
+    etat.intention = null;
+    const cible = etat.cibleEnAttente;
+    etat.cibleEnAttente = null;
+    if (cible && cible !== etat.cible && cible.dataset.infobulleTitre !== undefined) {
+        if (!cible.hasAttribute('title')) cible.setAttribute('title', cible.dataset.infobulleTitre);
+        delete cible.dataset.infobulleTitre;
+    }
+}
 
 /**
  * Une infobulle est-elle affichée ? Lu par le gestionnaire des dialogues : le premier Échap
@@ -130,6 +146,7 @@ function habiller(b, cible, sections, poseeParLeCode) {
  *   vient d'ouvrir reste (une zone re-rendue, un graphique quitté, ne la ferment pas).
  */
 export function fermerInfobulle(zone) {
+    if (!zone || !etat.cibleEnAttente || zone.contains(etat.cibleEnAttente)) renoncer();
     if (zone && etat.cible && etat.cible.isConnected && !zone.contains(etat.cible)) return;
     fermer();
 }
@@ -218,19 +235,36 @@ function focusClavier(cible) {
 export class MoteurInfobulle {
     /**
      * @param {HTMLElement} element le conteneur servi
-     * @param {{placement?: 'curseur'|'bouton', source?: 'donnees'|'titre'}} [options]
+     * @param {{placement?: 'curseur'|'bouton'|'droite', source?: 'donnees'|'titre', delaiSurvol?: number}} [options]
+     *   `droite` : à droite de l'élément (le rail d'outils de la colonne 3) ; `delaiSurvol` : un
+     *   DÉLAI D'INTENTION au survol (ms) — le pointeur qui ne fait que traverser ne fait rien
+     *   apparaître ; au focus clavier, la bulle reste immédiate. 0 par défaut.
      */
     constructor(element, options) {
         const o = options || {};
         this.element = element;
         this.placement = o.placement || 'curseur';
         this.source = o.source || 'donnees';
+        this.delaiSurvol = Math.max(0, Number(o.delaiSurvol) || 0);
+        // Un clic dans le conteneur pendant le délai : on agit, on ne lit plus — rien ne surgit.
+        // Un TOUCHER est noté : le `mouseover` de compatibilité qui le suit n'arme pas de bulle
+        // (au doigt, `:hover` reste collé, et la bulle surgissait 300 ms après le tap).
+        this._dernierToucher = 0;
+        this._surPression = (e) => {
+            if (e.pointerType === 'touch' || e.pointerType === 'pen') this._dernierToucher = Date.now();
+            if (etat.cibleEnAttente && this.element.contains(etat.cibleEnAttente)) renoncer();
+        };
 
         this._surEntree = (e) => this._entrer(e);
         this._surSortie = (e) => this._sortir(e);
         this._surFocus = (e) => this._focus(e);
         this._surPerteDeFocus = (e) => this._perteDeFocus(e);
         this._surTouche = (e) => {
+            // Échap PENDANT le délai d'intention : la bulle est rejetée avant même d'apparaître.
+            // Rien d'autre n'est retenu — cet Échap ferme aussi ce qu'il devait fermer.
+            if ((e.key === 'Escape' || e.key === 'Esc') && etat.cibleEnAttente && this.element.contains(etat.cibleEnAttente)) {
+                renoncer();
+            }
             if (etat.proprietaire !== this) return;
             // L'élément a disparu sous un utilisateur au clavier (liste rafraîchie) : aucun
             // `focusout` fiable, aucune souris pour le voir — la touche suivante ferme la bulle.
@@ -259,6 +293,7 @@ export class MoteurInfobulle {
 
     connecter() {
         this.element.addEventListener('mouseover', this._surEntree);
+        this.element.addEventListener('pointerdown', this._surPression, true);
         this.element.addEventListener('mouseout', this._surSortie);
         this.element.addEventListener('focusin', this._surFocus);
         this.element.addEventListener('focusout', this._surPerteDeFocus);
@@ -271,13 +306,25 @@ export class MoteurInfobulle {
 
     deconnecter() {
         this.element.removeEventListener('mouseover', this._surEntree);
+        this.element.removeEventListener('pointerdown', this._surPression, true);
         this.element.removeEventListener('mouseout', this._surSortie);
         this.element.removeEventListener('focusin', this._surFocus);
         this.element.removeEventListener('focusout', this._surPerteDeFocus);
         this.element.removeEventListener('toggle', this._surBascule, true);
         document.removeEventListener('keydown', this._surTouche);
         document.removeEventListener('mousemove', this._surMouvement);
+        if (etat.cibleEnAttente && this.element.contains(etat.cibleEnAttente)) renoncer();
         if (etat.proprietaire === this) fermer();
+    }
+
+    /** Où poser la bulle : `point` est celui du pointeur (null au clavier). */
+    _position(cible, point) {
+        const cadre = cible.getBoundingClientRect();
+        const placement = this._placement(cible);
+        if (placement === 'droite') return positionADroite(cadre, this._taille(), this._ecran());
+        if (placement === 'bouton') return positionCentreeSous(cadre, this._taille(), this._ecran());
+
+        return point ? positionAuCurseur(point, this._taille(), this._ecran()) : positionSousLElement(cadre, this._taille(), this._ecran());
     }
 
     // ── Qui porte une infobulle ───────────────────────────────────────────────
@@ -318,13 +365,48 @@ export class MoteurInfobulle {
             clearTimeout(etat.minuterie); // retour sur l'élément pendant la grâce
             return;
         }
+        // Le menu de cet élément est ouvert : sa bulle le recouvrirait.
+        if (cible.getAttribute('aria-expanded') === 'true') return;
+        const point = { x: event.clientX, y: event.clientY };
+        if (this.delaiSurvol > 0) {
+            // Le pointeur passe sur un ENFANT (l'icône) de l'élément déjà en attente : le délai
+            // continue — le réarmer reculait l'ouverture à chaque pixel.
+            if (cible === etat.cibleEnAttente) return;
+            if (Date.now() - this._dernierToucher < 800) return;
+            // LE DÉLAI D'INTENTION : la bulle n'apparaît que si le pointeur S'ARRÊTE sur
+            // l'élément ; le traverser en passant ne fait rien surgir.
+            renoncer();
+            etat.cibleEnAttente = cible;
+            // Le `title` natif est mis de côté DÈS L'ATTENTE : sinon la bulle du navigateur
+            // pouvait surgir pendant le délai, puis la nôtre par-dessus.
+            if (this.source === 'titre' && cible.hasAttribute('title')) {
+                cible.dataset.infobulleTitre = cible.getAttribute('title');
+                cible.removeAttribute('title');
+            }
+            etat.intention = setTimeout(() => {
+                etat.intention = null;
+                const pret = cible.isConnected && cible.matches(':hover') && cible.getAttribute('aria-expanded') !== 'true';
+                // `_montrer` peut refuser (rien à dire) : l'attente n'est levée qu'après, pour que
+                // `renoncer` rende alors le `title` mis de côté.
+                if (!pret || !this._montrer(cible)) {
+                    renoncer();
+                    return;
+                }
+                etat.cibleEnAttente = null;
+                this._placer(this._position(cible, point));
+            }, this.delaiSurvol);
+            return;
+        }
         if (!this._montrer(cible)) return;
-        this._placer(this._placement(cible) === 'bouton'
-            ? positionCentreeSous(cible.getBoundingClientRect(), this._taille(), this._ecran())
-            : positionAuCurseur({ x: event.clientX, y: event.clientY }, this._taille(), this._ecran()));
+        this._placer(this._position(cible, point));
     }
 
     _sortir(event) {
+        // Le pointeur quitte l'élément avant la fin du délai d'intention : rien n'apparaîtra.
+        const enAttente = etat.cibleEnAttente;
+        if (enAttente && enAttente.contains(event.target) && !(event.relatedTarget && enAttente.contains(event.relatedTarget))) {
+            renoncer();
+        }
         if (etat.proprietaire !== this || !etat.cible) return;
         // Seule la sortie de l'ÉLÉMENT compte : la souris qui bouge ailleurs dans le conteneur
         // ne ferme pas une bulle ouverte par le clavier (persistante, WCAG 1.4.13).
@@ -345,16 +427,14 @@ export class MoteurInfobulle {
         // Un focus du CLAVIER seulement : un clic sur une carte focalisable, ou le focus rendu à
         // la fermeture d'un dialogue, ne fait pas sauter la bulle sous l'élément.
         if (!focusClavier(cible)) return;
+        renoncer(); // au clavier, immédiate
         if (cible === etat.cible) {
             etat.parLeClavier = true; // ouverte à la souris, désormais tenue par le focus
             return;
         }
         if (this._montrer(cible)) {
             etat.parLeClavier = true;
-            const cadre = cible.getBoundingClientRect();
-            this._placer(this._placement(cible) === 'bouton'
-                ? positionCentreeSous(cadre, this._taille(), this._ecran())
-                : positionSousLElement(cadre, this._taille(), this._ecran()));
+            this._placer(this._position(cible, null));
         }
     }
 

@@ -9,7 +9,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { positionAuCurseur, positionSousLElement, positionCentreeSous } from '../../assets/controllers/infobulle-position.js';
+import { positionAuCurseur, positionSousLElement, positionCentreeSous, positionADroite } from '../../assets/controllers/infobulle-position.js';
 
 const ECRAN = { largeur: 1366, hauteur: 768 };
 const BULLE = { largeur: 280, hauteur: 300 };
@@ -90,5 +90,21 @@ test('écran ÉTROIT (pas la place à gauche ni à droite) : la bulle passe au-d
             assert.ok(!couvre(p, haute, { x, y }), `pointeur (${x}, ${y}) couvert par ${JSON.stringify(p)}`);
             assert.ok(contenue(p, haute, etroit), `pointeur (${x}, ${y}) → ${JSON.stringify(p)}`);
         }
+    }
+});
+
+// LE RAIL D'OUTILS DE LA COLONNE 3 (décision de Serge, 2026-10-28) : la bulle à DROITE du bouton.
+// Dessous, elle recouvrait le bouton suivant du rail.
+test('à droite d’un bouton du rail : centrée sur sa hauteur, sans recouvrir le rail', () => {
+    const bouton = { left: 134, right: 169, top: 250, bottom: 285, width: 35, height: 35 };
+    assert.deepEqual(positionADroite(bouton, { largeur: 120, hauteur: 30 }, ECRAN), { left: 177, top: 252.5 });
+});
+
+test('à droite d’un bouton : à GAUCHE s’il manque de place, et jamais hors de l’écran', () => {
+    const auBord = positionADroite({ left: 1300, right: 1335, top: 250, bottom: 285, width: 35, height: 35 }, { largeur: 120, hauteur: 30 }, ECRAN);
+    assert.equal(auBord.left, 1300 - 120 - 8);
+    for (const top of [0, 4, 400, 740, 768]) {
+        const p = positionADroite({ left: 134, right: 169, top, bottom: top + 35, width: 35, height: 35 }, BULLE, ECRAN);
+        assert.ok(contenue(p), `bouton à ${top} → ${JSON.stringify(p)}`);
     }
 });

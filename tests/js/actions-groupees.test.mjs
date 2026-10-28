@@ -11,7 +11,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { actionsVisibles, grouperActions, urlAction, GROUPE_DEBORDEMENT } from '../../assets/controllers/actions-groupees.js';
+import { actionsVisibles, grouperActions, urlAction } from '../../assets/controllers/actions-groupees.js';
 
 const action = (label, groupe = null, extra = {}) => ({
     label,
@@ -78,36 +78,6 @@ test("l'icône de famille vient de groupe_icone, sinon du premier membre", () =>
 
     const sans = grouperActions([action('A', 'Fam', { icon: 'action:add' }), action('B', 'Fam')]);
     assert.equal(sans[0].icon, 'action:add', 'à défaut, celle du premier membre');
-});
-
-test('au-delà du plafond, le surplus est replié dans « Autres actions »', () => {
-    const entrees = grouperActions(
-        [action('A'), action('B'), action('C'), action('D'), action('E'), action('F')],
-        { maxInline: 4 },
-    );
-
-    assert.equal(entrees.length, 4, 'la barre garde une largeur prévisible');
-    assert.deepEqual(entrees.slice(0, 3).map((e) => e.action.label), ['A', 'B', 'C']);
-    assert.equal(entrees[3].type, 'groupe');
-    assert.equal(entrees[3].label, GROUPE_DEBORDEMENT);
-    assert.deepEqual(entrees[3].actions.map((a) => a.label), ['D', 'E', 'F'], 'aucune action perdue');
-});
-
-test('une famille qui déborde garde son nom en préfixe', () => {
-    const entrees = grouperActions(
-        [action('A'), action('B'), action('C'), action('M1', 'Mouvements'), action('M2', 'Mouvements')],
-        { maxInline: 3 },
-    );
-
-    // maxInline 3 → 2 entrées gardées (A, B), le reste déborde : « C » ET la famille.
-    assert.equal(entrees.length, 3);
-    const debordement = entrees[entrees.length - 1];
-    assert.equal(debordement.label, GROUPE_DEBORDEMENT);
-    assert.deepEqual(
-        debordement.actions.map((a) => a.label),
-        ['C', 'Mouvements · M1', 'Mouvements · M2'],
-        'les membres d’une famille repliée restent identifiables par leur préfixe',
-    );
 });
 
 test('sans plafond, aucune entrée n’est repliée (cas du menu contextuel qui défile)', () => {

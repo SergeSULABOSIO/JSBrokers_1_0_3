@@ -3,13 +3,8 @@ import { actionsVisibles, urlAction } from './actions-groupees.js';
 import { BarreActions } from './barre-actions.js';
 import { MenuContextuel } from './menu-contextuel.js';
 import { DefilementRail } from './rail-defilement.js';
-
-/**
- * Nombre maximal d'entrées d'actions spécifiques affichées EN LIGNE dans la barre.
- * Au-delà, le surplus est replié dans un menu « Autres actions » : la barre garde
- * une largeur prévisible quel que soit le nombre d'actions déclarées par la rubrique.
- */
-const TOOLBAR_MAX_ACTIONS_EN_LIGNE = 4;
+import { outilsAuRail } from './rail-outils.js';
+import { fermerInfobulle } from './infobulle-moteur.js';
 
 /**
  * @class ToolbarController - REFACTORED (V3)
@@ -45,6 +40,9 @@ export default class extends Controller {
         'btplus',                   // « Plus » : Sélectionner tout, Actualiser, Paramètres, Quitter
         'menuPlus',
         'defilant',                 // la zone du rail qui défile en dernier recours
+        'outilsRail',               // les outils de la rubrique, au rail autant qu'il en tient
+        'separateurPlus',           // le séparateur de « Plus », avant Quitter
+        'piedRail',                 // le pied du rail, ancré en bas : outils et « Plus »
     ];
 
     /**
@@ -113,6 +111,12 @@ export default class extends Controller {
         if (this.hasDefilantTarget && !this.defilementRail) {
             this.defilementRail = new DefilementRail(this.element, this.defilantTarget);
         }
+        // Les outils reviennent au rail AUSSITÔT qu'un espace se dégage : la fenêtre change de
+        // hauteur (ici) ; la sélection change les boutons (organizeButtons).
+        if (this.hasDefilantTarget && !this.observateurOutils && typeof ResizeObserver !== 'undefined') {
+            this.observateurOutils = new ResizeObserver(() => this._placerLesOutils());
+            this.observateurOutils.observe(this.defilantTarget);
+        }
 
         this.initializeToolbarState();
         this.setupEventListeners();
@@ -153,6 +157,84 @@ export default class extends Controller {
         this.menuPlus?.fermer({ rendreLeFocus: false });
         this.defilementRail?.detruire();
         this.defilementRail = null;
+        this.observateurOutils?.disconnect();
+        this.observateurOutils = null;
+    }
+
+    /**
+     * LES OUTILS DE LA RUBRIQUE, AU RAIL AUTANT QU'IL EN TIENT (décision de Serge, 2026-10-28).
+     *
+     * Sélectionner tout, Actualiser, Paramètres, Quitter : les premiers qui tiennent sont au rail,
+     * les autres dans « Plus », qui disparaît quand tous tiennent. La règle vit dans
+     * rail-outils.js ; ici, on MESURE et on applique. `base` exclut ce que la règle fait varier
+     * (les outils, « Plus ») : elle ne peut pas osciller.
+     * @private
+     */
+    _placerLesOutils() {
+        if (!this.hasOutilsRailTarget || !this.hasDefilantTarget || !this.hasMenuPlusTarget || !this.hasPiedRailTarget) return;
+        const zone = this.defilantTarget;
+        const disponible = zone.clientHeight;
+        if (!disponible) return; // onglet en arrière-plan : on mesurera à l'affichage
+
+        const style = getComputedStyle(zone);
+        const ecart = parseFloat(style.rowGap) || 0;
+        const hauteur = (e) => {
+            const s = getComputedStyle(e);
+            return e.getBoundingClientRect().height + (parseFloat(s.marginTop) || 0) + (parseFloat(s.marginBottom) || 0);
+        };
+        // Tout ce qui précède le pied (actions), puis l'écart et le séparateur du pied : c'est la
+        // part que la règle ne fait pas varier. Le reste du pied — outils et « Plus » — est ce
+        // qu'elle décide.
+        const pied = this.piedRailTarget;
+        const presents = [...zone.children].filter((e) => e !== pied && getComputedStyle(e).display !== 'none');
+        const separateur = pied.querySelector(':scope > .toolbar-separator');
+        const base = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0)
+            + presents.reduce((total, e) => total + hauteur(e), 0) + ecart * presents.length
+            + (separateur ? hauteur(separateur) : 0);
+        // La hauteur d'un bouton du rail, mesurée sur un bouton affiché, puis gardée.
+        const modele = [...zone.querySelectorAll('button')].find((b) => !this.menuPlusTarget.contains(b) && b.offsetHeight > 0);
+        if (modele) this.hauteurBouton = modele.offsetHeight;
+
+        const outils = [...this.outilsRailTarget.querySelectorAll('[data-outil]')];
+        const auRail = outilsAuRail({ disponible, base, bouton: (this.hauteurBouton || 0) + ecart, nombre: outils.length });
+        if (auRail === null || auRail === this.outilsAuRail) return;
+        this.outilsAuRail = auRail;
+
+        // Le focus est-il sur un outil qui va changer de place ? On le suivra.
+        const actif = this.element.contains(document.activeElement) ? document.activeElement : null;
+
+        // Au rail : les premiers ; dans « Plus » : les autres. Un seul des deux exemplaires
+        // d'un outil est affiché (`style.display` : la feuille de style l'emporterait sur `hidden`).
+        // Les deux exemplaires se reconnaissent par leur `data-outil`, jamais par leur rang.
+        const rang = (e) => Number(e.dataset.outil);
+        outils.forEach((bouton) => { bouton.style.display = rang(bouton) < auRail ? '' : 'none'; });
+        this.outilsRailTarget.style.display = auRail > 0 ? '' : 'none';
+        const entrees = [...this.menuPlusTarget.querySelectorAll('[data-outil]')];
+        entrees.forEach((entree) => { entree.style.display = rang(entree) < auRail ? 'none' : ''; });
+        // Le séparateur ne précède Quitter dans « Plus » que si d'autres outils y restent.
+        this.separateurPlusTarget.style.display = auRail < outils.length - 1 ? '' : 'none';
+        const tousAuRail = auRail === outils.length;
+        if (tousAuRail) this.menuPlus?.fermer({ rendreLeFocus: false });
+        this.btplusTarget.style.display = tousAuRail ? 'none' : '';
+
+        // LE FOCUS SUIT L'OUTIL : masqué sous le clavier, il tombait sur la page. On le pose sur
+        // l'autre exemplaire (au rail), ou sur « Plus » quand l'outil y est parti.
+        if (actif && actif.getClientRects().length === 0) {
+            const outil = actif.dataset.outil ?? this.dernierOutil;
+            const pendant = outil !== undefined ? outils.find((b) => b.dataset.outil === String(outil)) : null;
+            const cible = [pendant, this.btplusTarget, ...this._boutonsDuRail()].find((b) => b && b.getClientRects().length > 0);
+            cible?.focus({ preventScroll: true });
+        }
+        // Les boutons ont bougé : une bulle ouverte désignerait un autre bouton.
+        fermerInfobulle(this.element);
+
+        this.barreActions?.rafraichirNavigation();
+        this.defilementRail?.marquer();
+    }
+
+    /** Les boutons du rail (hors menus). @private */
+    _boutonsDuRail() {
+        return [...this.defilantTarget.querySelectorAll('button')].filter((b) => !this.menuPlusTarget.contains(b));
     }
 
     /**
@@ -243,6 +325,10 @@ export default class extends Controller {
         // contextuel (actions-groupees.js#actionsVisibles) — portées `sans_selection`,
         // `multi` ou sélection unique, puis la condition de chaque action.
         this.updateSpecificActionButtons(actionsVisibles(canvasParams.attribute_actions, this.selectos));
+        // Les boutons d'action ont pu changer : une bulle ouverte désignerait un autre bouton.
+        fermerInfobulle(this.element);
+        // La sélection change les boutons : les outils gagnent ou cèdent leur place au rail.
+        this._placerLesOutils();
     }
 
     /**
@@ -297,7 +383,8 @@ export default class extends Controller {
      * @private
      */
     initializeToolbarState() {
-        // Ces boutons doivent toujours rester actifs et visibles.
+        // Les entrées de « Plus » : toutes affichées ici ; la place des outils (rail ou « Plus »)
+        // se décide ensuite, d'après la hauteur (_placerLesOutils).
         this.toggleButton(this.btquitterTarget, true);
         this.toggleButton(this.btparametresTarget, true);
         this.toggleButton(this.btrechargerTarget, true);
@@ -312,6 +399,9 @@ export default class extends Controller {
         // Les actions spécifiques sont aussi cachées par défaut.
         this.toggleButton(this.specificActionsSeparatorTarget, false);
         this.specificActionsContainerTarget.innerHTML = '';
+
+        // La place des outils de la rubrique se décide à nouveau (rail-outils.js).
+        this.outilsAuRail = null;
 
         // Un seul arrêt de tabulation dans la barre, posé dès l'affichage.
         this.barreActions.rafraichirNavigation();
@@ -330,6 +420,8 @@ export default class extends Controller {
             event.preventDefault();
             return;
         }
+        // Le dernier outil joué : si la décision du rail le déplace, le focus le suivra.
+        if (button.dataset.outil !== undefined) this.dernierOutil = button.dataset.outil;
         const eventName = button.dataset.toolbarEventNameParam;
 
         if (!eventName) {
@@ -371,10 +463,11 @@ export default class extends Controller {
         // On affiche ou masque le séparateur en fonction de la présence d'actions
         this.toggleButton(this.specificActionsSeparatorTarget, actions.length > 0);
 
-        // REGROUPEMENT PAR FAMILLE, et au-delà de TOOLBAR_MAX_ACTIONS_EN_LIGNE entrées,
-        // le surplus rejoint « Autres actions » : la barre du workspace partage sa ligne
-        // avec les actions CRUD, elle doit garder une largeur prévisible.
-        this.barreActions.afficher(actions, { maxInline: TOOLBAR_MAX_ACTIONS_EN_LIGNE });
+        // REGROUPEMENT PAR FAMILLE, SANS PLAFOND (décision de Serge, 2026-10-28). Le plafond
+        // de quatre entrées repliait le surplus dans « Autres actions », un second « ⋮ » qu'on
+        // confondait avec « Plus ». Il tenait à l'ancienne barre horizontale, qui partageait sa
+        // ligne avec la recherche ; le rail vertical a la place, et défile en dernier recours.
+        this.barreActions.afficher(actions);
     }
 
     /**

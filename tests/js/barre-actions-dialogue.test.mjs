@@ -41,9 +41,12 @@ test('les deux barres passent par le même rendu', () => {
     }
 });
 
-test('le dialogue ne plafonne pas ses actions', () => {
+test('ni le dialogue ni le rail ne plafonnent leurs actions', () => {
     assert.match(dialogue, /this\.barreActions\.afficher\(visibles\);/);
-    assert.match(toolbar, /this\.barreActions\.afficher\(actions, \{ maxInline: TOOLBAR_MAX_ACTIONS_EN_LIGNE \}\);/);
+    // Le rail de la colonne 3 non plus (2026-10-28) : son « Autres actions » était un second
+    // « ⋮ », confondu avec « Plus ». Le rail a la place, et défile en dernier recours.
+    assert.match(toolbar, /this\.barreActions\.afficher\(actions\);/);
+    assert.doesNotMatch(toolbar, /maxInline/);
 });
 
 test('le selecto de la fiche a les champs de celui d’une ligne de liste', () => {

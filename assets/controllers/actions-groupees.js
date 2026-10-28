@@ -49,12 +49,6 @@ export function actionsVisibles(actions, selection) {
     });
 }
 
-/** Libellé du groupe de débordement (au-delà du seuil d'entrées en ligne). */
-export const GROUPE_DEBORDEMENT = 'Autres actions';
-
-/** Icône du groupe de débordement (alias IconCanvasProvider). */
-export const ICONE_DEBORDEMENT = 'action:options';
-
 /**
  * @typedef {{type: 'action', action: object}} EntreeAction
  * @typedef {{type: 'groupe', label: string, icon: string, actions: object[]}} EntreeGroupe
@@ -63,13 +57,13 @@ export const ICONE_DEBORDEMENT = 'action:options';
 /**
  * Regroupe les actions par famille, dans l'ordre de première apparition.
  *
+ * Aucun plafond : le repli « Autres actions » a été retiré (2026-10-28) — un second « ⋮ »,
+ * confondu avec « Plus » dans le rail de la colonne 3, qui a la place et défile au besoin.
+ *
  * @param {object[]} actions Actions déjà filtrées (sélection + conditions).
- * @param {{maxInline?: number}} [options] `maxInline` = nombre maximal d'entrées
- *        affichées en ligne ; au-delà, le surplus rejoint « Autres actions ».
- *        0 ou absent = pas de plafond (cas du menu contextuel, qui défile).
  * @returns {(EntreeAction|EntreeGroupe)[]}
  */
-export function grouperActions(actions, { maxInline = 0 } = {}) {
+export function grouperActions(actions) {
     const entrees = [];
     const parFamille = new Map();
 
@@ -94,32 +88,11 @@ export function grouperActions(actions, { maxInline = 0 } = {}) {
 
     // Un groupe d'un seul membre coûte un clic de plus pour rien : on le remet à plat.
     // Cela arrive naturellement quand les conditions n'en laissent qu'un visible.
-    const aplaties = entrees.map((entree) => (
+    return entrees.map((entree) => (
         entree.type === 'groupe' && entree.actions.length === 1
             ? { type: 'action', action: entree.actions[0] }
             : entree
     ));
-
-    if (!maxInline || aplaties.length <= maxInline) return aplaties;
-
-    // DÉBORDEMENT : la barre reste lisible quel que soit le nombre d'actions
-    // déclarées — la dernière place est réservée à un menu « Autres actions ».
-    const gardees = aplaties.slice(0, maxInline - 1);
-    const debordement = { type: 'groupe', label: GROUPE_DEBORDEMENT, icon: ICONE_DEBORDEMENT, actions: [] };
-    aplaties.slice(maxInline - 1).forEach((entree) => {
-        if (entree.type === 'action') {
-            debordement.actions.push(entree.action);
-            return;
-        }
-        // Une famille qui déborde garde son nom en préfixe : sans lui, « Proroger »
-        // et « Annuler » se retrouveraient orphelines au milieu d'actions étrangères.
-        entree.actions.forEach((action) => {
-            debordement.actions.push({ ...action, label: `${entree.label} · ${action.label}` });
-        });
-    });
-    gardees.push(debordement);
-
-    return gardees;
 }
 
 /**

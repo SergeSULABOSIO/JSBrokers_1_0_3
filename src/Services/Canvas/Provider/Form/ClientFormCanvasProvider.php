@@ -46,10 +46,11 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
             ],
             // ── LES ACTIONS SE RANGENT EN FAMILLES ──────────────────────────────────
             //
-            // La barre d'outils n'affiche que QUATRE entrées en ligne ; au-delà, le
-            // surplus tombe dans « Autres actions ». Un client rattaché à un portefeuille
-            // et doté d'un lien SOA en présentait sept à plat : les dernières étaient
-            // déjà enfouies, et toute action nouvelle le serait d'office.
+            // Une rubrique garde au plus QUATRE entrées d'actions (le rail d'outils de la
+            // colonne 3 s'allonge avec chacune, et défile au-delà de sa hauteur ; l'ancienne
+            // barre horizontale repliait le surplus dans « Autres actions », retiré le
+            // 2026-10-28). Un client rattaché à un portefeuille et doté d'un lien SOA en
+            // présentait sept à plat, et toute action nouvelle aurait allongé la liste.
             //
             // Deux familles ramènent la barre à trois entrées lisibles. Le regroupement
             // est la SOURCE UNIQUE partagée par la barre et le clic droit (voir
@@ -144,7 +145,7 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                 //
                 // Ces deux gestes étaient d'abord à plat, la piste étant seule de son
                 // espèce. À deux, ils remplissaient la barre : quatre entrées, soit le
-                // plafond exact au-delà duquel le surplus tombe dans « Autres actions ».
+                // budget exact d'une rubrique (ClientCreerPisteActionTest).
                 // La famille leur rend cette place, et elle en fait une CONVENTION : toute
                 // action de création future rejoint « Créer… », avec la même icône
                 // `action:add` — celle que porte déjà le bouton « Ajouter » des

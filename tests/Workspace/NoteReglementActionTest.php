@@ -237,8 +237,9 @@ class NoteReglementActionTest extends WebTestCase
     }
 
     /**
-     * LA BARRE D'OUTILS N'AFFICHE QUE QUATRE ENTRÉES EN LIGNE ; au-delà, le surplus tombe
-     * dans « Autres actions ». Depuis « Valider la note », les trois gestes sur la pièce
+     * UNE RUBRIQUE GARDE AU PLUS QUATRE ENTRÉES D'ACTIONS : le rail de la colonne 3 n'a plus
+     * de repli « Autres actions » (2026-10-28), mais chaque entrée l'allonge, et au-delà de sa
+     * hauteur il défile. Depuis « Valider la note », les trois gestes sur la pièce
      * (visualiser, imprimer, télécharger) forment une famille : trois entrées en tout.
      */
     public function testLaRubriqueResteSousLePlafondDeLaBarre(): void
@@ -254,7 +255,7 @@ class NoteReglementActionTest extends WebTestCase
         }
 
         self::assertLessThanOrEqual(4, count($entrees), sprintf(
-            'Au-delà de quatre entrées, le surplus quitte la barre. Entrées : %s.',
+            'Au-delà de quatre entrées, le rail s\'allonge et défile. Entrées : %s.',
             implode(', ', array_keys($entrees)),
         ));
     }

@@ -2,6 +2,7 @@ import { grouperActions } from './actions-groupees.js';
 import { positionnerMenu } from './menu-flottant.js';
 import { CircuitIcones } from './circuit-icones.js';
 import { indexVise } from './barre-clavier.js';
+import { fermerInfobulle } from './infobulle-moteur.js';
 
 /**
  * BARRE D'ACTIONS SPÉCIFIQUES — rendu PARTAGÉ par la barre d'outils du workspace et
@@ -59,15 +60,14 @@ export class BarreActions {
      * Remplace le contenu de la barre par les actions données.
      *
      * @param {object[]} actions Actions déjà filtrées par la surface (sélection, conditions).
-     * @param {{maxInline?: number}} [options] Plafond d'entrées en ligne (0 = aucun).
      */
-    afficher(actions, { maxInline = 0 } = {}) {
+    afficher(actions) {
         this.fermerMenu();
         this.conteneur.innerHTML = '';
 
         // REGROUPEMENT PAR FAMILLE : une famille d'actions (les mouvements d'une
         // police, par exemple) devient UN bouton qui déploie ses membres.
-        grouperActions(actions, { maxInline }).forEach((entree) => {
+        grouperActions(actions).forEach((entree) => {
             this.conteneur.appendChild(
                 entree.type === 'groupe' ? this._creerBoutonGroupe(entree) : this._creerBoutonAction(entree.action),
             );
@@ -304,6 +304,9 @@ export class BarreActions {
 
     /** Ouvre le menu d'une famille et arme la fermeture (clic extérieur / Échap). @private */
     _ouvrirMenu(button, menu) {
+        // Deux surfaces flottantes ne se recouvrent pas : la bulle du bouton (à droite dans le
+        // rail, comme le menu) part, et une bulle en attente ne surgira pas.
+        fermerInfobulle();
         menu.hidden = false;
         button.setAttribute('aria-expanded', 'true');
         this.menuOuvert = { button, menu };

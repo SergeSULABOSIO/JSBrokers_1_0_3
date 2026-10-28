@@ -2,10 +2,10 @@
     Barre d'outils de la rubrique : un RAIL vertical à gauche de la liste (refonte de la
     colonne 3, 2026-10-27). Pilotée par le contrôleur Stimulus `toolbar`.
 
-    Au rail : les actions sur la sélection (Supprimer compris, toujours visible et
-    libellé), les actions de l'entité, puis « Plus ». Dans « Plus » : Sélectionner tout,
-    Actualiser, Paramètres, Quitter — regroupement PERMANENT (décision de Serge), chacun
-    ayant un double à l'écran (case de l'entête du tableau, × de l'onglet).
+    En haut : les actions sur la sélection (Supprimer compris, toujours visible), puis les
+    actions de l'entité. En bas, ANCRÉS : les outils de la rubrique (Sélectionner tout,
+    Actualiser, Paramètres, Quitter), au rail autant qu'il en tient, les autres dans « Plus »
+    (décision de Serge, 2026-10-28).
 #}
 {% set idMenuPlus = 'menu-plus-' ~ random() %}
 <div
@@ -14,8 +14,10 @@
   aria-orientation="vertical"
   aria-label="Barre d'outils de la liste"
   data-controller="toolbar infobulle"
-  {# L'infobulle unique (chantier 3) : le `title` des boutons. #}
-  data-infobulle-source-value="titre" data-infobulle-placement-value="bouton"
+  {# L'infobulle unique (chantier 3) : le `title` des boutons, À DROITE du bouton (dessous,
+     elle recouvrait le bouton suivant du rail), après un DÉLAI D'INTENTION de 300 ms —
+     immédiate au focus clavier (décision de Serge, 2026-10-28). #}
+  data-infobulle-source-value="titre" data-infobulle-placement-value="droite" data-infobulle-delai-value="300"
   {# Valeur Stimulus Object : repli '{}' littéral (jamais `{}` Twig → json `[]`). #}
   data-toolbar-entity-form-canvas-value="{{ entityFormCanvas is defined and entityFormCanvas is not empty ? entityFormCanvas|json_encode : '{}' }}"
 >
@@ -79,9 +81,43 @@
         {# Les boutons sont injectés ici par le contrôleur Stimulus #}
     </div>
 
+    {# LE PIED DU RAIL, ANCRÉ EN BAS : les outils et « Plus » ne bougent pas quand la sélection
+       fait apparaître ou disparaître des actions au-dessus. « Sélectionner tout » est une
+       bascule : sans cet ancrage, le second clic tombait sur l'outil remonté à sa place —
+       parfois Quitter. #}
+    <div class="context-toolbar__pied" data-toolbar-target="piedRail">
     <div class="toolbar-separator" role="separator" aria-orientation="horizontal"></div>
 
-    {# Groupe 3 : « Plus » — un menu rendu par le serveur, ouvert par la coquille commune
+    {# Groupe 3 : LES OUTILS DE LA RUBRIQUE, AU RAIL AUTANT QU'IL EN TIENT (rail-outils.js) —
+       aussitôt qu'un espace se dégage, ils y reviennent, dans l'ordre ; ceux qui n'ont pas de
+       place restent dans « Plus », qui disparaît quand tous tiennent (décision de Serge,
+       2026-10-28). Chacun existe deux fois — bouton ici, entrée de « Plus » plus bas — avec le
+       MÊME geste et le même événement du Cerveau ; un seul des deux est affiché. #}
+    <div class="context-toolbar__groupe context-toolbar__outils" role="group" aria-label="Outils de la rubrique"
+         data-toolbar-target="outilsRail">
+        <button data-controller="ripple" data-action="click->toolbar#notify"
+                data-toolbar-event-name-param="ui:toolbar.select-all-request" data-outil="0"
+                class="btn btn-default" type="button" aria-label="Sélectionner tout" title="Sélectionner tout">
+            <twig:UX:Icon name="{{ resolve_icon_name('material-symbols:check-box') }}" class="toolbar-icon" aria-hidden="true" />
+        </button>
+        <button data-controller="ripple" data-action="click->toolbar#notify"
+                data-toolbar-event-name-param="ui:toolbar.refresh-request" data-outil="1"
+                class="btn btn-default" type="button" aria-label="Actualiser la liste" title="Actualiser">
+            <twig:UX:Icon name="{{ resolve_icon_name('ci:arrows-reload-01') }}" class="toolbar-icon" aria-hidden="true" />
+        </button>
+        <button data-controller="ripple" data-action="click->toolbar#notify"
+                data-toolbar-event-name-param="ui:toolbar.settings-request" data-outil="2"
+                class="btn btn-default" type="button" aria-label="Paramètres de la rubrique" title="Paramètres">
+            <twig:UX:Icon name="{{ resolve_icon_name('material-symbols:settings') }}" class="toolbar-icon" aria-hidden="true" />
+        </button>
+        <button data-controller="ripple" data-action="click->toolbar#notify"
+                data-toolbar-event-name-param="ui:toolbar.close-request" data-outil="3"
+                class="btn btn-icon-danger" type="button" aria-label="Quitter la rubrique" title="Quitter la rubrique">
+            <twig:UX:Icon name="{{ resolve_icon_name('hugeicons:logout-04') }}" class="toolbar-icon" aria-hidden="true" />
+        </button>
+    </div>
+
+    {# Groupe 4 : « Plus » — un menu rendu par le serveur, ouvert par la coquille commune
        (menu-contextuel.js), à DROITE du bouton. Chaque entrée garde le geste et l'événement
        qu'elle avait au rail : seul l'endroit où on la trouve change. #}
     <button
@@ -97,34 +133,35 @@
         title="Plus">
         <twig:UX:Icon name="{{ resolve_icon_name('action:options') }}" class="toolbar-icon" aria-hidden="true" />
     </button>
+    </div>
     <div id="{{ idMenuPlus }}" class="context-menu jsb-menu-plus" role="menu" aria-label="Plus d'outils"
          data-toolbar-target="menuPlus" hidden>
         <button type="button" role="menuitem" tabindex="-1"
                 data-action="click->toolbar#notify"
                 data-toolbar-event-name-param="ui:toolbar.select-all-request"
-                data-toolbar-target="bttoutcocher">
+                data-toolbar-target="bttoutcocher" data-outil="0">
             <span class="context-menu-icon" aria-hidden="true"><twig:UX:Icon name="{{ resolve_icon_name('material-symbols:check-box') }}" class="jsb-menu-plus__icone" /></span>
             <span class="flex-grow-1">Sélectionner tout</span>
         </button>
         <button type="button" role="menuitem" tabindex="-1"
                 data-action="click->toolbar#notify"
                 data-toolbar-event-name-param="ui:toolbar.refresh-request"
-                data-toolbar-target="btrecharger">
+                data-toolbar-target="btrecharger" data-outil="1">
             <span class="context-menu-icon" aria-hidden="true"><twig:UX:Icon name="{{ resolve_icon_name('ci:arrows-reload-01') }}" class="jsb-menu-plus__icone" /></span>
             <span class="flex-grow-1">Actualiser</span>
         </button>
         <button type="button" role="menuitem" tabindex="-1"
                 data-action="click->toolbar#notify"
                 data-toolbar-event-name-param="ui:toolbar.settings-request"
-                data-toolbar-target="btparametres">
+                data-toolbar-target="btparametres" data-outil="2">
             <span class="context-menu-icon" aria-hidden="true"><twig:UX:Icon name="{{ resolve_icon_name('material-symbols:settings') }}" class="jsb-menu-plus__icone" /></span>
             <span class="flex-grow-1">Paramètres</span>
         </button>
-        <div role="separator" class="separator"></div>
+        <div role="separator" class="separator" data-toolbar-target="separateurPlus"></div>
         <button type="button" role="menuitem" tabindex="-1" class="is-danger"
                 data-action="click->toolbar#notify"
                 data-toolbar-event-name-param="ui:toolbar.close-request"
-                data-toolbar-target="btquitter">
+                data-toolbar-target="btquitter" data-outil="3">
             <span class="context-menu-icon" aria-hidden="true"><twig:UX:Icon name="{{ resolve_icon_name('hugeicons:logout-04') }}" class="jsb-menu-plus__icone" /></span>
             <span class="flex-grow-1">Quitter la rubrique</span>
         </button>

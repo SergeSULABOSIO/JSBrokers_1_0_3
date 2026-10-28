@@ -1058,7 +1058,19 @@ textarea:hover,
    ils rétrécissaient au lieu de laisser la zone défiler — mesuré : « Plus » à 13 px de haut
    au lieu de 35, à 480 px de fenêtre. */
 .context-toolbar__defilant > *,
-.context-toolbar--rail .context-toolbar__groupe > * { flex-shrink: 0; }
+.context-toolbar--rail .context-toolbar__groupe > *,
+.context-toolbar__pied > * { flex-shrink: 0; }
+/* LE PIED DU RAIL, ANCRÉ EN BAS : séparateur, outils de la rubrique, « Plus ». Il ne bouge pas
+   quand la sélection fait apparaître ou disparaître des actions au-dessus — « Sélectionner
+   tout » est une bascule, et son second clic tombait sinon sur l'outil remonté à sa place
+   (parfois Quitter). Quand le rail défile, l'ancrage s'efface (la marge automatique vaut 0). */
+.context-toolbar__pied {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
 /* Les flèches, EN SURCOUCHE (elles ne prennent aucune place), avec leur fondu. */
 .context-toolbar__fleche {
     position: absolute;
@@ -1090,6 +1102,29 @@ textarea:hover,
    rail en masquait le début. */
 .jsb-zone-liste [data-view-manager-target="tabContentContainer"] > :not(template):not(:has(> .jsb-list-manager)) {
     padding-left: var(--jsb-rail-w);
+}
+/* LE SURVOL D'UN BOUTON DU RAIL (décision de Serge, 2026-10-28) : il grossit légèrement en
+   avançant vers la droite, en surimpression — il « sort » vers la liste, du côté où son
+   infobulle apparaît. Il grandit DEPUIS SON BORD GAUCHE : ce bord ne bouge pas (une
+   translation le déplaçait sous un pointeur posé dessus, et le survol clignotait), et le
+   bouton reste entier dans la zone du rail (4 + 37,6 px sur 43). Un bouton inactif
+   (aria-disabled) ne bouge pas : il dit pourquoi, il ne promet rien ; un bouton focalisé au
+   clavier non plus, son contour serait rogné. Les boutons rouges (Supprimer, Quitter)
+   gardent une ombre de leur couleur. */
+.context-toolbar--rail .btn {
+    transform-origin: left center;
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, background-color 0.15s ease-in-out;
+}
+.context-toolbar--rail .btn:not([aria-disabled="true"]):not(:focus-visible):hover {
+    transform: scale(1.08);
+    box-shadow: 0 2px 6px var(--cobalt-shadow, rgba(0, 71, 171, 0.25));
+}
+.context-toolbar--rail .btn-icon-danger:not([aria-disabled="true"]):not(:focus-visible):hover {
+    box-shadow: 0 2px 6px rgba(220, 53, 69, 0.25);
+}
+@media (prefers-reduced-motion: reduce) {
+    .context-toolbar--rail .btn { transition: none; }
+    .context-toolbar--rail .btn:not([aria-disabled="true"]):not(:focus-visible):hover { transform: none; }
 }
 .context-toolbar--rail .context-toolbar__groupe {
     display: flex;

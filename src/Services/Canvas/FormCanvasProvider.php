@@ -102,11 +102,11 @@ class FormCanvasProvider
      * fiche avant de pouvoir y déposer quoi que ce soit — sans quoi « attacher » n'aurait
      * pas de destinataire.
      *
-     * LES DEUX SONT REPLIÉES SOUS UNE FAMILLE. La barre n'affiche que quatre entrées en
-     * ligne et renvoie le surplus dans « Autres actions » : deux actions transverses de
-     * plus auraient repoussé les actions MÉTIER des rubriques déjà chargées (les
-     * mouvements d'une police, par exemple) dans un menu de débordement. Une entrée
-     * « Pièces jointes » qui déploie les deux coûte une place au lieu de deux.
+     * LES DEUX SONT REPLIÉES SOUS UNE FAMILLE. Une rubrique garde au plus quatre entrées
+     * d'actions (le rail d'outils s'allonge avec chacune, et défile au-delà de sa hauteur) :
+     * deux actions transverses de plus auraient allongé le rail des rubriques déjà chargées
+     * (les mouvements d'une police, par exemple). Une entrée « Pièces jointes » qui déploie
+     * les deux coûte une place au lieu de deux.
      */
     private function injecterActionsDocuments(array &$canvas, string $fqcn, ?int $idEntreprise): void
     {
