@@ -1003,8 +1003,15 @@ textarea:hover,
     display: flex;
     flex-direction: column;
     container: jsb-zone / inline-size;
-    /* 34,8 px de bouton + sa marge : la colonne que chaque liste réserve au rail. */
-    --jsb-rail-w: 44px;
+    /* LE RETRAIT GAUCHE DU RAIL (Serge, 2026-10-28) : la poignée de la colonne 2, centrée sur
+       ce bord, y déborde de sa demi-largeur (11 px) et sa zone de clic de 11 px encore — mesuré,
+       jusqu'à 22 px dans le rail : Modifier, Ouvrir, Supprimer ne répondaient plus sur leur bord
+       gauche. Le bouton, centré dans la place qui reste, commence 4 px après le retrait : 19 + 4
+       = 23 px, juste au-delà des 22 (Serge, 2026-10-28 : « trop grand », réduit de 24 à 19 px —
+       au plus près, sans rouvrir le chevauchement). Lu par DispositionColonneTroisTest. */
+    --jsb-rail-retrait: 19px;
+    /* 34,8 px de bouton + sa marge, plus le retrait : la colonne que chaque liste réserve au rail. */
+    --jsb-rail-w: calc(44px + var(--jsb-rail-retrait));
     /* UNE hauteur pour la barre du bas ET le pied du rail : ils ne peuvent pas diverger. */
     --jsb-barre-bas-h: 40px;
 }
@@ -1047,7 +1054,8 @@ textarea:hover,
     /* 2 px entre deux boutons : le pire cas courant tient dans 595 px de haut avec
        « Plus » (calcul du plan, sur les hauteurs mesurées). */
     gap: 2px;
-    padding: 4px 0;
+    /* Les boutons commencent APRÈS le retrait (la zone de clic de la poignée de la colonne 2). */
+    padding: 4px 0 4px var(--jsb-rail-retrait);
     overflow-x: hidden;
     overflow-y: auto;
     scrollbar-width: none;
@@ -1074,7 +1082,7 @@ textarea:hover,
 /* Les flèches, EN SURCOUCHE (elles ne prennent aucune place), avec leur fondu. */
 .context-toolbar__fleche {
     position: absolute;
-    left: 0;
+    left: var(--jsb-rail-retrait);
     right: 0;
     /* 24 px : la taille minimale d'une cible (WCAG 2.5.8). */
     height: 24px;

@@ -178,7 +178,7 @@ class DispositionColonneTroisTest extends TestCase
         $zone = self::regle('.jsb-zone-liste');
         self::assertMatchesRegularExpression('/position:\s*relative;/', $zone);
         self::assertMatchesRegularExpression('/--jsb-barre-bas-h:\s*\d/', $zone);
-        self::assertMatchesRegularExpression('/--jsb-rail-w:\s*\d/', $zone);
+        self::assertMatchesRegularExpression('/--jsb-rail-w:\s*(?:\d|calc\()/', $zone);
 
         $rail = self::regle('.context-toolbar--rail');
         self::assertMatchesRegularExpression('/position:\s*absolute;/', $rail);
@@ -283,6 +283,35 @@ class DispositionColonneTroisTest extends TestCase
             '/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.context-toolbar--rail \.btn\s*\{\s*transition:\s*none;\s*\}\s*\.context-toolbar--rail \.btn:not\(\[aria-disabled="true"\]\):not\(:focus-visible\):hover\s*\{\s*transform:\s*none;/',
             $feuille,
         );
+    }
+
+    /**
+     * LA POIGNÉE DE LA COLONNE 2 NE RECOUVRE AUCUN BOUTON DU RAIL (Serge, 2026-10-28).
+     *
+     * Centrée sur le bord gauche du rail, la poignée « Afficher / Masquer le panneau » déborde
+     * de sa demi-largeur, et sa zone de clic s'agrandit encore de son `::after` (cible WCAG) :
+     * mesuré, jusqu'à 22 px dans le rail — Modifier, Ouvrir, Supprimer ne répondaient plus sur
+     * leur bord gauche. Le rail se retire d'autant, plus une marge ; les dimensions sont LUES
+     * dans la feuille de la poignée, pour que le retrait les suive.
+     */
+    public function testLaPoigneeDeLaColonne2NeRecouvreAucunBoutonDuRail(): void
+    {
+        $menu = (string) preg_replace('#/\*.*?\*/#s', '', (string) file_get_contents(__DIR__ . '/../../assets/styles/interactive-menu.css'));
+        preg_match('/\.ws-edge-handle\s*\{[^}]*?\bwidth:\s*(\d+)px;/', $menu, $largeur);
+        preg_match('/\.ws-edge-handle::after\s*\{[^}]*?inset:\s*-(\d+)px;/', $menu, $agrandi);
+        self::assertNotEmpty($largeur);
+        self::assertNotEmpty($agrandi);
+        $empietement = (int) $largeur[1] / 2 + (int) $agrandi[1];
+
+        preg_match('/--jsb-rail-retrait:\s*(\d+)px;/', self::regle('.jsb-zone-liste'), $retrait);
+        self::assertNotEmpty($retrait, 'Le rail déclare son retrait.');
+        // Le bouton (34,8 px), centré dans la place qui reste (44 px moins la bordure), commence
+        // 4 px après le retrait : il doit commencer AU-DELÀ de la zone de clic de la poignée.
+        self::assertGreaterThanOrEqual($empietement + 1, (int) $retrait[1] + 4, 'Le bouton commence après la zone de clic de la poignée.');
+        // Le retrait s'AJOUTE à la largeur du rail (la colonne que la liste lui réserve suit),
+        // et les boutons commencent après lui.
+        self::assertMatchesRegularExpression('/--jsb-rail-w:\s*calc\(\s*\d+px\s*\+\s*var\(--jsb-rail-retrait\)\s*\);/', self::regle('.jsb-zone-liste'));
+        self::assertMatchesRegularExpression('/padding:\s*\d+px\s+0\s+\d+px\s+var\(--jsb-rail-retrait\);/', self::regle('.context-toolbar__defilant'));
     }
 
     /** Un panneau sans liste (squelette, échec) se décale du rail au lieu d'être masqué. */
