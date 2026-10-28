@@ -1,0 +1,108 @@
+{
+  "_lisez-moi": "LA LIGNE DES FILTRES ACTIFS, deux écritures, un seul jeu de cas : search-bar-filtres.js#filtresActifs (tests/js/ligne-des-filtres-parite.test.mjs) et App\\Services\\Search\\LigneDesFiltres::calculer (tests/Services/LigneDesFiltresPariteTest.php). L'écran l'affiche, Ket l'annonce : modifier l'une impose de modifier l'autre.",
+  "definitions": [
+    { "Nom": "refPolice", "Display": "Réf. Police", "Type": "Text" },
+    { "Nom": "client", "Display": "Client", "Type": "Relation" },
+    { "Nom": "endingAt", "Display": "Échéance", "Type": "DateTimeRange" },
+    { "Nom": "__mon_portefeuille__", "Display": "Mon portefeuille", "Type": "Relation" },
+    { "Nom": "actif", "Display": "Actif", "Type": "Boolean", "Valeur": { "1": "Oui", "0": "Non" } },
+    { "Nom": "primeTotale", "Display": "Prime totale", "Type": "Number" }
+  ],
+  "cas": [
+    {
+      "nom": "aucun filtre : aucune ligne",
+      "criteres": {},
+      "groupes": [{ "cle": "__prime__", "titre": "Prime", "options": { "payee": "Payée", "impayee": "Impayée", "": "Toutes" } }],
+      "attendu": []
+    },
+    {
+      "nom": "les défauts des Tranches : le chip d'abord, « par défaut », puis Mon portefeuille",
+      "criteres": {
+        "__mon_portefeuille__": { "operator": "=", "value": 414238, "label": "Portefeuille A" },
+        "__prime__": { "operator": "=", "value": "impayee", "label": "La prime est impayée" }
+      },
+      "defauts": {
+        "__prime__": { "operator": "=", "value": "impayee", "label": "La prime est impayée" },
+        "__mon_portefeuille__": { "operator": "=", "value": 414238, "label": "Portefeuille A" }
+      },
+      "groupes": [
+        { "cle": "__prime__", "titre": "Prime", "options": { "payee": "Payée", "impayee": "Impayée", "": "Toutes" } },
+        { "cle": "__echeance__", "titre": "Échéance", "options": { "retard": "En retard", "": "Toutes" } }
+      ],
+      "attendu": [
+        { "cle": "__prime__", "texte": "Prime : Impayée", "parDefaut": true, "retirable": true },
+        { "cle": "__mon_portefeuille__", "texte": "Mon portefeuille : Portefeuille A", "parDefaut": true, "retirable": true }
+      ]
+    },
+    {
+      "nom": "un chip hors des défauts, un chip sur « Toutes »",
+      "criteres": { "__prime__": { "value": "payee" }, "__echeance__": { "value": "" } },
+      "defauts": { "__prime__": { "value": "impayee" } },
+      "groupes": [
+        { "cle": "__prime__", "titre": "Prime", "options": { "payee": "Payée", "impayee": "Impayée", "": "Toutes" } },
+        { "cle": "__echeance__", "titre": "Échéance", "options": { "retard": "En retard", "": "Toutes" } }
+      ],
+      "attendu": [{ "cle": "__prime__", "texte": "Prime : Payée", "parDefaut": false, "retirable": true }]
+    },
+    {
+      "nom": "un groupe sans « Toutes » : son défaut se montre même absent, sans ×",
+      "criteres": {},
+      "groupes": [{ "cle": "__statut__", "titre": "Statut", "defaut": "souscrites", "options": { "souscrites": "Souscrites", "en_attente": "En attente" } }],
+      "attendu": [{ "cle": "__statut__", "texte": "Statut : Souscrites", "parDefaut": true, "retirable": false }]
+    },
+    {
+      "nom": "un groupe sans « Toutes », posé à une autre valeur",
+      "criteres": { "__statut__": { "value": "en_attente" } },
+      "groupes": [{ "cle": "__statut__", "titre": "Statut", "defaut": "souscrites", "options": { "souscrites": "Souscrites", "en_attente": "En attente" } }],
+      "attendu": [{ "cle": "__statut__", "texte": "Statut : En attente", "parDefaut": false, "retirable": true }]
+    },
+    {
+      "nom": "un critère imposé (congés) : lu, jamais retirable",
+      "criteres": { "__visibilite_conge__": { "value": "miennes", "label": "Mes demandes" } },
+      "imposes": ["__visibilite_conge__"],
+      "groupes": [],
+      "attendu": [{ "cle": "__visibilite_conge__", "texte": "__visibilite_conge__ : \"miennes\"", "parDefaut": true, "retirable": false }]
+    },
+    {
+      "nom": "un chip-sélecteur se lit par le nom porté par le critère",
+      "criteres": { "__beneficiaire__": { "value": "agent:12", "label": "Alice" } },
+      "groupes": [{ "cle": "__beneficiaire__", "titre": "Bénéficiaire", "options": { "": "Tous" } }],
+      "attendu": [{ "cle": "__beneficiaire__", "texte": "Bénéficiaire : Alice", "parDefaut": false, "retirable": true }]
+    },
+    {
+      "nom": "la maille de lecture n'apparaît jamais",
+      "criteres": { "__virement__": { "value": "detail" } },
+      "groupes": [{ "cle": "__virement__", "titre": "Affichage", "presentation": true, "options": { "groupe": "Groupé", "detail": "Détail" } }],
+      "attendu": []
+    },
+    {
+      "nom": "chaque type de critère, dans l'ordre reçu ; une clé inconnue sert de libellé",
+      "criteres": {
+        "endingAt": { "from": "01/01/2026", "to": "31/01/2026" },
+        "refPolice": { "operator": "LIKE", "value": "POL-7" },
+        "client": { "value": "42", "label": "KIN AVIA" },
+        "actif": { "value": "1" },
+        "primeTotale": { "operator": ">=", "value": 1000 },
+        "champFantome": "abc"
+      },
+      "groupes": [],
+      "attendu": [
+        { "cle": "endingAt", "texte": "Échéance : du 01/01/2026 au 31/01/2026", "parDefaut": false, "retirable": true },
+        { "cle": "refPolice", "texte": "Réf. Police : \"POL-7\"", "parDefaut": false, "retirable": true },
+        { "cle": "client", "texte": "Client : KIN AVIA", "parDefaut": false, "retirable": true },
+        { "cle": "actif", "texte": "Actif : Oui", "parDefaut": false, "retirable": true },
+        { "cle": "primeTotale", "texte": "Prime totale >= 1000", "parDefaut": false, "retirable": true },
+        { "cle": "champFantome", "texte": "champFantome : \"abc\"", "parDefaut": false, "retirable": true }
+      ]
+    },
+    {
+      "nom": "les plages partielles",
+      "criteres": { "endingAt": { "from": "01/01/2026" }, "autre": { "to": "31/01/2026" } },
+      "groupes": [],
+      "attendu": [
+        { "cle": "endingAt", "texte": "Échéance : à partir du 01/01/2026", "parDefaut": false, "retirable": true },
+        { "cle": "autre", "texte": "autre : jusqu'au 31/01/2026", "parDefaut": false, "retirable": true }
+      ]
+    }
+  ]
+}

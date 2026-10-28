@@ -16,6 +16,8 @@ use App\Ai\Scope\AiScope;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\Search\AvenantEcheanceScope;
 use App\Services\Search\CotationSouscriptionScope;
+use App\Services\Search\CriteresParDefautDeListe;
+use App\Services\Search\LigneDesFiltres;
 use App\Services\Search\PisteTransformationScope;
 use App\Services\Search\PoliceDeLaTranche;
 use App\Services\Search\ProductionScope;
@@ -49,6 +51,10 @@ final class OuvrirRubriqueTool implements AiToolInterface, AiToolConditionnel
         // Un agent bénéficiaire n'est pas une rubrique : il se cherche à part.
         private readonly InviteRepository $inviteRepository,
         private readonly PartenaireRepository $partenaireRepository,
+        // CE QUE L'ÉCRAN MONTRE QUAND ON NE LUI DIT RIEN : ses critères par défaut, et la
+        // ligne des filtres qui les écrit — les mêmes sources que la liste (C2+).
+        private readonly CriteresParDefautDeListe $criteresParDefaut,
+        private readonly LigneDesFiltres $ligneDesFiltres,
     ) {
     }
 
@@ -401,19 +407,35 @@ final class OuvrirRubriqueTool implements AiToolInterface, AiToolConditionnel
                 $filtres[] = ReversementScope::libelle($cleReversement, (string) $criteresRubrique[$cleReversement]['value']);
             }
         }
-        // UN FILTRE QU'ON POSE SANS LE DIRE se lit comme une liste entière : la
-        // production a ses deux chips, et ils s'annoncent comme tous les autres.
-        // Le STATUT n'est jamais absent : sans demande, le serveur applique son défaut
-        // (`statutDemande`) — c'est un filtre comme un autre, il se dit « par défaut ».
-        if ($shortName === ProductionScope::ENTITE) {
-            $filtres[] = isset($criteresRubrique[ProductionScope::CLE_STATUT])
-                ? ProductionScope::libelle(ProductionScope::CLE_STATUT, (string) $criteresRubrique[ProductionScope::CLE_STATUT]['value'])
-                : ProductionScope::libelle(ProductionScope::CLE_STATUT, ProductionScope::statutDemande([])) . ' (par défaut)';
+        if ($shortName === ProductionScope::ENTITE && isset($criteresRubrique[ProductionScope::CLE_STATUT])) {
+            $filtres[] = ProductionScope::libelle(ProductionScope::CLE_STATUT, (string) $criteresRubrique[ProductionScope::CLE_STATUT]['value']);
         }
         if (isset($criteresRubrique[ProductionScope::CLE_TYPE])) {
             $filtres[] = ProductionScope::libelle(ProductionScope::CLE_TYPE, (string) $criteresRubrique[ProductionScope::CLE_TYPE]['value']);
         }
         $criteres += $criteresRubrique;
+
+        // UN FILTRE QU'ON POSE SANS LE DIRE se lit comme une liste entière. Ce que l'écran
+        // applique de lui-même s'annonce donc, avec le texte de SA ligne des filtres et la
+        // mention « par défaut » (refonte de la colonne 3, C2+) :
+        //  — sans critère transmis, la liste pose ses critères PAR DÉFAUT (tranches
+        //    impayées, mon portefeuille, avenants échus…) : Ket annonçait une rubrique
+        //    « ENTIÈRE » pendant que l'écran n'en montrait qu'une partie ;
+        //  — avec des critères, ils REMPLACENT les défauts ; reste le défaut d'un groupe sans
+        //    « Toutes » (le statut de la production), que le serveur applique toujours.
+        $classe = class_exists('App\\Entity\\' . $shortName) ? 'App\\Entity\\' . $shortName : $shortName;
+        if ($criteres === []) {
+            $defauts = $this->criteresParDefaut->pour($classe, (int) $scope->invite->getId(), $scope->entreprise);
+            $ligne = $this->ligneDesFiltres->pour($classe, $defauts, $defauts, array_keys($this->criteresParDefaut->imposes($classe, $scope->invite)));
+        } else {
+            $ligne = array_filter(
+                $this->ligneDesFiltres->pour($classe, $criteres),
+                static fn (array $filtre): bool => $filtre['parDefaut'] && !array_key_exists($filtre['cle'], $criteres),
+            );
+        }
+        foreach ($ligne as $filtre) {
+            $filtres[] = $filtre['texte'] . ($filtre['parDefaut'] ? ' (par défaut)' : '');
+        }
 
         return AiToolResult::ok(
             array_filter([
@@ -422,14 +444,22 @@ final class OuvrirRubriqueTool implements AiToolInterface, AiToolConditionnel
                 'filtres' => $filtres !== [] ? $filtres : null,
                 // DIS CE QUI EST À L'ÉCRAN, pas ce que tu espères y voir. Le modèle a
                 // annoncé « la rubrique a été ouverte » sur une liste qui ne portait pas
-                // son filtre : la note nomme désormais le filtre réellement posé.
+                // son filtre : la note nomme désormais le filtre réellement posé — défauts
+                // de la liste compris.
                 'note'    => $filtres === []
                     ? 'La rubrique s\'ouvre ENTIÈRE dans l\'espace de travail : aucun filtre n\'a été '
                         . 'transmis. Si ta réponse écrite ne porte que sur une partie des '
                         . 'enregistrements, ne dis PAS que la liste affichée est celle-là.'
                     : 'La rubrique s\'ouvre FILTRÉE sur : ' . implode(' · ', $filtres)
                         . '. Annonce ce filtre en une demi-phrase, pour que l\'utilisateur '
-                        . 'sache pourquoi l\'écran ne montre pas tout.',
+                        . 'sache pourquoi l\'écran ne montre pas tout.'
+                        // UN ONGLET DÉJÀ OUVERT EST RÉACTIVÉ TEL QUEL : sans critère transmis,
+                        // il garde ses filtres en cours, que Ket ne connaît pas.
+                        . ($criteres === []
+                            ? ' Si cette rubrique était DÉJÀ ouverte, son onglet est seulement '
+                                . 'réactivé et garde les filtres en cours : dis alors « ses filtres '
+                                . 'par défaut », sans affirmer qu\'ils sont encore ceux de l\'écran.'
+                            : ''),
             ], static fn ($v) => $v !== null),
             uiAction: array_filter([
                 'type'     => TypeAction::OUVRIR_RUBRIQUE->value,

@@ -197,18 +197,56 @@ class NavigationRubriqueToolsTest extends KernelTestCase
     }
 
     /**
-     * SANS FILTRE, ON LE DIT. La note doit interdire d'annoncer que l'écran montre la
-     * réponse écrite : c'est précisément le mensonge de l'incident.
+     * SANS FILTRE, ON LE DIT — quand la rubrique n'en pose aucun d'elle-même. La note doit
+     * interdire d'annoncer que l'écran montre la réponse écrite : c'est précisément le
+     * mensonge de l'incident.
      */
     public function testUneRubriqueSansFiltreLAnnonce(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+
+        $result = $this->ouvrir()->execute(['entite' => 'Assureur'], new AiScope($e, $owner));
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertArrayNotHasKey('criteres', $result->uiAction);
+        $this->assertArrayNotHasKey('filtres', $result->data);
+        $this->assertStringContainsString('ENTIÈRE', $result->data['note']);
+    }
+
+    /**
+     * LES DÉFAUTS DE LA LISTE SONT DES FILTRES, ET ILS SE DISENT (refonte de la colonne 3,
+     * C2+). Sans critère transmis, l'écran pose ses défauts — pistes « En cours », mon
+     * portefeuille : Ket annonçait pourtant une rubrique « ENTIÈRE ».
+     *
+     * PARITÉ : annonce de Ket = ligne des filtres de l'écran = liste affichée. Les défauts
+     * annoncés sont ceux que la liste pose (`getInitialSearchCriteria`), écrits par la
+     * ligne des filtres (`LigneDesFiltres`, jumelle de `filtresActifs` par un même fichier
+     * de cas), chacun suivi de « (par défaut) » comme l'annonce de l'écran aux lecteurs
+     * d'écran.
+     */
+    public function testUneRubriqueSansFiltreAnnonceSesDefauts(): void
     {
         ['owner' => $owner, 'entreprise' => $e] = $this->seed();
 
         $result = $this->ouvrir()->execute(['entite' => 'Piste'], new AiScope($e, $owner));
 
         $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        // Rien n'est transmis : l'écran pose ses défauts lui-même, comme au clic du menu.
         $this->assertArrayNotHasKey('criteres', $result->uiAction);
-        $this->assertStringContainsString('ENTIÈRE', $result->data['note']);
+        $this->assertStringContainsString('FILTRÉE', $result->data['note']);
+        $this->assertContains('Statut : En cours (par défaut)', $result->data['filtres']);
+
+        // Les critères que la LISTE pose à son ouverture…
+        $initiaux = new \ReflectionMethod(\App\Controller\Admin\PisteController::class, 'getInitialSearchCriteria');
+        $initiaux->setAccessible(true);
+        $liste = $initiaux->invoke(static::getContainer()->get(\App\Controller\Admin\PisteController::class), Piste::class, $owner->getId(), $e);
+        $this->assertArrayHasKey(\App\Services\Search\PortefeuilleScope::CRITERION_KEY, $liste);
+        // … écrits par la ligne des filtres, sont exactement ce que Ket annonce.
+        $ligne = static::getContainer()->get(\App\Services\Search\LigneDesFiltres::class)->pour(Piste::class, $liste, $liste);
+        $this->assertSame(
+            array_map(static fn (array $f): string => $f['texte'] . ' (par défaut)', $ligne),
+            $result->data['filtres'],
+        );
     }
 
     /**
@@ -227,7 +265,7 @@ class NavigationRubriqueToolsTest extends KernelTestCase
         );
 
         $this->assertSame(AiToolResult::STATUS_OK, $result->status);
-        $this->assertContains('Souscrites (par défaut)', $result->data['filtres'] ?? []);
+        $this->assertContains('Statut : Souscrites (par défaut)', $result->data['filtres'] ?? []);
         $this->assertStringContainsString('FILTRÉE', $result->data['note']);
         // Le défaut n'est pas transmis comme un critère : le serveur l'applique seul.
         $this->assertArrayNotHasKey('criteres', $result->uiAction);

@@ -132,29 +132,16 @@ trait ControllerUtilsTrait
     }
 
     /**
-     * Fabrique du critère « Mon portefeuille ». SOURCE UNIQUE partagée avec les outils de
-     * l'assistant IA : les listes du workspace et Ket posent littéralement le même critère,
-     * donc répondent le même nombre à la même question.
+     * Les critères par défaut d'une liste (« Mon portefeuille », tranches impayées…) et ceux
+     * que le serveur lui impose (la frontière des congés). SOURCE UNIQUE partagée avec Ket :
+     * `ouvrir_rubrique` annonce ce que l'écran montre.
      */
-    private \App\Services\Search\PortefeuilleCritereFactory $portefeuilleCritereFactory;
+    private \App\Services\Search\CriteresParDefautDeListe $criteresParDefautDeListe;
 
     #[Required]
-    public function setPortefeuilleCritereFactory(\App\Services\Search\PortefeuilleCritereFactory $factory): void
+    public function setCriteresParDefautDeListe(\App\Services\Search\CriteresParDefautDeListe $criteres): void
     {
-        $this->portefeuilleCritereFactory = $factory;
-    }
-
-    /**
-     * Périmètre de visibilité des demandes de congé. SOURCE UNIQUE partagée avec les
-     * outils de l'assistant : un collaborateur qui n'est pas valideur ne voit que ses
-     * propres demandes, à l'écran comme dans le chat.
-     */
-    private \App\Services\Search\CongeVisibiliteScope $congeVisibiliteScope;
-
-    #[Required]
-    public function setCongeVisibiliteScope(\App\Services\Search\CongeVisibiliteScope $scope): void
-    {
-        $this->congeVisibiliteScope = $scope;
+        $this->criteresParDefautDeListe = $criteres;
     }
 
     /**
@@ -1178,9 +1165,7 @@ trait ControllerUtilsTrait
      */
     private function criteresImposesALaListe(string $entityClass): array
     {
-        return (new \ReflectionClass($entityClass))->getShortName() === 'DemandeConge'
-            ? $this->congeVisibiliteScope->critereFor($this->getInvite())
-            : [];
+        return $this->criteresParDefautDeListe->imposes($entityClass, $this->getInvite());
     }
 
     /** L'état vide RENDU par le serveur, pour une recherche (réponse JSON). @return array{cause: string, html: string} */
@@ -2940,118 +2925,15 @@ trait ControllerUtilsTrait
      * @throws AccessDeniedException Si le type d'entité n'est pas autorisé.
      */
     /**
-     * Critères de recherche actifs par défaut au premier chargement d'une liste.
-     *
-     * Pour les rubriques soumises au « périmètre portefeuille » (cf. PortefeuilleScope :
-     * Client, Piste, Cotation, Avenant, Sinistres, Tâche, Feedback…), on applique par défaut
-     * le critère synthétique « Mon portefeuille » = l'invité connecté. L'invité ne voit alors
-     * que les éléments rattachés — directement ou indirectement — à un portefeuille qu'il
-     * gère. Le critère reste retirable (badge de la barre ou champ du dialogue avancé) ; le
-     * libellé décrit le périmètre réel (nom du portefeuille, nombre, ou « aucun portefeuille »).
+     * Critères de recherche actifs par défaut au premier chargement d'une liste — SOURCE
+     * UNIQUE dans CriteresParDefautDeListe, que Ket lit aussi pour annoncer ce que l'écran
+     * montre (`ouvrir_rubrique`).
      *
      * @return array<string, mixed>
      */
     protected function getInitialSearchCriteria(string $entityClass, int $idInvite, \App\Entity\Entreprise $entreprise): array
     {
-        $shortName = (new \ReflectionClass($entityClass))->getShortName();
-        $criteria = [];
-
-        // Tranches : au premier chargement, la rubrique montre ce que les CLIENTS doivent
-        // encore (prime impayée), trié par urgence (retard décroissant puis échéances
-        // proches). Un seul axe est posé : les dettes de commission et de rétro ont leur
-        // propre groupe de chips, à un clic. Critère retirable comme les autres (badge de la
-        // barre ou dialogue avancé) → retour à « Toutes ».
-        // Se COMBINE avec le périmètre portefeuille ci-dessous (Tranche y est soumise
-        // au même titre que Cotation/Avenant : les deux badges coexistent).
-        if ($shortName === 'Tranche') {
-            $criteria += \App\Services\Search\TranchePaiementScope::critereRecherche(
-                'Tranche',
-                [\App\Services\Search\TranchePaiementScope::AXE_PRIME => \App\Services\Search\TranchePaiementScope::IMPAYEE],
-            );
-        }
-
-        // Notes : au premier chargement, la rubrique montre ce qu'il reste à ENCAISSER.
-        // C'est la première question qu'on se pose en ouvrant ses notes, et le filtre est
-        // retirable d'un clic (chip « Toutes » ou badge de la barre de recherche).
-        //
-        // ⚠ Ce critère ne se COMBINE avec aucun périmètre portefeuille : Note est
-        // délibérément absente de PortefeuilleScope — une note de débit agrège les
-        // commissions de plusieurs clients, souvent de plusieurs gestionnaires, et ce suivi
-        // est au niveau du CABINET. La rubrique n'affichera donc qu'un seul badge, là où
-        // Tranches en cumule deux. Ce n'est pas un oubli.
-        if ($shortName === 'Note') {
-            $criteria += \App\Services\Search\NoteReglementScope::critereRecherche(
-                'Note',
-                \App\Services\Search\NoteReglementScope::IMPAYEE,
-            );
-        }
-
-        // Cotations (propositions) : au premier chargement, on met en avant le travail
-        // commercial restant → les propositions « En attente » (non transformées en police).
-        // Critère retirable comme les autres (badge de la barre ou dialogue avancé) → « Toutes ».
-        // Se COMBINE avec le périmètre portefeuille ci-dessous (les deux badges coexistent).
-        if ($shortName === 'Cotation') {
-            $criteria[\App\Services\Search\CotationSouscriptionScope::CRITERION_KEY] = [
-                'operator' => '=',
-                'value' => \App\Services\Search\CotationSouscriptionScope::STATUT_EN_ATTENTE,
-                'label' => \App\Services\Search\CotationSouscriptionScope::libelle(\App\Services\Search\CotationSouscriptionScope::STATUT_EN_ATTENTE),
-            ];
-        }
-
-        // Pistes (opportunités) : au premier chargement, on met en avant le travail commercial
-        // restant → les pistes « En cours » (aucune cotation encore transformée en police).
-        // Même logique que Cotation, un cran plus haut. Retirable (badge/dialogue) → « Toutes »,
-        // et se COMBINE avec le périmètre portefeuille ci-dessous.
-        if ($shortName === 'Piste') {
-            $criteria[\App\Services\Search\PisteTransformationScope::CRITERION_KEY] = [
-                'operator' => '=',
-                'value' => \App\Services\Search\PisteTransformationScope::STATUT_EN_COURS,
-                'label' => \App\Services\Search\PisteTransformationScope::libelle(\App\Services\Search\PisteTransformationScope::STATUT_EN_COURS),
-            ];
-        }
-
-        // CONGÉS : au premier chargement, un collaborateur qui n'est pas valideur ne voit
-        // QUE ses demandes. Ce n'est pas un confort de lecture comme le périmètre
-        // portefeuille, c'est une frontière : les données de congé sont des données
-        // personnelles. Le critère est reposé à chaque rafraîchissement par
-        // DemandeCongeController::query() (via $extraCriteria, fusionné APRÈS la charge
-        // utile du navigateur) — effacer le badge ne le lève donc pas.
-        if ($shortName === 'DemandeConge') {
-            $invite = $this->inviteRepository->find($idInvite);
-            if ($invite !== null) {
-                $criteria += $this->congeVisibiliteScope->critereFor($invite);
-            }
-        }
-
-        // Périmètre portefeuille : critère produit par la fabrique partagée avec les outils
-        // de l'assistant IA (source unique — cf. PortefeuilleCritereFactory), pour que la
-        // rubrique et Ket ne puissent plus diverger.
-        $criteria += $this->portefeuilleCritereFactory->pourInviteId($shortName, $idInvite);
-
-        // Avenants : au premier chargement, on met en avant l'urgence réelle. Les avenants
-        // DÉJÀ EXPIRÉS sont les plus urgents à traiter → si le périmètre de l'invité en
-        // contient au moins un, le chip « Échus » est actif par défaut ; sinon « Sous 30
-        // jours ». La sonde réutilise le moteur de recherche (même interception SQL + même
-        // scope, dont le portefeuille déjà posé ci-dessus) : zéro logique de scope dupliquée.
-        // Critère retirable comme les autres (badge/dialogue avancé), et il se COMBINE au
-        // périmètre portefeuille (les deux badges coexistent, comme pour Tranche).
-        if ($shortName === 'Avenant') {
-            $echeanceScope = \App\Services\Search\AvenantEcheanceScope::class;
-            $sonde = $criteria;
-            $sonde[$echeanceScope::CRITERION_KEY] = [
-                'operator' => '=', 'value' => $echeanceScope::STATUT_ECHUS,
-            ];
-            $aDesExpires = ($this->searchService->search($entityClass, $sonde, $entreprise, null, 1, 1)['totalItems'] ?? 0) > 0;
-
-            $statutParDefaut = $aDesExpires ? $echeanceScope::STATUT_ECHUS : $echeanceScope::STATUT_30J;
-            $criteria[$echeanceScope::CRITERION_KEY] = [
-                'operator' => '=',
-                'value' => $statutParDefaut,
-                'label' => $echeanceScope::libelle($statutParDefaut),
-            ];
-        }
-
-        return $criteria;
+        return $this->criteresParDefautDeListe->pour($entityClass, $idInvite, $entreprise);
     }
 
     /**
