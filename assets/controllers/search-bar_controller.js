@@ -1,6 +1,6 @@
 // assets/controllers/search-bar_controller.js
 import BaseController from './base_controller.js';
-import { clesARetirer, criteresDeLaBarreSimple, filtresActifs } from './search-bar-filtres.js';
+import { clesARetirer, criteresApresRetrait, criteresDeLaBarreSimple, filtresActifs } from './search-bar-filtres.js';
 
 export default class extends BaseController {
     static targets = [
@@ -35,6 +35,13 @@ export default class extends BaseController {
 
         this.boundHandleContextChanged = this.handleContextChanged.bind(this);
         document.addEventListener('app:context.changed', this.boundHandleContextChanged);
+        // Le « Réinitialiser » de l'état vide, relayé par le cerveau : la barre est seule à
+        // connaître la règle (ce que la ligne affiche, le droit d'administrateur).
+        this.boundReinitialiser = (event) => {
+            if (this.workspaceTabId && event.detail?.workspaceTabId !== this.workspaceTabId) return;
+            this.resetAllFilters();
+        };
+        document.addEventListener('app:search.reset-requested', this.boundReinitialiser);
 
         // L'initialisation est minimale. Le rendu se fait via handleContextChanged.
         this.populateSimpleSearchSelector();
@@ -43,6 +50,7 @@ export default class extends BaseController {
 
     disconnect() {
         document.removeEventListener('app:context.changed', this.boundHandleContextChanged);
+        document.removeEventListener('app:search.reset-requested', this.boundReinitialiser);
     }
 
     /**
@@ -65,6 +73,9 @@ export default class extends BaseController {
         this.notifyCerveau('dialog:search.open-request', {
             criteria: this.criteriaValue,
             activeFilters: this.currentCriteria,
+            // Son « Réinitialiser » suit la MÊME règle que le × de la recherche (chantier 6) :
+            // la barre, seule à la connaître, lui dit ce qui doit rester.
+            apresReinitialisation: this.criteresApresToutRetirer(),
             entiteNom: this.nomEntiteValue,
             autocompleteUrl: this.hasAutocompleteUrlValue ? this.autocompleteUrlValue : ''
         });
@@ -98,7 +109,13 @@ export default class extends BaseController {
         if (event.detail.tabId) this.ongletActif = event.detail.tabId;
 
         // On met à jour notre copie locale des critères
+        const avant = this.currentCriteria || {};
         this.currentCriteria = searchCriteria || {};
+        // Le terme de la recherche simple a été RETIRÉ ailleurs (« Réinitialiser » de la recherche
+        // avancée, Ket) : le champ se vide avec lui. Seulement s'il était posé : une saisie en
+        // cours, pas encore envoyée, n'est jamais effacée.
+        const cleSimple = this.simpleSearchCriterionTarget.value;
+        if (cleSimple && avant[cleSimple] && !this.currentCriteria[cleSimple]) this.simpleSearchInputTarget.value = '';
 
         // On met à jour l'UI pour refléter l'état reçu du cerveau.
         // Si c'est un changement d'onglet, on s'assure que le critère simple est bien synchronisé.
@@ -146,9 +163,17 @@ export default class extends BaseController {
      */
     resetAllFilters() {
         this.simpleSearchInputTarget.value = '';
-        // Ce que la ligne AFFICHE comme retirable : jamais la maille de lecture ni ce que le
-        // serveur impose.
-        this._retirer(clesARetirer(this.filtresAffiches, this.portefeuilleRetirableValue));
+        this.notifyCerveau('ui:search.submitted', { criteria: this.criteresApresToutRetirer(), workspaceTabId: this.workspaceTabId });
+    }
+
+    /**
+     * Les critères QUI RESTENT après « tout retirer » — la seule écriture de la règle du chantier 6
+     * côté écran, servie aussi au « Réinitialiser » de la recherche avancée et à celui de l'état
+     * vide : part ce que la ligne AFFICHE comme retirable (jamais la maille de lecture ni ce que
+     * le serveur impose), « Mon portefeuille » seulement pour un administrateur du cabinet.
+     */
+    criteresApresToutRetirer() {
+        return criteresApresRetrait(this.currentCriteria, this.filtresAffiches, this.portefeuilleRetirableValue);
     }
 
     /** « Tout retirer », sur la ligne des filtres actifs. */
@@ -156,13 +181,6 @@ export default class extends BaseController {
         // Le bouton disparaît avec la ligne : le focus ira au champ de recherche.
         this.replacerFocusApresRetrait = true;
         this.resetAllFilters();
-    }
-
-    /** Retire ces critères et relance la recherche. @private */
-    _retirer(cles) {
-        const newCriteria = { ...this.currentCriteria };
-        cles.forEach((cle) => { delete newCriteria[cle]; });
-        this.notifyCerveau('ui:search.submitted', { criteria: newCriteria, workspaceTabId: this.workspaceTabId });
     }
 
     submitSimpleSearch(event) {

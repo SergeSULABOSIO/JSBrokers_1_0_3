@@ -168,3 +168,20 @@ export function clesARetirer(filtres, portefeuilleRetirable) {
         .filter((f) => f.retirable && (portefeuilleRetirable || f.cle !== CRITERE_PORTEFEUILLE))
         .map((f) => f.cle);
 }
+
+/**
+ * LES CRITÈRES QUI RESTENT après « réinitialiser » — le × de la recherche, « Tout retirer », le
+ * « Réinitialiser » de la recherche avancée et celui de l'état vide (décision de Serge du
+ * 2026-10-28 : une seule règle pour les trois gestes).
+ *
+ * @param {object|null|undefined} criteres les critères actifs.
+ * @param {Array<{cle: string, retirable: boolean}>|null|undefined} filtres la sortie de filtresActifs.
+ * @param {boolean} portefeuilleRetirable l'invité administre-t-il le cabinet ?
+ * @returns {object} les critères à garder.
+ */
+export function criteresApresRetrait(criteres, filtres, portefeuilleRetirable) {
+    const reste = { ...(criteres && typeof criteres === 'object' ? criteres : {}) };
+    clesARetirer(filtres, portefeuilleRetirable).forEach((cle) => { delete reste[cle]; });
+
+    return reste;
+}

@@ -14,6 +14,7 @@ import assert from 'node:assert/strict';
 
 import {
     clesARetirer,
+    criteresApresRetrait,
     criteresDeLaBarreSimple,
     filtresActifs,
     formatterTexteFiltre,
@@ -138,6 +139,19 @@ test('« Tout retirer » : ce que la ligne AFFICHE comme retirable, sauf « Mon 
     assert.deepEqual(clesARetirer(filtres, true), ['__prime__', 'client', '__mon_portefeuille__']);
     assert.deepEqual(clesARetirer([], true), []);
     assert.deepEqual(clesARetirer(null, false), []);
+});
+
+test('après « réinitialiser » (×, recherche avancée, état vide) : ne RESTENT que le non-retirable, et le portefeuille du collaborateur', () => {
+    const criteres = { client: { value: '42' }, __prime__: { value: 'impayee' }, __mon_portefeuille__: { value: '7' }, __virement__: { value: 'detail' } };
+    const filtres = filtresActifs(criteres, {
+        definitions: DEFS,
+        groupes: [...GROUPES, { cle: '__virement__', titre: 'Affichage', presentation: true, options: {} }],
+    });
+    assert.deepEqual(Object.keys(criteresApresRetrait(criteres, filtres, false)), ['__mon_portefeuille__', '__virement__']);
+    assert.deepEqual(Object.keys(criteresApresRetrait(criteres, filtres, true)), ['__virement__']);
+    // Rien d'affiché (avant le premier contexte) : rien ne part.
+    assert.deepEqual(criteresApresRetrait(criteres, undefined, true), criteres);
+    assert.deepEqual(criteresApresRetrait(null, [], true), {});
 });
 
 test('formatterTexteFiltre — plages de dates partielles', () => {

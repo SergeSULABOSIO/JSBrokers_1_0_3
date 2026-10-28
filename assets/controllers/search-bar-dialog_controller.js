@@ -62,11 +62,14 @@ export default class extends BaseController {
     // ────────────────────────────────────────────────────────────────────────
 
     openDialog(event) {
-        const { criteria, activeFilters, autocompleteUrl, workspaceTabId } = event.detail;
+        const { criteria, activeFilters, autocompleteUrl, workspaceTabId, apresReinitialisation } = event.detail;
         if (workspaceTabId && this.workspaceTabId && workspaceTabId !== this.workspaceTabId) return;
 
         this.criteriaDefs = Array.isArray(criteria) ? criteria : [];
         this.activeFilters = activeFilters || {};
+        // Ce qui reste après « Réinitialiser » : la règle du chantier 6, calculée par la barre de
+        // recherche (« Mon portefeuille » ne part que pour un administrateur du cabinet).
+        this.apresReinitialisation = apresReinitialisation || {};
         this.autocompleteUrl = autocompleteUrl || '';
 
         this.destroyTomSelects();
@@ -473,7 +476,7 @@ export default class extends BaseController {
     }
 
     resetForm() {
-        this.notifyCerveau('ui:search.submitted', { criteria: {}, workspaceTabId: this.workspaceTabId });
+        this.notifyCerveau('ui:search.submitted', { criteria: this.apresReinitialisation || {}, workspaceTabId: this.workspaceTabId });
         this.modal.hide();
     }
 

@@ -57,7 +57,7 @@ class LigneDesFiltresActifsTest extends KernelTestCase
         self::assertStringNotContainsString('innerHTML', $controleur, 'Aucun HTML fabriqué par chaîne : les textes sont posés par textContent.');
         // Le × de la recherche et « Tout retirer » (qui l'appelle) suivent la MÊME règle,
         // appliquée à ce que la ligne AFFICHE (jamais la maille de lecture ni l'imposé).
-        self::assertStringContainsString('this._retirer(clesARetirer(this.filtresAffiches, this.portefeuilleRetirableValue));', $controleur);
+        self::assertStringContainsString('criteresApresRetrait(this.currentCriteria, this.filtresAffiches, this.portefeuilleRetirableValue)', $controleur);
         self::assertMatchesRegularExpression('/retirerTout\(\) \{[^}]*this\.resetAllFilters\(\);/', $controleur);
         // Les critères IMPOSÉS par le serveur lui sont lus — et le serveur les déclare.
         self::assertStringContainsString('dataset.criteresImposes', $controleur);
@@ -68,6 +68,32 @@ class LigneDesFiltresActifsTest extends KernelTestCase
         $regle = (string) file_get_contents(self::REGLE);
         self::assertStringNotContainsString('SEUIL_COMPTEUR', $regle);
         self::assertStringNotContainsString('construireResumeFiltres', $regle);
+    }
+
+    /**
+     * LES TROIS « RÉINITIALISER » SUIVENT LA MÊME RÈGLE (Serge, 2026-10-28) : le × de la recherche,
+     * celui de la recherche avancée, celui de l'état vide. La règle n'est écrite qu'une fois —
+     * dans la barre (`criteresApresToutRetirer`) — et les deux autres la lui demandent ; ils
+     * vidaient jusqu'ici tout, « Mon portefeuille » compris, pour chacun.
+     */
+    public function testLesTroisReinitialisationsSuiventLaMemeRegle(): void
+    {
+        $barre = (string) file_get_contents(self::CONTROLEUR);
+        self::assertMatchesRegularExpression('/resetAllFilters\(\) \{[^}]*criteria: this\.criteresApresToutRetirer\(\)/', $barre);
+        self::assertStringContainsString('apresReinitialisation: this.criteresApresToutRetirer(),', $barre);
+
+        $dialogue = (string) file_get_contents(__DIR__ . '/../../assets/controllers/search-bar-dialog_controller.js');
+        self::assertStringContainsString('criteria: this.apresReinitialisation || {}', $dialogue);
+        self::assertDoesNotMatchRegularExpression("/resetForm\(\) \{\s*this\.notifyCerveau\('ui:search\.submitted', \{ criteria: \{\}/", $dialogue);
+
+        // L'état vide passe par le CERVEAU, qui relaie à la barre (jamais d'un composant à
+        // l'autre) — et le cerveau ne vide plus tout lui-même.
+        $liste = (string) file_get_contents(__DIR__ . '/../../assets/controllers/list-manager_controller.js');
+        self::assertMatchesRegularExpression("/resetSearch\(\) \{.*?this\.notifyCerveau\('ui:search\.reset-request', \{ workspaceTabId: this\.workspaceTabId \}\);/s", $liste);
+        $cerveau = (string) file_get_contents(__DIR__ . '/../../assets/controllers/cerveau_controller.js');
+        self::assertMatchesRegularExpression("/case 'ui:search\.reset-request':.*?this\.broadcast\('app:search\.reset-requested'/s", $cerveau);
+        self::assertDoesNotMatchRegularExpression("/case 'ui:search\.reset-request':\s*this\._handleSearchRequest\(\{\}\)/", $cerveau);
+        self::assertStringContainsString("document.addEventListener('app:search.reset-requested', this.boundReinitialiser);", $barre);
     }
 
     /** « Virement » est la maille de lecture des Rétros, pas un filtre : la ligne ne l'annonce pas. */

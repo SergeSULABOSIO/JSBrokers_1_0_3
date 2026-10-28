@@ -941,7 +941,10 @@ export default class extends BaseController {
      */
     resetSearch() {
         this._logDebug("Demande de réinitialisation de la recherche reçue depuis l'état vide.");
-        this.notifyCerveau('ui:search.reset-request', {});
+        // LA MÊME RÈGLE QUE LE × DE LA RECHERCHE (chantier 6) : la barre de la rubrique est seule
+        // à la connaître (« Mon portefeuille » ne part que pour un administrateur du cabinet). La
+        // demande lui parvient par le cerveau — jamais d'un composant à l'autre.
+        this.notifyCerveau('ui:search.reset-request', { workspaceTabId: this.workspaceTabId });
     }
 
     /**
