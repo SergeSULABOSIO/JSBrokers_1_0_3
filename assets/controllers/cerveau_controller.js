@@ -245,9 +245,8 @@ export default class extends Controller {
                 this._handleSearchRequest(payload.criteria, payload.workspaceTabId);
                 break;
             case 'ui:search.reset-request':
-                // RELAYÉ À LA BARRE DE RECHERCHE de l'onglet, seule à connaître la règle du
-                // chantier 6 (ce que la ligne des filtres affiche, le droit d'administrateur).
-                // Le cerveau vidait tout lui-même, « Mon portefeuille » compris, pour chacun.
+                // RELAYÉ À LA BARRE DE RECHERCHE de l'onglet, seule à connaître ses critères par
+                // défaut (réinitialiser, c'est y revenir). Le cerveau vidait tout lui-même.
                 this.broadcast('app:search.reset-requested', { workspaceTabId: payload.workspaceTabId ?? this.currentWorkspaceTabId });
                 break;
             case 'ui:fiche-hors-filtre.afficher-request':

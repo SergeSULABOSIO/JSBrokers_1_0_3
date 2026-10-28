@@ -69,10 +69,11 @@
             </button>
             <button
                 class="jsb-search-bar__btn jsb-search-bar__btn--reset"
-                {# Comme « Tout retirer » (chantier 6) : « Mon portefeuille » ne part que pour un
-                   administrateur du cabinet — d'où « les filtres », et non « tout ». #}
-                title="Effacer la recherche et les filtres"
-                aria-label="Effacer la recherche et les filtres"
+                {# RÉINITIALISER : le texte s'efface et les critères PAR DÉFAUT de la rubrique
+                   reviennent (Serge, 2026-10-28). « Tout retirer », sur la ligne des filtres,
+                   est le seul geste qui retire tout. #}
+                title="Réinitialiser la recherche"
+                aria-label="Réinitialiser la recherche (critères par défaut)"
                 data-action="click->search-bar#resetAllFilters"
             >
                 <twig:ux:icon name="{{ resolve_icon_name('lucide:x') }}" aria-hidden="true" />
@@ -93,7 +94,13 @@
          data-search-bar-target="ligne" hidden>
         <span class="jsb-filtres-actifs__compte" data-search-bar-target="compte"></span>
         <ul class="jsb-filtres-actifs__liste" data-search-bar-target="liste"></ul>
-        <button type="button" class="jsb-filtres-actifs__tout"
+        {# Deux gestes, deux sens (Serge, 2026-10-28) : « Réinitialiser » recharge les critères
+           PAR DÉFAUT de la rubrique ; « Tout retirer » retire tout (règle du chantier 6). Chacun
+           n'est offert que s'il changerait quelque chose. #}
+        <button type="button" class="jsb-filtres-actifs__geste"
+                data-search-bar-target="reinitialiser"
+                data-action="click->search-bar#reinitialiser">Réinitialiser</button>
+        <button type="button" class="jsb-filtres-actifs__geste"
                 data-search-bar-target="toutRetirer"
                 data-action="click->search-bar#retirerTout">Tout retirer</button>
         <template data-search-bar-target="modeleFiltre">

@@ -1737,7 +1737,7 @@ textarea:hover,
     outline-offset: 1px;
     opacity: 1;
 }
-.jsb-filtres-actifs__tout {
+.jsb-filtres-actifs__geste {
     flex-shrink: 0;
     min-height: 24px;
     padding: 0.15rem 0.5rem;
@@ -1752,12 +1752,12 @@ textarea:hover,
     cursor: pointer;
     transition: background-color 0.12s ease;
 }
-.jsb-filtres-actifs__tout:hover { background-color: var(--bg-cobalt-subtle, #e8f0fb); }
-.jsb-filtres-actifs__tout:focus-visible {
+.jsb-filtres-actifs__geste:hover { background-color: var(--bg-cobalt-subtle, #e8f0fb); }
+.jsb-filtres-actifs__geste:focus-visible {
     outline: 2px solid var(--cobalt, #0047AB);
     outline-offset: 1px;
 }
-.jsb-filtres-actifs__tout[hidden] { display: none; }
+.jsb-filtres-actifs__geste[hidden] { display: none; }
 
 .jsb-search-dialog__header {
     background-color: #0047AB;

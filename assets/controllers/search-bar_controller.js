@@ -1,6 +1,6 @@
 // assets/controllers/search-bar_controller.js
 import BaseController from './base_controller.js';
-import { clesARetirer, criteresApresRetrait, criteresDeLaBarreSimple, filtresActifs } from './search-bar-filtres.js';
+import { auxDefauts, clesARetirer, criteresApresRetrait, criteresDeLaBarreSimple, filtresActifs } from './search-bar-filtres.js';
 
 export default class extends BaseController {
     static targets = [
@@ -10,6 +10,7 @@ export default class extends BaseController {
         "ligne",        // la ligne entière, masquée quand rien ne filtre
         "compte",       // « 3 filtres »
         "liste",        // les filtres, clonés depuis le modèle
+        "reinitialiser", // « Réinitialiser » : les critères par défaut
         "toutRetirer",
         "modeleFiltre", // <template> d'un filtre : texte, « par défaut », ×
         "annonce",      // statut poli, masqué : la ligne lue aux lecteurs d'écran quand elle change
@@ -36,7 +37,7 @@ export default class extends BaseController {
         this.boundHandleContextChanged = this.handleContextChanged.bind(this);
         document.addEventListener('app:context.changed', this.boundHandleContextChanged);
         // Le « Réinitialiser » de l'état vide, relayé par le cerveau : la barre est seule à
-        // connaître la règle (ce que la ligne affiche, le droit d'administrateur).
+        // connaître les critères par défaut de l'onglet.
         this.boundReinitialiser = (event) => {
             if (this.workspaceTabId && event.detail?.workspaceTabId !== this.workspaceTabId) return;
             this.resetAllFilters();
@@ -73,9 +74,9 @@ export default class extends BaseController {
         this.notifyCerveau('dialog:search.open-request', {
             criteria: this.criteriaValue,
             activeFilters: this.currentCriteria,
-            // Son « Réinitialiser » suit la MÊME règle que le × de la recherche (chantier 6) :
-            // la barre, seule à la connaître, lui dit ce qui doit rester.
-            apresReinitialisation: this.criteresApresToutRetirer(),
+            // Son « Réinitialiser » fait ce que fait le × de la recherche : il recharge les
+            // critères PAR DÉFAUT de la rubrique, que la barre lui donne.
+            apresReinitialisation: this.criteresParDefaut(),
             entiteNom: this.nomEntiteValue,
             autocompleteUrl: this.hasAutocompleteUrlValue ? this.autocompleteUrlValue : ''
         });
@@ -157,30 +158,48 @@ export default class extends BaseController {
     }
 
     /**
-     * Le × DE LA RECHERCHE : comme « Tout retirer », la règle du chantier 6 — tous les filtres
-     * partent, « Mon portefeuille » seulement pour un administrateur du cabinet. Il vidait
-     * jusqu'ici TOUT, portefeuille compris, pour chacun.
+     * RÉINITIALISER (le × de la recherche, et pour la recherche avancée comme pour l'état vide) :
+     * le texte s'efface et les critères PAR DÉFAUT de la rubrique reviennent — ceux que le
+     * serveur pose à l'ouverture (Serge, 2026-10-28 : réinitialiser n'est ni « tout retirer », ni
+     * « actualiser », qui recharge sans rien perdre).
      */
     resetAllFilters() {
         this.simpleSearchInputTarget.value = '';
-        this.notifyCerveau('ui:search.submitted', { criteria: this.criteresApresToutRetirer(), workspaceTabId: this.workspaceTabId });
+        this.notifyCerveau('ui:search.submitted', { criteria: this.criteresParDefaut(), workspaceTabId: this.workspaceTabId });
+    }
+
+    /** Les critères PAR DÉFAUT : ceux que le serveur a posés à l'ouverture de la liste de l'onglet. */
+    criteresParDefaut() {
+        return { ...this._lireJson(this._listeActive()?.dataset.listManagerInitialCriteriaValue, {}) };
     }
 
     /**
-     * Les critères QUI RESTENT après « tout retirer » — la seule écriture de la règle du chantier 6
-     * côté écran, servie aussi au « Réinitialiser » de la recherche avancée et à celui de l'état
-     * vide : part ce que la ligne AFFICHE comme retirable (jamais la maille de lecture ni ce que
-     * le serveur impose), « Mon portefeuille » seulement pour un administrateur du cabinet.
+     * Les critères QUI RESTENT après « Tout retirer » (règle du chantier 6) : part ce que la ligne
+     * AFFICHE comme retirable (jamais la maille de lecture ni ce que le serveur impose), « Mon
+     * portefeuille » seulement pour un administrateur du cabinet.
      */
     criteresApresToutRetirer() {
         return criteresApresRetrait(this.currentCriteria, this.filtresAffiches, this.portefeuilleRetirableValue);
     }
 
-    /** « Tout retirer », sur la ligne des filtres actifs. */
-    retirerTout() {
-        // Le bouton disparaît avec la ligne : le focus ira au champ de recherche.
+    /** « RÉINITIALISER », sur la ligne des filtres actifs : le même geste que le × de la recherche. */
+    reinitialiser() {
+        // Le bouton disparaît (les critères sont aux défauts) : le focus ira au premier × de la
+        // ligne, sinon au champ de recherche.
         this.replacerFocusApresRetrait = true;
         this.resetAllFilters();
+    }
+
+    /**
+     * « TOUT RETIRER », sur la ligne des filtres actifs — le seul geste qui retire tout, selon la
+     * règle du chantier 6 : « Mon portefeuille » ne part que pour un administrateur du cabinet.
+     */
+    retirerTout() {
+        // Le bouton disparaît (plus rien à retirer) : le focus ira à « Réinitialiser » s'il est
+        // offert, sinon au champ de recherche.
+        this.replacerFocusApresRetrait = true;
+        this.simpleSearchInputTarget.value = '';
+        this.notifyCerveau('ui:search.submitted', { criteria: this.criteresApresToutRetirer(), workspaceTabId: this.workspaceTabId });
     }
 
     submitSimpleSearch(event) {
@@ -242,19 +261,22 @@ export default class extends BaseController {
      */
     updateSummary(criteria) {
         const liste = this._listeActive();
-        const filtres = filtresActifs(criteria, {
-            definitions: this.criteriaValue,
-            groupes: this._groupesDeChips(liste),
-            defauts: this._lireJson(liste?.dataset.listManagerInitialCriteriaValue, {}),
-            imposes: this._lireJson(liste?.dataset.criteresImposes, []),
-        });
+        const groupes = this._groupesDeChips(liste);
+        const defauts = this._lireJson(liste?.dataset.listManagerInitialCriteriaValue, {});
+        const imposes = this._lireJson(liste?.dataset.criteresImposes, []);
+        const filtres = filtresActifs(criteria, { definitions: this.criteriaValue, groupes, defauts, imposes });
         this.filtresAffiches = filtres;
+        const aLaMain = !auxDefauts(criteria, defauts, { groupes, imposes });
 
         this.listeTarget.replaceChildren(...filtres.map((filtre) => this._filtre(filtre)));
-        this.compteTarget.textContent = filtres.length > 1 ? `${filtres.length} filtres` : '';
-        // « Tout retirer » n'a de sens que s'il reste quelque chose qu'il retirerait.
+        this.compteTarget.textContent = filtres.length > 1 ? `${filtres.length} filtres` : (filtres.length === 0 ? 'Aucun filtre' : '');
+        // Chaque geste n'est offert que s'il changerait quelque chose : « Réinitialiser » quand les
+        // critères ne sont plus ceux par défaut, « Tout retirer » quand il reste à retirer.
+        this.reinitialiserTarget.hidden = !aLaMain;
         this.toutRetirerTarget.hidden = clesARetirer(filtres, this.portefeuilleRetirableValue).length === 0;
-        this.ligneTarget.hidden = filtres.length === 0;
+        // Sans filtre ET aux défauts, rien à lire ni à faire : pas de ligne. Sans filtre mais hors
+        // des défauts (après « Tout retirer »), la ligne reste, pour qu'on puisse y revenir.
+        this.ligneTarget.hidden = filtres.length === 0 && !aLaMain;
 
         // L'ANNONCE : un filtre posé par un chip, par Ket ou par un retrait se dit aux lecteurs
         // d'écran — une seule fois, quand la ligne change vraiment.
@@ -343,7 +365,9 @@ export default class extends BaseController {
         if (!this.replacerFocusApresRetrait) return;
         this.replacerFocusApresRetrait = false;
 
-        const cible = this.ligneTarget.hidden ? null : this.listeTarget.querySelector('.jsb-filtre-actif__retirer');
+        const cible = this.ligneTarget.hidden ? null
+            : (this.listeTarget.querySelector('.jsb-filtre-actif__retirer')
+                || (this.reinitialiserTarget.hidden ? null : this.reinitialiserTarget));
         (cible || this.simpleSearchInputTarget).focus();
     }
 }

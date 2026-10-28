@@ -185,3 +185,43 @@ export function criteresApresRetrait(criteres, filtres, portefeuilleRetirable) {
 
     return reste;
 }
+
+/**
+ * Ce qui distingue un critère : son opérateur (absent = « = ») et sa valeur, ou les bornes d'une
+ * plage ; '' = il ne filtre rien.
+ */
+function signature(critere) {
+    if (critere && typeof critere === 'object' && (critere.from || critere.to)) return `${critere.from || ''}…${critere.to || ''}`;
+    const valeur = valeurDe(critere);
+    if (valeur === '') return '';
+
+    return `${(critere && typeof critere === 'object' && critere.operator) || '='} ${valeur}`;
+}
+
+/**
+ * LES CRITÈRES SONT-ILS DÉJÀ CEUX PAR DÉFAUT ? Alors « Réinitialiser » ne changerait rien, et ne
+ * s'offre pas. Comparés par opérateur et valeur (pas par libellé) ; une valeur vide (chip
+ * « Toutes ») compte comme absente. N'entrent PAS dans la comparaison, comme pour la ligne
+ * (filtresActifs) : la maille de lecture (groupe de présentation, qui ne masque rien), un
+ * critère imposé (le serveur le repose de toute façon) et le défaut d'un groupe sans « Toutes »
+ * (posé ou non, le serveur l'applique).
+ *
+ * @param {object|null|undefined} criteres les critères en vigueur.
+ * @param {object|null|undefined} defauts les critères par défaut de la liste.
+ * @param {{groupes?: Array<{cle: string, defaut?: string, presentation?: boolean}>|null, imposes?: string[]|null}} [contexte]
+ * @returns {boolean}
+ */
+export function auxDefauts(criteres, defauts, { groupes, imposes } = {}) {
+    const lesGroupes = Array.isArray(groupes) ? groupes : [];
+    const horsComparaison = (cle, critere) => (Array.isArray(imposes) && imposes.includes(cle))
+        || lesGroupes.some((g) => g.cle === cle && (g.presentation
+            || (g.defaut !== undefined && g.defaut !== null && String(g.defaut) === valeurDe(critere))));
+    const actifs = (o) => Object.entries(o && typeof o === 'object' ? o : {})
+        .filter(([cle, critere]) => !horsComparaison(cle, critere))
+        .map(([cle, critere]) => [cle, signature(critere)])
+        .filter(([, valeur]) => valeur !== '');
+    const a = new Map(actifs(criteres));
+    const b = new Map(actifs(defauts));
+
+    return a.size === b.size && [...a].every(([cle, valeur]) => b.get(cle) === valeur);
+}

@@ -13,6 +13,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+    auxDefauts,
     clesARetirer,
     criteresApresRetrait,
     criteresDeLaBarreSimple,
@@ -152,6 +153,39 @@ test('après « réinitialiser » (×, recherche avancée, état vide) : ne REST
     // Rien d'affiché (avant le premier contexte) : rien ne part.
     assert.deepEqual(criteresApresRetrait(criteres, undefined, true), criteres);
     assert.deepEqual(criteresApresRetrait(null, [], true), {});
+});
+
+test('« Réinitialiser » n’a de sens que si les critères ne sont pas DÉJÀ ceux par défaut', () => {
+    const defauts = { __prime__: { operator: '=', value: 'impayee', label: 'Impayée' }, __mon_portefeuille__: { value: 414238 } };
+    // Mêmes valeurs, formes différentes (label, opérateur, nombre / chaîne) : aux défauts.
+    assert.equal(auxDefauts({ __mon_portefeuille__: { value: '414238' }, __prime__: { value: 'impayee' } }, defauts), true);
+    assert.equal(auxDefauts({ __prime__: { value: 'payee' }, __mon_portefeuille__: { value: 414238 } }, defauts), false);
+    assert.equal(auxDefauts({ __mon_portefeuille__: { value: 414238 } }, defauts), false, 'un défaut retiré');
+    assert.equal(auxDefauts({ ...defauts, client: { value: '42' } }, defauts), false, 'un filtre ajouté');
+    // Une valeur vide (chip « Toutes ») ne filtre rien : elle compte comme absente.
+    assert.equal(auxDefauts({ ...defauts, __echeance__: { value: '' } }, defauts), true);
+    // Les plages se comparent par leurs bornes.
+    assert.equal(auxDefauts({ d: { from: '01/01/2026', to: '31/01/2026' } }, { d: { from: '01/01/2026', to: '31/01/2026' } }), true);
+    assert.equal(auxDefauts({ d: { from: '01/01/2026' } }, { d: { from: '01/01/2026', to: '31/01/2026' } }), false);
+    assert.equal(auxDefauts({}, {}), true);
+    assert.equal(auxDefauts(null, undefined), true);
+    // L'opérateur compte : « contient x » n'est pas « = x » (absent vaut « = »).
+    assert.equal(auxDefauts({ t: { operator: 'LIKE', value: 'x' } }, { t: { value: 'x' } }), false);
+    assert.equal(auxDefauts({ t: { operator: '=', value: 'x' } }, { t: { value: 'x' } }), true);
+});
+
+test('auxDefauts — hors comparaison : maille de lecture, imposé, défaut d’un groupe sans « Toutes »', () => {
+    const groupes = [
+        { cle: '__statut__', defaut: 'souscrites' },
+        { cle: '__virement__', presentation: true },
+    ];
+    // Le statut remis sur son défaut : le serveur l'applique de toute façon, rien ne changerait.
+    assert.equal(auxDefauts({ __statut__: { value: 'souscrites' } }, {}, { groupes }), true);
+    assert.equal(auxDefauts({ __statut__: { value: 'en_attente' } }, {}, { groupes }), false);
+    // La maille de lecture ne masque rien : elle ne fait pas offrir « Réinitialiser ».
+    assert.equal(auxDefauts({ __virement__: { value: 'detail' } }, {}, { groupes }), true);
+    // Un critère imposé, présent ou non : le serveur le repose.
+    assert.equal(auxDefauts({}, { __visibilite__: { value: 'moi' } }, { imposes: ['__visibilite__'] }), true);
 });
 
 test('formatterTexteFiltre — plages de dates partielles', () => {

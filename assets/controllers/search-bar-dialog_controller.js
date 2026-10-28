@@ -67,8 +67,8 @@ export default class extends BaseController {
 
         this.criteriaDefs = Array.isArray(criteria) ? criteria : [];
         this.activeFilters = activeFilters || {};
-        // Ce qui reste après « Réinitialiser » : la règle du chantier 6, calculée par la barre de
-        // recherche (« Mon portefeuille » ne part que pour un administrateur du cabinet).
+        // « Réinitialiser » recharge les critères PAR DÉFAUT de la rubrique, que la barre de
+        // recherche lui donne (Serge, 2026-10-28).
         this.apresReinitialisation = apresReinitialisation || {};
         this.autocompleteUrl = autocompleteUrl || '';
 
