@@ -151,6 +151,9 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
                     // comme une seule.
                     "critere" => ReversementScope::CLE_VIREMENT,
                     "libelle" => "Virement",
+                    // LA MAILLE DE LECTURE, PAS UN FILTRE : « Détail » ne masque rien, il ventile
+                    // (totaux identiques). La ligne des filtres actifs ne l'annonce donc pas.
+                    "presentation" => true,
                     "options" => [
                         ["value" => "", "label" => "Groupé", "icon" => "depense"],
                         [

@@ -1,28 +1,20 @@
 /**
- * Logique PURE du résumé des filtres actifs de la barre de recherche — AUCUN
- * accès au DOM. Séparée exprès pour être testable sous Node
- * (`node --test tests/js/`) sans bundler ni navigateur, sur le modèle de
- * `menu-flottant.js`, `assistant-theme.js` et `assistant-chart-spec.js` : la
- * coquille Stimulus (`search-bar_controller.js`) se contente de rendre ce que
- * ces fonctions décident.
+ * Logique PURE des filtres actifs de la barre de recherche — AUCUN accès au DOM.
+ * Séparée exprès pour être testable sous Node (`node --test tests/js/`) : la
+ * coquille Stimulus (`search-bar_controller.js`) mesure le DOM et rend ce que ces
+ * fonctions décident.
  *
- * Deux responsabilités :
  *  - formatterTexteFiltre() : le libellé lisible d'UN filtre, selon son type
  *    (plage de dates, relation, booléen, nombre, texte).
- *  - construireResumeFiltres() : la stratégie d'affichage de l'ENSEMBLE des
- *    filtres sur la ligne unique de la barre (rien / badge en clair / pastille
- *    compteur + volet). C'est cette fonction qui garantit que la barre garde
- *    une hauteur constante quel que soit le nombre de critères actifs.
+ *  - filtresActifs() : la LIGNE DES FILTRES ACTIFS (refonte de la colonne 3, C2) —
+ *    tout ce qui masque des données, en texte, défauts compris (« par défaut »).
+ *    Elle remplace le repli « Filtres N » et son volet, qui cachaient justement ce
+ *    qu'il fallait lire (BIC Cristal : l'état réel visible).
+ *  - clesARetirer() : « Tout retirer », selon la règle du chantier 6.
  */
 
-/**
- * Au-delà de ce nombre de filtres actifs, les badges en clair ne tiennent plus
- * dans la ligne unique (le panneau de workspace est étroit : la barre partage
- * sa largeur avec la barre d'outils) : on bascule sur la pastille compteur.
- * À 1 filtre on reste en clair — reconnaissance plutôt que rappel (Nielsen #6)
- * sans aucun risque de déformation.
- */
-export const SEUIL_COMPTEUR = 2;
+/** Le critère « Mon portefeuille » (PortefeuilleScope::CRITERION_KEY). */
+export const CRITERE_PORTEFEUILLE = '__mon_portefeuille__';
 
 /**
  * Les critères que propose la barre de recherche SIMPLE, dans l'ordre du sélecteur.
@@ -88,35 +80,91 @@ export function formatterTexteFiltre(displayName, val, criterionDef) {
     return `${displayName} : "${displayValue}"`;
 }
 
-/**
- * Décide COMMENT présenter les filtres actifs sur la ligne unique de la barre.
- *
- * @param {object|null|undefined} criteres Filtres actifs reçus du cerveau,
- *        indexés par nom de critère.
- * @param {Array<object>|null|undefined} definitions Le searchCanvas (définitions
- *        de critères) : sert à retrouver le libellé et le type de chaque filtre.
- * @returns {{
- *   mode: 'vide'|'badge'|'compteur',
- *   nombre: number,
- *   filtres: Array<{cle: string, libelle: string, texte: string}>,
- * }}
- *   - `vide`     : aucun filtre → la zone est masquée.
- *   - `badge`    : un seul filtre → badge en clair dans la barre.
- *   - `compteur` : plusieurs filtres → pastille « Filtres N » ouvrant le volet.
- */
-export function construireResumeFiltres(criteres, definitions) {
-    const defs = Array.isArray(definitions) ? definitions : [];
-    const entrees = (criteres && typeof criteres === 'object') ? Object.entries(criteres) : [];
+/** La valeur d'un critère, quelle que soit sa forme (`{value, label}` ou valeur nue). */
+function valeurDe(critere) {
+    if (critere === null || critere === undefined) return '';
+    return String(typeof critere === 'object' ? (critere.value ?? '') : critere);
+}
 
-    const filtres = entrees.map(([cle, valeur]) => {
-        const def = defs.find(c => c && c.Nom === cle);
-        const libelle = def && def.Display ? def.Display : cle;
-        return { cle, libelle, texte: formatterTexteFiltre(libelle, valeur, def) };
+/**
+ * LA LIGNE DES FILTRES ACTIFS : tout ce qui masque des données, en texte.
+ *
+ * Les chips d'abord, dans l'ordre de leurs groupes (« Prime : Impayée ») ; puis les autres
+ * critères dans l'ordre reçu (terme, critères avancés, « Mon portefeuille »). Un critère égal
+ * au défaut posé par le serveur porte `parDefaut`. Un groupe SANS « Toutes » a un défaut que le
+ * serveur applique toujours (le statut de Production intermédiaires) : rien n'étant posé, il est
+ * montré quand même, sans × — le retirer ne changerait rien ; posé explicitement à cette même
+ * valeur, il reste le défaut. Un critère IMPOSÉ par le serveur (la visibilité des congés, qu'il
+ * repose à chaque recherche) se lit, sans × non plus. Un groupe de PRÉSENTATION (la maille de
+ * lecture d'une liste, pas un filtre) n'apparaît jamais.
+ *
+ * @param {object|null|undefined} criteres les critères actifs, par nom de critère.
+ * @param {{
+ *   definitions?: Array<object>|null,
+ *   groupes?: Array<{cle: string, titre: string, options: Object<string, string>, defaut?: string,
+ *                    presentation?: boolean}>|null,
+ *   defauts?: object|null,
+ *   imposes?: string[]|null,
+ * }} contexte `definitions` : le searchCanvas ; `groupes` : les chips de la liste ; `defauts` :
+ *   les critères posés d'office par le serveur (initialCriteria de la liste) ; `imposes` : les
+ *   clés que le serveur impose à chaque recherche.
+ * @returns {Array<{cle: string, texte: string, parDefaut: boolean, retirable: boolean}>}
+ */
+export function filtresActifs(criteres, { definitions, groupes, defauts, imposes } = {}) {
+    const defs = Array.isArray(definitions) ? definitions : [];
+    const lesGroupes = Array.isArray(groupes) ? groupes : [];
+    const actifs = (criteres && typeof criteres === 'object') ? criteres : {};
+    const parDefaut = (cle, valeur) => !!defauts && Object.prototype.hasOwnProperty.call(defauts, cle) && valeurDe(defauts[cle]) === valeur;
+    const impose = (cle) => Array.isArray(imposes) && imposes.includes(cle);
+    const vus = new Set();
+    const filtres = [];
+
+    lesGroupes.forEach((groupe) => {
+        vus.add(groupe.cle);
+        if (groupe.presentation) return;
+        const options = groupe.options || {};
+        const valeur = valeurDe(actifs[groupe.cle]);
+        if (valeur === '') {
+            if (groupe.defaut !== undefined && groupe.defaut !== null && groupe.defaut !== '') {
+                filtres.push({ cle: groupe.cle, texte: `${groupe.titre} : ${options[groupe.defaut] ?? groupe.defaut}`, parDefaut: true, retirable: false });
+            }
+            return;
+        }
+        const critere = actifs[groupe.cle];
+        const libelle = options[valeur] ?? ((critere && typeof critere === 'object' && critere.label) || valeur);
+        // La valeur même du défaut d'un groupe sans « Toutes » : c'est lui, rien à retirer.
+        const leDefaut = groupe.defaut !== undefined && groupe.defaut !== null && String(groupe.defaut) === valeur;
+        const fixe = leDefaut || impose(groupe.cle);
+        filtres.push({ cle: groupe.cle, texte: `${groupe.titre} : ${libelle}`, parDefaut: fixe || parDefaut(groupe.cle, valeur), retirable: !fixe });
     });
 
-    let mode = 'compteur';
-    if (filtres.length === 0) mode = 'vide';
-    else if (filtres.length < SEUIL_COMPTEUR) mode = 'badge';
+    Object.entries(actifs).forEach(([cle, critere]) => {
+        if (vus.has(cle)) return;
+        const valeur = valeurDe(critere);
+        const plage = critere && typeof critere === 'object' && (critere.from || critere.to);
+        if (valeur === '' && !plage) return;
+        const def = defs.find((c) => c && c.Nom === cle);
+        const libelle = def && def.Display ? def.Display : cle;
+        filtres.push({ cle, texte: formatterTexteFiltre(libelle, critere, def), parDefaut: impose(cle) || parDefaut(cle, valeur), retirable: !impose(cle) });
+    });
 
-    return { mode, nombre: filtres.length, filtres };
+    return filtres;
+}
+
+/**
+ * « TOUT RETIRER » — la règle du chantier 6 (CauseDeListeVide), du côté de l'écran : tout ce que
+ * la ligne affiche comme RETIRABLE part (jamais la maille de lecture, jamais ce que le serveur
+ * impose) ; « Mon portefeuille » seulement pour un ADMINISTRATEUR du cabinet. Le × de la barre
+ * de recherche suit la même règle.
+ *
+ * @param {Array<{cle: string, retirable: boolean}>|null|undefined} filtres la sortie de filtresActifs.
+ * @param {boolean} portefeuilleRetirable l'invité administre-t-il le cabinet ? (rendu par le serveur)
+ * @returns {string[]} les clés à retirer.
+ */
+export function clesARetirer(filtres, portefeuilleRetirable) {
+    if (!Array.isArray(filtres)) return [];
+
+    return filtres
+        .filter((f) => f.retirable && (portefeuilleRetirable || f.cle !== CRITERE_PORTEFEUILLE))
+        .map((f) => f.cle);
 }

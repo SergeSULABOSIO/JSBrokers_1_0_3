@@ -1403,6 +1403,9 @@ trait ControllerUtilsTrait
             'vueCartes' => $vueCartes ?? null,
             // Les paramètres de l'état vide, si la liste l'est (chantier 6, CauseDeListeVide).
             'etatVide' => $etatVide['parametres'] ?? null,
+            // Les critères que le serveur IMPOSE à chaque recherche (la visibilité des congés) :
+            // la ligne des filtres actifs les montre sans × — les retirer ne changerait rien.
+            'criteresImposes' => array_keys($this->criteresImposesALaListe($entityClass)),
         ];
 
         // dd("Paramètres - searchCanvas:", $parameters["searchCanvas"]);

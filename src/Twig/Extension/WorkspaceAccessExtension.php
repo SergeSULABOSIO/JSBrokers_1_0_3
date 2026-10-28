@@ -32,6 +32,7 @@ class WorkspaceAccessExtension extends AbstractExtension
             new TwigFunction('workspace_can', [$this, 'can']),
             new TwigFunction('workspace_can_read', [$this, 'canRead']),
             new TwigFunction('workspace_can_manage_invites', [$this, 'canManageInvites']),
+            new TwigFunction('workspace_est_administrateur', [$this, 'estAdministrateur']),
         ];
     }
 
@@ -52,6 +53,18 @@ class WorkspaceAccessExtension extends AbstractExtension
         $invite = $this->currentInvite();
 
         return $invite !== null && $this->resolver->canManageInvites($invite);
+    }
+
+    /**
+     * L'invité administre-t-il TOUT le cabinet (propriétaire ou délégué) ? Lu par la ligne des
+     * filtres actifs : « Tout retirer » n'y retire « Mon portefeuille » que pour lui — la règle
+     * du chantier 6 (CauseDeListeVide), la même que celle de l'état vide.
+     */
+    public function estAdministrateur(): bool
+    {
+        $invite = $this->currentInvite();
+
+        return $invite !== null && $this->resolver->estAdministrateurDuCabinet($invite);
     }
 
     private function currentInvite(): ?Invite

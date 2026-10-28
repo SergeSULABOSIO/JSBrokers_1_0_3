@@ -1,29 +1,28 @@
 // assets/controllers/search-bar_controller.js
 import BaseController from './base_controller.js';
-import { construireResumeFiltres, criteresDeLaBarreSimple } from './search-bar-filtres.js';
-import { positionnerMenu, indexApresTouche } from './menu-flottant.js';
-// L'ancienne copie locale (textContent → innerHTML) n'échappait ni " ni ' — or le résumé
-// place libellés et clés dans des ATTRIBUTS (title, aria-label, data-filter-key).
-import { echapper } from './echapper.js';
-
-/** Identifiants uniques du volet : plusieurs barres coexistent (une par rubrique/onglet). */
-let compteurInstances = 0;
+import { clesARetirer, criteresDeLaBarreSimple, filtresActifs } from './search-bar-filtres.js';
 
 export default class extends BaseController {
     static targets = [
         "simpleSearchInput",
         "simpleSearchCriterion", // NOUVEAU
-        "summaryContainer",
-        "summary",
-        "popover",     // volet flottant listant les critères actifs
-        "popoverList"  // <ul> peuplé à chaque mise à jour du résumé
+        // La ligne des filtres actifs (refonte de la colonne 3, C2), rendue par le serveur :
+        "ligne",        // la ligne entière, masquée quand rien ne filtre
+        "compte",       // « 3 filtres »
+        "liste",        // les filtres, clonés depuis le modèle
+        "toutRetirer",
+        "modeleFiltre", // <template> d'un filtre : texte, « par défaut », ×
+        "annonce",      // statut poli, masqué : la ligne lue aux lecteurs d'écran quand elle change
     ];
 
     static values = {
         criteria: Array,
         defaultCriterion: Object,
         nomEntite: String, // NOUVEAU : pour recevoir le nom de l'entité
-        autocompleteUrl: String // Endpoint générique d'autocomplétion des critères « relation »
+        autocompleteUrl: String, // Endpoint générique d'autocomplétion des critères « relation »
+        // « Tout retirer » retire « Mon portefeuille » seulement pour un administrateur du
+        // cabinet (règle du chantier 6) — le serveur le dit.
+        portefeuilleRetirable: Boolean,
     }
 
     // La barre de recherche devient "stateless". Elle ne stocke que l'état actuel reçu du cerveau pour le rendu.
@@ -37,16 +36,6 @@ export default class extends BaseController {
         this.boundHandleContextChanged = this.handleContextChanged.bind(this);
         document.addEventListener('app:context.changed', this.boundHandleContextChanged);
 
-        // Volet des filtres : identifiant unique (aria-controls) + écouteurs de fermeture
-        // liés une seule fois, posés/retirés à l'ouverture/fermeture.
-        this.popoverId = `jsb-filtres-volet-${++compteurInstances}`;
-        if (this.hasPopoverTarget) {
-            this.popoverTarget.id = this.popoverId;
-        }
-        this.voletOuvert = false;
-        this.boundPointerHorsVolet = this.pointerHorsVolet.bind(this);
-        this.boundFermerVolet = () => this.fermerVolet();
-
         // L'initialisation est minimale. Le rendu se fait via handleContextChanged.
         this.populateSimpleSearchSelector();
         this.updateSimpleSearchPlaceholder();
@@ -54,7 +43,6 @@ export default class extends BaseController {
 
     disconnect() {
         document.removeEventListener('app:context.changed', this.boundHandleContextChanged);
-        this.retirerEcouteursVolet();
     }
 
     /**
@@ -104,6 +92,11 @@ export default class extends BaseController {
             this.updateSimpleSearchPlaceholder();
         }
 
+        // L'ONGLET INTERNE concerné (principal, ou une collection contextuelle) : c'est SA liste
+        // qui déclare les chips et les défauts. Sa visibilité ne suffit pas : le contexte est
+        // publié avant que son panneau soit ré-affiché.
+        if (event.detail.tabId) this.ongletActif = event.detail.tabId;
+
         // On met à jour notre copie locale des critères
         this.currentCriteria = searchCriteria || {};
 
@@ -126,7 +119,7 @@ export default class extends BaseController {
     populateSimpleSearchSelector() {
         // Le choix et l'ordre : module pur (critère de recherche rapide en tête).
         const textCriteria = criteresDeLaBarreSimple(this.criteriaValue);
-        this.simpleSearchCriterionTarget.innerHTML = ''; // On vide le sélecteur
+        this.simpleSearchCriterionTarget.replaceChildren(); // On vide le sélecteur
 
         textCriteria.forEach(criterion => {
             const option = document.createElement('option');
@@ -147,17 +140,29 @@ export default class extends BaseController {
     }
 
     /**
-     * NOUVEAU : Réinitialise tous les filtres et notifie le cerveau.
+     * Le × DE LA RECHERCHE : comme « Tout retirer », la règle du chantier 6 — tous les filtres
+     * partent, « Mon portefeuille » seulement pour un administrateur du cabinet. Il vidait
+     * jusqu'ici TOUT, portefeuille compris, pour chacun.
      */
-    resetAllFilters(event) {
-        // Déclenché depuis le volet : celui-ci se referme, donc le bouton cliqué
-        // disparaît → on redonnera le focus au champ de recherche.
-        if (event?.currentTarget?.closest?.('.jsb-search-bar__popover')) {
-            this.replacerFocusApresRetrait = true;
-        }
-        this.fermerVolet();
+    resetAllFilters() {
         this.simpleSearchInputTarget.value = '';
-        this.notifyCerveau('ui:search.submitted', { criteria: {}, workspaceTabId: this.workspaceTabId });
+        // Ce que la ligne AFFICHE comme retirable : jamais la maille de lecture ni ce que le
+        // serveur impose.
+        this._retirer(clesARetirer(this.filtresAffiches, this.portefeuilleRetirableValue));
+    }
+
+    /** « Tout retirer », sur la ligne des filtres actifs. */
+    retirerTout() {
+        // Le bouton disparaît avec la ligne : le focus ira au champ de recherche.
+        this.replacerFocusApresRetrait = true;
+        this.resetAllFilters();
+    }
+
+    /** Retire ces critères et relance la recherche. @private */
+    _retirer(cles) {
+        const newCriteria = { ...this.currentCriteria };
+        cles.forEach((cle) => { delete newCriteria[cle]; });
+        this.notifyCerveau('ui:search.submitted', { criteria: newCriteria, workspaceTabId: this.workspaceTabId });
     }
 
     submitSimpleSearch(event) {
@@ -198,6 +203,8 @@ export default class extends BaseController {
 
     removeFilter(event) {
         const keyToRemove = event.currentTarget.dataset.filterKey;
+        // Le terme de la recherche simple : le champ se vide avec son filtre.
+        if (keyToRemove === this.simpleSearchCriterionTarget.value) this.simpleSearchInputTarget.value = '';
 
         const newCriteria = { ...this.currentCriteria };
         delete newCriteria[keyToRemove];
@@ -211,189 +218,114 @@ export default class extends BaseController {
     }
 
     /**
-     * Rend les filtres actifs SUR LA LIGNE de la barre : un seul filtre s'affiche
-     * en clair, plusieurs se replient derrière une pastille compteur ouvrant le
-     * volet. La hauteur de la barre reste donc constante (aucune 2ᵉ ligne).
-     * La décision (mode / libellés) vient du module pur `search-bar-filtres.js`.
+     * LA LIGNE DES FILTRES ACTIFS : la décision vient du module pur (filtresActifs) ; ici, on
+     * lit ce que la liste de l'onglet actif déclare (ses chips, ses défauts), puis on CLONE le
+     * modèle rendu par le serveur et l'on pose les textes par `textContent`.
      */
     updateSummary(criteria) {
-        const resume = construireResumeFiltres(criteria, this.criteriaValue);
-
-        // `summary` doit rester un div VIDE quand il n'y a aucun filtre : c'est
-        // ce que détecte `.jsb-search-bar__filters:has(div:empty)` pour masquer la zone.
-        this.summaryTarget.innerHTML = resume.mode === 'vide' ? '' : this.htmlResume(resume);
-        this.remplirVolet(resume);
-
-        if (resume.mode !== 'compteur') {
-            // Plus de pastille → plus rien à ancrer.
-            this.fermerVolet();
-        } else if (this.voletOuvert) {
-            this.positionnerVolet(); // le nombre de lignes a changé
-        }
-
-        this.replacerFocus(resume);
-    }
-
-    /** Contenu de la zone « filtres » de la ligne : badge en clair ou pastille compteur. */
-    htmlResume(resume) {
-        if (resume.mode === 'badge') {
-            const { cle, libelle, texte } = resume.filtres[0];
-            return `
-            <span class="jsb-filter-badge">
-                <span class="jsb-filter-badge__text" title="${echapper(texte)}">${echapper(texte)}</span>
-                <button type="button"
-                    class="jsb-filter-badge__remove"
-                    aria-label="Retirer le filtre ${echapper(libelle)}"
-                    data-action="click->search-bar#removeFilter"
-                    data-filter-key="${echapper(cle)}">×</button>
-            </span>`;
-        }
-
-        // Signifiance : le libellé « Filtres » + le nombre disent l'état sans jargon,
-        // et le détail reste à un clic (Nielsen #1 visibilité de l'état du système).
-        return `
-            <button type="button"
-                class="jsb-filters-chip"
-                data-action="click->search-bar#basculerVolet keydown->search-bar#toucheChip"
-                aria-haspopup="true"
-                aria-expanded="${this.voletOuvert ? 'true' : 'false'}"
-                aria-controls="${this.popoverId}"
-                title="${resume.nombre} critères actifs — voir le détail">
-                <span>Filtres</span>
-                <span class="jsb-filters-chip__count">${resume.nombre}</span>
-            </button>`;
-    }
-
-    /** Peuple le volet : une ligne par critère, avec son bouton de retrait. */
-    remplirVolet(resume) {
-        if (!this.hasPopoverListTarget) return;
-
-        this.popoverListTarget.innerHTML = resume.filtres.map(({ cle, libelle, texte }) => `
-            <li class="jsb-search-bar__popover-item">
-                <span class="jsb-search-bar__popover-text">${echapper(texte)}</span>
-                <button type="button"
-                    class="jsb-filter-badge__remove"
-                    aria-label="Retirer le filtre ${echapper(libelle)}"
-                    data-action="click->search-bar#removeFilter"
-                    data-filter-key="${echapper(cle)}">×</button>
-            </li>`).join('');
-    }
-
-    /** Élément pastille courant (re-rendu à chaque mise à jour du résumé). */
-    get chip() {
-        return this.summaryTarget.querySelector('.jsb-filters-chip');
-    }
-
-    basculerVolet() {
-        if (this.voletOuvert) {
-            this.fermerVolet();
-        } else {
-            this.ouvrirVolet();
-        }
-    }
-
-    ouvrirVolet() {
-        if (!this.hasPopoverTarget || !this.chip) return;
-        this.popoverTarget.hidden = false;
-        this.voletOuvert = true;
-        this.chip.setAttribute('aria-expanded', 'true');
-        this.positionnerVolet();
-
-        document.addEventListener('pointerdown', this.boundPointerHorsVolet, true);
-        window.addEventListener('resize', this.boundFermerVolet);
-    }
-
-    fermerVolet() {
-        if (this.hasPopoverTarget) {
-            this.popoverTarget.hidden = true;
-        }
-        this.voletOuvert = false;
-        this.chip?.setAttribute('aria-expanded', 'false');
-        this.retirerEcouteursVolet();
-    }
-
-    retirerEcouteursVolet() {
-        if (!this.boundPointerHorsVolet) return;
-        document.removeEventListener('pointerdown', this.boundPointerHorsVolet, true);
-        window.removeEventListener('resize', this.boundFermerVolet);
-    }
-
-    /**
-     * Position `fixed` du volet, calculée par la géométrie PURE partagée avec le
-     * menu de bulle du chat (`menu-flottant.js`) : ancré sous la pastille, basculé
-     * au-dessus s'il déborderait, puis écrêté aux marges du viewport.
-     */
-    positionnerVolet() {
-        const chip = this.chip;
-        if (!chip || !this.hasPopoverTarget) return;
-
-        const volet = this.popoverTarget;
-        volet.style.visibility = 'hidden'; // mesurable sans clignotement
-        const { left, top } = positionnerMenu({
-            ancre: chip.getBoundingClientRect(),
-            menu: { largeur: volet.offsetWidth, hauteur: volet.offsetHeight },
-            viewport: { largeur: window.innerWidth, hauteur: window.innerHeight },
+        const liste = this._listeActive();
+        const filtres = filtresActifs(criteria, {
+            definitions: this.criteriaValue,
+            groupes: this._groupesDeChips(liste),
+            defauts: this._lireJson(liste?.dataset.listManagerInitialCriteriaValue, {}),
+            imposes: this._lireJson(liste?.dataset.criteresImposes, []),
         });
-        volet.style.left = `${left}px`;
-        volet.style.top = `${top}px`;
-        volet.style.visibility = 'visible';
+        this.filtresAffiches = filtres;
+
+        this.listeTarget.replaceChildren(...filtres.map((filtre) => this._filtre(filtre)));
+        this.compteTarget.textContent = filtres.length > 1 ? `${filtres.length} filtres` : '';
+        // « Tout retirer » n'a de sens que s'il reste quelque chose qu'il retirerait.
+        this.toutRetirerTarget.hidden = clesARetirer(filtres, this.portefeuilleRetirableValue).length === 0;
+        this.ligneTarget.hidden = filtres.length === 0;
+
+        // L'ANNONCE : un filtre posé par un chip, par Ket ou par un retrait se dit aux lecteurs
+        // d'écran — une seule fois, quand la ligne change vraiment.
+        const annonce = filtres.length
+            ? `Filtres actifs : ${filtres.map((f) => f.texte + (f.parDefaut ? ' (par défaut)' : '')).join(', ')}`
+            : 'Aucun filtre actif';
+        if (this.hasAnnonceTarget && this.annonceTarget.textContent !== annonce) this.annonceTarget.textContent = annonce;
+
+        this.replacerFocus();
     }
 
-    pointerHorsVolet(event) {
-        if (!this.voletOuvert) return;
-        const dansVolet = this.hasPopoverTarget && this.popoverTarget.contains(event.target);
-        const surChip = this.chip?.contains(event.target);
-        if (!dansVolet && !surChip) this.fermerVolet();
-    }
-
-    /** Sur la pastille : ↓ ouvre et entre dans le volet, Échap referme. */
-    toucheChip(event) {
-        if (event.key === 'ArrowDown') {
-            event.preventDefault();
-            if (!this.voletOuvert) this.ouvrirVolet();
-            this.itemsVolet()[0]?.focus();
-            return;
+    /** Un filtre, cloné du modèle. @private */
+    _filtre({ cle, texte, parDefaut, retirable }) {
+        const element = this.modeleFiltreTarget.content.firstElementChild.cloneNode(true);
+        element.querySelector('.jsb-filtre-actif__texte').textContent = texte;
+        element.querySelector('.jsb-filtre-actif__defaut').hidden = !parDefaut;
+        const bouton = element.querySelector('.jsb-filtre-actif__retirer');
+        if (retirable) {
+            bouton.dataset.filterKey = cle;
+            bouton.setAttribute('aria-label', `Retirer le filtre ${texte}`);
+        } else {
+            // Un défaut que le serveur applique toujours : le retirer ne changerait rien.
+            bouton.remove();
         }
-        if (event.key === 'Escape' && this.voletOuvert) {
-            event.preventDefault();
-            this.fermerVolet();
-        }
-    }
 
-    /** Flèches / Home / End dans le volet ; Échap ferme et rend le focus à la pastille. */
-    naviguerPopover(event) {
-        if (event.key === 'Escape') {
-            event.preventDefault();
-            const chip = this.chip;
-            this.fermerVolet();
-            chip?.focus();
-            return;
-        }
-        const items = this.itemsVolet();
-        const suivant = indexApresTouche(event.key, items.indexOf(document.activeElement), items.length);
-        if (suivant === null) return;
-        event.preventDefault();
-        items[suivant].focus();
-    }
-
-    /** Boutons navigables du volet : les retraits puis « Tout effacer ». */
-    itemsVolet() {
-        if (!this.hasPopoverTarget) return [];
-        return Array.from(this.popoverTarget.querySelectorAll('button'));
+        return element;
     }
 
     /**
-     * Après un retrait, le bouton cliqué n'existe plus : on replace le focus sur
-     * l'élément le plus proche encore présent (pastille, badge restant, sinon le
-     * champ de recherche) pour ne jamais perdre le repère clavier.
+     * La liste de l'onglet ACTIF de la rubrique (principal ou contextuel) : c'est elle qui
+     * déclare les chips et les défauts. @private
      */
-    replacerFocus(resume) {
+    _listeActive() {
+        const vue = this.element.closest('[data-controller~="view-manager"]');
+        if (!vue) return null;
+        const listes = [...vue.querySelectorAll('.jsb-list-manager')];
+
+        return listes.find((l) => l.id === this.ongletActif)
+            || listes.find((l) => l.getClientRects().length > 0)
+            || null;
+    }
+
+    /** Les groupes de chips, lus dans la liste (rendue par le serveur). @private */
+    _groupesDeChips(liste) {
+        if (!liste) return [];
+
+        return [...liste.querySelectorAll('.jsb-preset-filters[data-preset-criterion]')].map((groupe) => {
+            const options = {};
+            let defaut;
+            groupe.querySelectorAll('.jsb-preset-chip[data-criterion-value]').forEach((chip) => {
+                const libelle = chip.querySelector(':scope > span:not(.jsb-preset-chip__icon)');
+                options[chip.dataset.criterionValue] = (libelle ? libelle.textContent : chip.textContent).trim();
+                if (chip.dataset.criterionDefaut === 'true') defaut = chip.dataset.criterionValue;
+            });
+            // Un groupe AVEC « Toutes » n'a pas de défaut imposé : seul un groupe sans option vide
+            // en déclare un (ChipsCoherenceContratTest).
+            if (Object.prototype.hasOwnProperty.call(options, '')) defaut = undefined;
+
+            return {
+                cle: groupe.dataset.presetCriterion,
+                // Le titre est SORTI du groupe par chips-defilement.js (il ne défile pas avec les
+                // valeurs) : on le cherche dans l'enveloppe, à défaut le nom accessible du groupe.
+                titre: ((groupe.closest('.jsb-preset-filters-wrap') || groupe).querySelector('.jsb-preset-filters__titre')?.textContent
+                    || groupe.getAttribute('aria-label') || groupe.dataset.presetCriterion).trim(),
+                options,
+                defaut,
+                presentation: groupe.dataset.presetPresentation === 'true',
+            };
+        });
+    }
+
+    /** Une déclaration JSON du serveur (défauts, critères imposés) ; illisible : le repli. @private */
+    _lireJson(texte, repli) {
+        try {
+            return texte ? (JSON.parse(texte) ?? repli) : repli;
+        } catch {
+            return repli;
+        }
+    }
+
+    /**
+     * Après un retrait, le bouton cliqué n'existe plus : le focus va au × suivant de la ligne,
+     * sinon au champ de recherche — jamais sur la page (WCAG 2.4.3).
+     */
+    replacerFocus() {
         if (!this.replacerFocusApresRetrait) return;
         this.replacerFocusApresRetrait = false;
 
-        const cible = resume.mode === 'compteur'
-            ? this.chip
-            : (this.summaryTarget.querySelector('.jsb-filter-badge__remove') || this.simpleSearchInputTarget);
-        cible?.focus();
+        const cible = this.ligneTarget.hidden ? null : this.listeTarget.querySelector('.jsb-filtre-actif__retirer');
+        (cible || this.simpleSearchInputTarget).focus();
     }
 }

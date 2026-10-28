@@ -1334,7 +1334,7 @@ textarea:hover,
     min-width: 200px;
     /* Au-dessus de la liste ET de l'en-tête collant de la rubrique (.sticky-header, 1020 :
        titre, onglets, barre d'outils), sous les modales Bootstrap — comme les autres surfaces
-       flottantes (.toolbar-groupe-menu, volet de recherche). À 1000, un menu remonté au-dessus
+       flottantes (.toolbar-groupe-menu, menu « Plus » du rail). À 1000, un menu remonté au-dessus
        de sa ligne passait sous la barre d'outils (Serge, 2026-10-25). */
     z-index: 1050;
     border-radius: 8px;          /* arrondi moderne */
@@ -1503,12 +1503,12 @@ textarea:hover,
 
 .jsb-search-bar { width: 100%; }
 
-/* Ligne UNIQUE : saisie + critère + filtres actifs + actions. Le gabarit reprend
+/* Ligne UNIQUE : saisie + critère + actions. Le gabarit reprend
    celui des barres sœurs — hauteur --jsb-control-h et rayon 8px de .jsb-control-pill
    (Cohérence, Bastien & Scapin) — mais la bordure reste VISIBLE au repos : un champ
    de saisie doit se reconnaître comme éditable (Signifiance / affordance).
-   `nowrap` + hauteur fixe = aucune déformation possible, quel que soit le nombre de
-   filtres actifs (au-delà d'un filtre, ils se replient dans le volet). */
+   `nowrap` + hauteur fixe = aucune déformation possible : les filtres actifs se lisent sur
+   leur propre ligne, dessous (.jsb-filtres-actifs). */
 .jsb-search-bar__row {
     display: flex;
     align-items: center;
@@ -1531,8 +1531,7 @@ textarea:hover,
     /* Conteneur de requête pour la dégradation progressive ci-dessous. Posé sur la
        LIGNE et non sur .jsb-search-bar : on a craint que `container-type` implique
        `contain: layout`, qui ferait de l'élément le bloc conteneur des descendants
-       `position: fixed` — le volet des filtres (frère de la ligne) doit rester ancré au
-       viewport. MESURÉ le 2026-10-27 sous Edge : ce n'est pas le cas (un enfant `fixed`
+       `position: fixed`. MESURÉ le 2026-10-27 sous Edge : ce n'est pas le cas (un enfant `fixed`
        reste posé par rapport à l'écran) ; non vérifié sous Firefox et Safari — la
        précaution reste, elle ne coûte rien. Voir `.jsb-zone-liste`. */
     container-type: inline-size;
@@ -1651,234 +1650,114 @@ textarea:hover,
     outline-offset: 1px;
 }
 
-/* Zone des filtres actifs, DANS la ligne : largeur naturelle (jamais élastique) et
-   nowrap — elle contient au plus UN élément (badge ou pastille compteur). */
-.jsb-search-bar__filters {
+/* ══ LA LIGNE DES FILTRES ACTIFS (refonte de la colonne 3, C2) ══════════════════════════
+   Sous la recherche, tout ce qui masque des données, EN TEXTE (« Prime : Impayée · par
+   défaut »). Elle remplace le badge unique et la pastille « Filtres N » de la ligne de
+   recherche, et leur volet. Une seule rangée : trop longue, elle défile horizontalement ;
+   « Tout retirer » et le compte restent visibles. Absente quand rien ne filtre (`hidden`). */
+.jsb-filtres-actifs:not([hidden]) {
     display: flex;
-    flex-wrap: nowrap;
     align-items: center;
-    /* Largeur naturelle, mais compressible : sous la pression, c'est l'ellipsis du
-       badge qui absorbe (le champ de saisie garde son plancher de 5rem). */
-    flex: 0 1 auto;
+    gap: 0.5rem;
+    margin-top: 0.375rem;
     min-width: 0;
+}
+.jsb-filtres-actifs__compte {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    color: var(--text-muted, #6c757d);
+    white-space: nowrap;
+}
+.jsb-filtres-actifs__compte:empty { display: none; }
+.jsb-filtres-actifs__liste {
+    display: flex;
+    align-items: center;
     gap: 0.375rem;
-}
-/* Aucun filtre → le div interne reste vide → la zone disparaît (pas de séparateur
-   ni de trou fantôme dans la ligne). */
-.jsb-search-bar__filters:has(div:empty) { display: none; }
-.jsb-search-bar__filters > div {
-    display: flex;
-    align-items: center;
+    flex: 1 1 auto;
     min-width: 0;
+    margin: 0;
+    padding: 0 0 2px;
+    list-style: none;
+    overflow-x: auto;
+    scrollbar-width: thin;
 }
-
-.jsb-filter-badge {
+/* Un filtre : la pilule cobalt pâle de la recherche, jamais tronquée (on lit le filtre). */
+.jsb-filtre-actif {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    background-color: #e8f0fb;
-    color: #0047AB;
-    border: 1px solid rgba(0, 71, 171, 0.25);
+    flex-shrink: 0;
+    white-space: nowrap;
+    background-color: var(--bg-cobalt-subtle, #e8f0fb);
+    color: var(--cobalt, #0047AB);
+    border: 1px solid var(--cobalt-shadow, rgba(0, 71, 171, 0.25));
     border-radius: 2rem;
-    padding: 0.1rem 0.35rem 0.1rem 0.6rem;
+    padding: 0.1rem 0.6rem;
     font-size: 0.78rem;
     font-weight: 500;
     line-height: 1.4;
-    max-width: 15rem;
-    /* Indispensable pour que l'ellipsis puisse jouer : sans min-width:0, la largeur
-       min-content du libellé empêcherait le badge de se comprimer et pousserait les
-       boutons d'action hors de la pilule. */
-    min-width: 0;
 }
-/* Un libellé long (« Mon portefeuille : Portefeuille de Serge ») est tronqué plutôt
-   que d'étirer la ligne ; le texte complet reste accessible en infobulle (title). */
-.jsb-filter-badge__text {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.jsb-filtre-actif:has(.jsb-filtre-actif__retirer) { padding-right: 0.25rem; }
+/* « par défaut » : posé d'office par le serveur — dit, mais en retrait du filtre lui-même. */
+.jsb-filtre-actif__defaut {
+    font-weight: 400;
+    font-style: italic;
+    /* ≈ 7:1 sur le fond cobalt pâle (le gris secondaire n'y faisait que 4,1:1 — WCAG 1.4.3). */
+    color: var(--text-body, #495057);
 }
-.jsb-filter-badge__remove {
+.jsb-filtre-actif__defaut::before { content: "· "; font-style: normal; }
+.jsb-filtre-actif__defaut[hidden] { display: none; }
+.jsb-filtre-actif__retirer {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0; /* jamais rogné : c'est la seule sortie du filtre (Contrôle explicite) */
-    width: 18px;
-    height: 18px;
+    position: relative;
+    width: 20px;
+    height: 20px;
     border: none;
     border-radius: 50%;
     background: transparent;
     color: inherit;
-    opacity: 0.65;
+    opacity: 0.7;
     cursor: pointer;
     padding: 0;
     font-size: 1rem;
     line-height: 1;
     transition: opacity 0.15s, background-color 0.15s;
 }
-.jsb-filter-badge__remove:hover {
+/* Cible de 24 px (WCAG 2.5.8) sans grossir la pilule. */
+.jsb-filtre-actif__retirer::after { content: ""; position: absolute; inset: -2px; }
+.jsb-filtre-actif__retirer:hover {
     opacity: 1;
-    background-color: rgba(0, 71, 171, 0.18);
+    background-color: var(--cobalt-shadow, rgba(0, 71, 171, 0.25));
 }
-.jsb-filter-badge__remove:focus-visible {
-    outline: 2px solid #0047AB;
+.jsb-filtre-actif__retirer:focus-visible {
+    outline: 2px solid var(--cobalt, #0047AB);
     outline-offset: 1px;
     opacity: 1;
 }
-
-/* Pastille compteur : à partir de deux filtres actifs, le détail se replie ici.
-   Nielsen #1 (le nombre de critères reste visible) + #8 (minimalisme : le détail est
-   à un clic). Charte : teinte cobalt au repos, cobalt plein à l'ouverture/survol. */
-.jsb-filters-chip {
-    display: inline-flex;
-    align-items: center;
-    flex-shrink: 0; /* compacte par nature : jamais rognée (le compteur doit rester lisible) */
-    gap: 0.35rem;
-    min-height: 25px;
-    padding: 0 0.4rem 0 0.6rem;
-    border: 1px solid rgba(0, 71, 171, 0.25);
-    border-radius: 2rem;
-    background-color: #e8f0fb;
-    color: #0047AB;
+.jsb-filtres-actifs__tout {
+    flex-shrink: 0;
+    min-height: 24px;
+    padding: 0.15rem 0.5rem;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--cobalt, #0047AB);
+    font-family: inherit;
     font-size: 0.78rem;
     font-weight: 600;
-    font-family: inherit;
-    line-height: 1.4;
     white-space: nowrap;
-    cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-/* Chevron dessiné en bordures CSS plutôt qu'en icône : la pastille est rendue en JS
-   (innerHTML), donc hors du circuit d'icônes serveur — aucune icône à y injecter. */
-.jsb-filters-chip::after {
-    content: "";
-    border: 4px solid transparent;
-    border-top-color: currentColor;
-    margin-left: 0.1rem;
-    transform: translateY(2px);
-    transition: transform 0.15s ease;
-}
-.jsb-filters-chip:hover,
-.jsb-filters-chip[aria-expanded="true"] {
-    background-color: #0047AB;
-    border-color: #0047AB;
-    color: #ffffff;
-}
-.jsb-filters-chip[aria-expanded="true"]::after {
-    transform: translateY(-2px) rotate(180deg);
-}
-.jsb-filters-chip:focus-visible {
-    outline: 2px solid #0047AB;
-    outline-offset: 2px;
-}
-.jsb-filters-chip__count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 17px;
-    height: 17px;
-    padding: 0 0.2rem;
-    border-radius: 999px;
-    background-color: rgba(0, 71, 171, 0.18);
-    font-size: 0.7rem;
-    font-weight: 700;
-    line-height: 1;
-}
-.jsb-filters-chip:hover .jsb-filters-chip__count,
-.jsb-filters-chip[aria-expanded="true"] .jsb-filters-chip__count {
-    background-color: rgba(255, 255, 255, 0.28);
-}
-
-/* Volet des critères actifs : même surface flottante que les menus de la barre
-   d'outils (blanc, bordure #dee2e6, rayon 8px, ombre portée, z-index 1050 = au-dessus
-   des listes, sous les modales Bootstrap). Position `fixed` posée par le contrôleur :
-   le volet échappe ainsi au découpage du bandeau collant. */
-.jsb-search-bar__popover {
-    position: fixed;
-    z-index: 1050;
-    min-width: 260px;
-    max-width: 360px;
-    padding: 0.25rem 0;
-    background-color: #ffffff;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.08);
-}
-.jsb-search-bar__popover[hidden] { display: none; }
-
-.jsb-search-bar__popover-title {
-    margin: 0;
-    padding: 0.35rem 0.75rem 0.3rem;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: #6c757d;
-}
-
-.jsb-search-bar__popover-list {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    max-height: 15rem;
-    overflow-y: auto;
-}
-.jsb-search-bar__popover-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-height: 32px;
-    padding: 0.2rem 0.5rem 0.2rem 0.75rem;
-    font-size: 0.83rem;
-    color: #212529;
-}
-.jsb-search-bar__popover-item:hover { background-color: rgba(0, 71, 171, 0.06); }
-.jsb-search-bar__popover-text {
-    flex: 1 1 auto;
-    min-width: 0;
-    word-break: break-word;
-}
-/* Cible de retrait confortable dans le volet (WCAG 2.5.8) : 24px, contre 18px sur le
-   badge compact de la ligne. */
-.jsb-search-bar__popover-item .jsb-filter-badge__remove {
-    width: 24px;
-    height: 24px;
-    flex-shrink: 0;
-    color: #6c757d;
-}
-.jsb-search-bar__popover-item .jsb-filter-badge__remove:hover {
-    color: #0047AB;
-    background-color: rgba(0, 71, 171, 0.12);
-}
-
-.jsb-search-bar__popover-footer {
-    margin-top: 0.25rem;
-    border-top: 1px solid #e9ecef;
-    padding-top: 0.25rem;
-}
-.jsb-search-bar__popover-clear {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100%;
-    min-height: 34px;
-    padding: 0.25rem 0.75rem;
-    border: none;
-    background: transparent;
-    color: #0047AB;
-    font-family: inherit;
-    font-size: 0.83rem;
-    font-weight: 600;
-    text-align: left;
     cursor: pointer;
     transition: background-color 0.12s ease;
 }
-.jsb-search-bar__popover-clear:hover { background-color: rgba(0, 71, 171, 0.08); }
-.jsb-search-bar__popover-clear:focus-visible {
-    outline: 2px solid #0047AB;
-    outline-offset: -2px;
+.jsb-filtres-actifs__tout:hover { background-color: var(--bg-cobalt-subtle, #e8f0fb); }
+.jsb-filtres-actifs__tout:focus-visible {
+    outline: 2px solid var(--cobalt, #0047AB);
+    outline-offset: 1px;
 }
-.jsb-search-bar__popover-clear svg { width: 15px; height: 15px; }
+.jsb-filtres-actifs__tout[hidden] { display: none; }
 
 .jsb-search-dialog__header {
     background-color: #0047AB;

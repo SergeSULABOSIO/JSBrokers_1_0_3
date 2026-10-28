@@ -221,14 +221,9 @@ class SearchCanvasProvider
 
         // Critères synthétiques de la rubrique « Rétros intermédiaires ». Ce ne sont pas
         // des colonnes : ils sont interceptés par le moteur (JSBDynamicSearchService) et
-        // traduits en SQL. Sans cette déclaration, leur BADGE dans la barre de recherche
-        // retombait sur la clé brute — « __type_beneficiaire__ : "agent" » — parce que
-        // `construireResumeFiltres` cherche le libellé dans ce canevas et n'y trouvait rien.
-        //
-        // C'était supportable tant que ces filtres n'étaient posés que par un clic
-        // délibéré. Depuis que choisir un bénéficiaire ALIGNE le chip « Type » du même
-        // geste, la barre passe à deux filtres, bascule sur le volet « Filtres 2 », et y
-        // affiche ces lignes : elles doivent se lire.
+        // traduits en SQL. Sans cette déclaration, un critère posé HORS de ses chips (par
+        // Ket, par la recherche avancée) retombait sur la clé brute dans la ligne des filtres
+        // actifs — « __type_beneficiaire__ : "agent" » —, faute de libellé : il doit se lire.
         if ($shortName === \App\Services\Search\ReversementScope::ENTITE) {
             $iconesSynthetiques = [
                 \App\Services\Search\ReversementScope::CLE_TYPE => 'action:filter',

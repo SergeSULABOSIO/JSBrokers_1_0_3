@@ -1,16 +1,22 @@
 /**
- * Tests du cœur PUR du résumé des filtres de la barre de recherche
+ * Tests du cœur PUR des filtres actifs de la barre de recherche
  * (assets/controllers/search-bar-filtres.js) — aucun DOM.
+ *
+ * LA LIGNE DES FILTRES ACTIFS (refonte de la colonne 3, C2) : tout ce qui masque des données
+ * se lit EN TEXTE, sous la recherche — chips, terme, critères avancés, « Mon portefeuille », et
+ * les défauts posés d'office, marqués « par défaut ». Elle remplace le repli « Filtres N »,
+ * qui cachait justement ce qu'il fallait lire (BIC Cristal : l'état réel visible).
+ *
  * Lancement : node --test tests/js/
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-    construireResumeFiltres,
+    clesARetirer,
     criteresDeLaBarreSimple,
+    filtresActifs,
     formatterTexteFiltre,
-    SEUIL_COMPTEUR,
 } from '../../assets/controllers/search-bar-filtres.js';
 
 /** Définitions de critères représentatives d'un searchCanvas d'Avenant. */
@@ -23,80 +29,115 @@ const DEFS = [
     { Nom: 'primeTotale', Display: 'Prime totale', Type: 'Number' },
 ];
 
-test('aucun filtre → mode « vide » (la zone reste masquée)', () => {
+/** Les groupes de chips d'une rubrique, tels que la liste les déclare (titre, options). */
+const GROUPES = [
+    { cle: '__prime__', titre: 'Prime', options: { payee: 'Payée', impayee: 'Impayée', '': 'Toutes' } },
+    { cle: '__echeance__', titre: 'Échéance', options: { retard: 'En retard', '': 'Toutes' } },
+];
+
+test('aucun filtre : aucune ligne', () => {
     for (const vide of [{}, null, undefined]) {
-        const resume = construireResumeFiltres(vide, DEFS);
-        assert.equal(resume.mode, 'vide');
-        assert.equal(resume.nombre, 0);
-        assert.deepEqual(resume.filtres, []);
+        assert.deepEqual(filtresActifs(vide, { definitions: DEFS, groupes: GROUPES }), []);
     }
 });
 
-test('un seul filtre → mode « badge » : il reste lisible en clair', () => {
-    const resume = construireResumeFiltres(
-        { client: { operator: 'LIKE', value: '42', label: 'KIN AVIA' } },
-        DEFS,
+test('un chip se lit « Titre du groupe : libellé court », et passe AVANT les autres filtres', () => {
+    const filtres = filtresActifs(
+        { client: { value: '42', label: 'KIN AVIA' }, __prime__: { operator: '=', value: 'impayee', label: 'La prime est impayée' } },
+        { definitions: DEFS, groupes: GROUPES },
     );
-    assert.equal(resume.mode, 'badge');
-    assert.equal(resume.nombre, 1);
-    assert.deepEqual(resume.filtres, [
-        { cle: 'client', libelle: 'Client', texte: 'Client : KIN AVIA' },
+    assert.deepEqual(filtres.map((f) => f.texte), ['Prime : Impayée', 'Client : KIN AVIA']);
+    assert.deepEqual(filtres.map((f) => f.cle), ['__prime__', 'client']);
+});
+
+test('un critère égal au défaut du serveur porte « par défaut » — il masque des données, il se DIT', () => {
+    const filtres = filtresActifs(
+        { __prime__: { value: 'impayee' }, client: { value: '42', label: 'KIN AVIA' } },
+        { definitions: DEFS, groupes: GROUPES, defauts: { __prime__: { value: 'impayee' } } },
+    );
+    assert.deepEqual(filtres.map((f) => [f.texte, f.parDefaut]), [['Prime : Impayée', true], ['Client : KIN AVIA', false]]);
+});
+
+test('un chip sur « Toutes » (valeur vide) ne filtre rien : il n’apparaît pas', () => {
+    assert.deepEqual(filtresActifs({ __prime__: { value: '' } }, { definitions: DEFS, groupes: GROUPES }), []);
+});
+
+test('un groupe SANS « Toutes » a un défaut que le serveur applique toujours : montré, sans ×', () => {
+    // Production intermédiaires : le statut retombe sur « Souscrites » quand rien n'est posé.
+    const groupes = [{ cle: '__statut__', titre: 'Statut', defaut: 'souscrites', options: { souscrites: 'Souscrites', en_attente: 'En attente' } }];
+    assert.deepEqual(filtresActifs({}, { definitions: DEFS, groupes }), [
+        { cle: '__statut__', texte: 'Statut : Souscrites', parDefaut: true, retirable: false },
+    ]);
+    // Posé explicitement à une autre valeur : un filtre ordinaire, retirable.
+    assert.deepEqual(filtresActifs({ __statut__: { value: 'en_attente' } }, { definitions: DEFS, groupes }), [
+        { cle: '__statut__', texte: 'Statut : En attente', parDefaut: false, retirable: true },
+    ]);
+    // Posé explicitement À SA VALEUR PAR DÉFAUT : c'est le défaut — le retirer n'y changerait rien.
+    assert.deepEqual(filtresActifs({ __statut__: { value: 'souscrites' } }, { definitions: DEFS, groupes }), [
+        { cle: '__statut__', texte: 'Statut : Souscrites', parDefaut: true, retirable: false },
     ]);
 });
 
-test('deux filtres ou plus → mode « compteur » : la ligne ne grandit pas', () => {
-    const resume = construireResumeFiltres(
-        {
-            endingAt: { from: '01/01/2026', to: '31/01/2026' },
-            client: { value: '42', label: 'KIN AVIA' },
-            __mon_portefeuille__: { value: '7', label: 'Portefeuille de Serge' },
-        },
-        DEFS,
+test('un critère IMPOSÉ par le serveur (la visibilité des congés) se lit, mais ne se retire pas', () => {
+    // Le serveur le repose à chaque recherche : un × promettrait une liste que l'on ne verra pas.
+    const filtres = filtresActifs(
+        { __visibilite_conge__: { value: 'miennes', label: 'Mes demandes' }, client: { value: '42', label: 'KIN AVIA' } },
+        { definitions: DEFS, groupes: [], imposes: ['__visibilite_conge__'] },
     );
-    assert.equal(resume.mode, 'compteur');
-    assert.equal(resume.nombre, 3);
-    assert.deepEqual(resume.filtres.map(f => f.texte), [
+    assert.deepEqual(filtres.map((f) => [f.cle, f.parDefaut, f.retirable]), [['__visibilite_conge__', true, false], ['client', false, true]]);
+});
+
+test('un chip-sélecteur (bénéficiaire) se lit par le NOM porté par le critère', () => {
+    const groupes = [{ cle: '__beneficiaire__', titre: 'Bénéficiaire', options: { '': 'Tous' } }];
+    const filtres = filtresActifs({ __beneficiaire__: { value: 'agent:12', label: 'Alice' } }, { definitions: DEFS, groupes });
+    assert.equal(filtres[0].texte, 'Bénéficiaire : Alice');
+});
+
+test('un groupe de PRÉSENTATION (la maille de lecture, pas un filtre) n’apparaît jamais', () => {
+    const groupes = [{ cle: '__virement__', titre: 'Affichage', presentation: true, options: { groupe: 'Groupé', detail: 'Détail' } }];
+    assert.deepEqual(filtresActifs({ __virement__: { value: 'detail' } }, { definitions: DEFS, groupes }), []);
+});
+
+test('les autres filtres gardent le libellé du canevas, dans l’ordre reçu ; une clé inconnue sert de libellé', () => {
+    const filtres = filtresActifs(
+        { endingAt: { from: '01/01/2026', to: '31/01/2026' }, __mon_portefeuille__: { value: '7', label: 'Portefeuille de Serge' }, champFantome: 'abc' },
+        { definitions: DEFS, groupes: [] },
+    );
+    assert.deepEqual(filtres.map((f) => f.texte), [
         'Échéance : du 01/01/2026 au 31/01/2026',
-        'Client : KIN AVIA',
         'Mon portefeuille : Portefeuille de Serge',
+        'champFantome : "abc"',
     ]);
+    assert.ok(filtres.every((f) => f.retirable), 'chaque filtre ordinaire se retire par ×');
 });
 
-test('le seuil de bascule badge → compteur est exactement SEUIL_COMPTEUR', () => {
-    const criteres = {};
-    for (let i = 0; i < SEUIL_COMPTEUR - 1; i++) criteres[`c${i}`] = 'x';
-    assert.equal(construireResumeFiltres(criteres, DEFS).mode, 'badge');
-
-    criteres[`c${SEUIL_COMPTEUR - 1}`] = 'x';
-    assert.equal(construireResumeFiltres(criteres, DEFS).mode, 'compteur');
-});
-
-test('critère inconnu du canvas : la clé sert de libellé, jamais de plantage', () => {
-    const resume = construireResumeFiltres({ champFantome: 'abc' }, DEFS);
-    assert.equal(resume.mode, 'badge');
-    assert.deepEqual(resume.filtres[0], {
-        cle: 'champFantome',
-        libelle: 'champFantome',
-        texte: 'champFantome : "abc"',
-    });
-});
-
-test('définitions absentes ou non tableau : dégradation propre', () => {
-    for (const defs of [null, undefined, 'pas un tableau']) {
-        const resume = construireResumeFiltres({ client: { value: 'x' } }, defs);
-        assert.equal(resume.mode, 'badge');
-        assert.equal(resume.filtres[0].libelle, 'client');
+test('définitions et groupes absents : dégradation propre', () => {
+    for (const absent of [null, undefined, 'pas un tableau']) {
+        const filtres = filtresActifs({ client: { value: 'x' } }, { definitions: absent, groupes: absent });
+        assert.equal(filtres[0].texte, 'client : "x"');
     }
 });
 
-test('la clé de chaque filtre est conservée telle quelle (retrait ciblé)', () => {
-    // Le bouton × renvoie cette clé au cerveau : elle doit être intacte, y compris
-    // pour les critères synthétiques préfixés « __ ».
-    const resume = construireResumeFiltres(
-        { __mon_portefeuille__: { value: '7', label: 'Serge' }, actif: '1' },
-        DEFS,
+// ── « Tout retirer » : la règle du chantier 6 (CauseDeListeVide), du côté de l'écran ─────────
+test('« Tout retirer » : ce que la ligne AFFICHE comme retirable, sauf « Mon portefeuille » pour qui n’administre pas le cabinet', () => {
+    const filtres = filtresActifs(
+        {
+            client: { value: '42' },
+            __prime__: { value: 'impayee' },
+            __mon_portefeuille__: { value: '7' },
+            __virement__: { value: 'detail' },         // maille de lecture : jamais retirée
+            __visibilite_conge__: { value: 'miennes' }, // imposé par le serveur : jamais retiré
+        },
+        {
+            definitions: DEFS,
+            groupes: [...GROUPES, { cle: '__virement__', titre: 'Affichage', presentation: true, options: {} }],
+            imposes: ['__visibilite_conge__'],
+        },
     );
-    assert.deepEqual(resume.filtres.map(f => f.cle), ['__mon_portefeuille__', 'actif']);
+    assert.deepEqual(clesARetirer(filtres, false), ['__prime__', 'client']);
+    assert.deepEqual(clesARetirer(filtres, true), ['__prime__', 'client', '__mon_portefeuille__']);
+    assert.deepEqual(clesARetirer([], true), []);
+    assert.deepEqual(clesARetirer(null, false), []);
 });
 
 test('formatterTexteFiltre — plages de dates partielles', () => {

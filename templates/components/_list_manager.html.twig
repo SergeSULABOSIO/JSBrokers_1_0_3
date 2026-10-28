@@ -51,6 +51,9 @@
         data-list-manager-list-url-value="{{ listUrl | default('') }}"
         data-list-manager-pagination-value='{{ (paginationMeta is defined and paginationMeta is not empty ? paginationMeta|json_encode : '{}')|e('html_attr') }}'
         data-list-manager-initial-criteria-value='{{ (initialSearchCriteria is defined and initialSearchCriteria is not empty ? initialSearchCriteria|json_encode : '{}')|e('html_attr') }}'
+        {# Les clés que le serveur IMPOSE à chaque recherche (CongeVisibiliteScope) : la ligne des
+           filtres actifs les lit, et ne les propose pas au retrait. #}
+        data-criteres-imposes='{{ (criteresImposes|default([]))|json_encode|e('html_attr') }}'
         {# LE LIEN VERS LE PARENT d'un onglet contextuel — {collection, champ, nature},
            résolu par Doctrine côté serveur. Le navigateur ne le devine plus : il le
            renvoie tel quel à chaque recherche, ce qui borne la liste au parent de
@@ -79,7 +82,10 @@
                 {% for groupe in listeCanvas.filtres_predefinis %}
                     <div class="jsb-preset-filters jsb-control-pill" role="group"
                          aria-label="{{ groupe.libelle | default('Filtres rapides') }}"
-                         data-preset-criterion="{{ groupe.critere }}">
+                         data-preset-criterion="{{ groupe.critere }}"
+                         {# La maille de lecture (Virement : groupé / détail), pas un filtre : la
+                            ligne des filtres actifs ne l'annonce pas. #}
+                         {% if groupe.presentation|default(false) %}data-preset-presentation="true"{% endif %}>
                         {# Le CRITÈRE est écrit une seule fois, en tête du groupe : les boutons
                            ne portent plus que la valeur. Une rubrique peut ainsi aligner
                            quatre groupes sur une ligne là où deux la remplissaient.
