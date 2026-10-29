@@ -72,6 +72,19 @@
                  role="status" aria-live="polite" aria-atomic="true"
                  data-view-manager-target="display">Prêt.</div>
             <div data-list-manager-target="paginationContainer" class="jsb-list-controls-bar__pagination jsb-control-pill"></div>
+            {# COMBIEN PAR PAGE (Serge, 2026-10-29) : des choix prévisibles, rendus par le serveur
+               (TailleDePage::CHOIX, qui borne aussi la requête). 20 par défaut ; il survit au F5,
+               pas à la fermeture de l'onglet du navigateur ; « Réinitialiser » le ramène à 20.
+               Masqué tant que la liste tient dans le plus petit choix. #}
+            <label class="jsb-list-controls-bar__par-page jsb-control-pill" data-list-manager-target="parPage" hidden>
+                <span class="jsb-par-page__mot">Par page</span>
+                <select class="jsb-par-page__choix" aria-label="Fiches par page"
+                        data-list-manager-target="parPageChoix" data-action="change->list-manager#changerParPage">
+                    {% for taille in constant('App\\Service\\Liste\\TailleDePage::CHOIX') %}
+                        <option value="{{ taille }}"{{ taille == constant('App\\Service\\Liste\\TailleDePage::PAR_DEFAUT') ? ' selected' : '' }}>{{ taille }}</option>
+                    {% endfor %}
+                </select>
+            </label>
             <div class="jsb-list-controls-bar__totals jsb-control-pill">
                 {{ include('components/_list_summary.html.twig') }}
             </div>

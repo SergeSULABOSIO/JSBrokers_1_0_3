@@ -13,8 +13,8 @@ use App\Services\Search\PortefeuilleScope;
  *   — AUCUNE_DONNEE : le cabinet n'a aucune fiche ici (filtres ou non) ;
  *   — PORTEFEUILLE : « Mon portefeuille » est le SEUL filtre actif. On propose « Afficher tout
  *     le cabinet » à TOUS : la chip est un confort de lecture, pas une frontière (option A) ;
- *   — FILTRES : d'autres filtres sont actifs (terme, chips, critères de Ket…). « Effacer les
- *     filtres » retire ceux-là, et « Mon portefeuille » seulement pour un ADMINISTRATEUR du
+ *   — FILTRES : d'autres filtres sont actifs (terme, chips, critères de Ket…). « Tout
+ *     retirer » retire ceux-là, et « Mon portefeuille » seulement pour un ADMINISTRATEUR du
  *     cabinet (WorkspaceAccessResolver::estAdministrateurDuCabinet).
  *
  * Règle pure : le contrôleur lui donne les critères VUS par l'utilisateur (pas les filtres que

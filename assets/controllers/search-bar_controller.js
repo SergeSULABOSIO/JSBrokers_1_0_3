@@ -165,7 +165,8 @@ export default class extends BaseController {
      */
     resetAllFilters() {
         this.simpleSearchInputTarget.value = '';
-        this.notifyCerveau('ui:search.submitted', { criteria: this.criteresParDefaut(), workspaceTabId: this.workspaceTabId });
+        // `reinitialiser` : la taille de page revient aussi au défaut (Serge, 2026-10-29).
+        this.notifyCerveau('ui:search.submitted', { criteria: this.criteresParDefaut(), workspaceTabId: this.workspaceTabId, reinitialiser: true });
     }
 
     /** Les critères PAR DÉFAUT : ceux que le serveur a posés à l'ouverture de la liste de l'onglet. */

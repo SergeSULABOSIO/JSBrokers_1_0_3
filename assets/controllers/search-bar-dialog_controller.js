@@ -476,7 +476,8 @@ export default class extends BaseController {
     }
 
     resetForm() {
-        this.notifyCerveau('ui:search.submitted', { criteria: this.apresReinitialisation || {}, workspaceTabId: this.workspaceTabId });
+        // `reinitialiser` : la taille de page revient aussi au défaut (Serge, 2026-10-29).
+        this.notifyCerveau('ui:search.submitted', { criteria: this.apresReinitialisation || {}, workspaceTabId: this.workspaceTabId, reinitialiser: true });
         this.modal.hide();
     }
 

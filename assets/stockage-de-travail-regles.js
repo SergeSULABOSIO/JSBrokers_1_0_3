@@ -179,7 +179,8 @@ function critereStructure(cle, critere) {
 }
 
 /**
- * La copie durable des onglets : disposition et filtres structurés, sans sélection.
+ * La copie durable des onglets : disposition et filtres structurés, sans sélection ni taille de
+ * page (elle ne vit qu'avec l'onglet du navigateur — Serge, 2026-10-29).
  * @param {Array<object>} onglets  l'état complet (celui du sessionStorage)
  * @param {string|null} idActif
  * @param {number} maintenant      horodatage en millisecondes
@@ -189,7 +190,7 @@ export function copieLocale(onglets, idActif, maintenant) {
     // Les RUBRIQUES seulement. Un aperçu (relevé de compte, note, bordereau : `loadUrl`) porte
     // dans son titre le nom du client ou la référence de la pièce : il reste dans l'onglet.
     const tabs = (Array.isArray(onglets) ? onglets : []).filter((o) => o && o.id && !o.loadUrl).map((onglet) => {
-        const { selection, criteres, ...disposition } = onglet;
+        const { selection, criteres, parPage, ...disposition } = onglet;
         if (criteres && typeof criteres === 'object') {
             const gardes = Object.fromEntries(Object.entries(criteres)
                 .filter(([cle, c]) => critereStructure(cle, c))

@@ -130,6 +130,46 @@ export function selectionARestaurer(onglets) {
     return enAttente;
 }
 /**
+ * COMBIEN PAR PAGE (Serge, 2026-10-29) : rangé sur l'onglet, il survit au F5 — dans la copie de
+ * l'onglet du navigateur SEULEMENT (`copieLocale` l'écarte : il ne survit pas à sa fermeture).
+ *
+ * `undefined` = le contexte n'en dit rien (changement d'onglet…) : on ne touche à rien.
+ * `null` = le défaut (après « Réinitialiser ») : on l'efface. Un entier positif : on le range.
+ *
+ * @param {Array<{id: string, parPage?: number}>} onglets
+ * @param {string} tabId
+ * @param {number|null|undefined} parPage
+ * @returns {Array<{id: string, parPage?: number}>}
+ */
+export function memoriserParPage(onglets, tabId, parPage) {
+    if (!Array.isArray(onglets) || !tabId || parPage === undefined) return onglets;
+    const actuel = onglets.find((onglet) => onglet && onglet.id === tabId);
+    if (!actuel) return onglets;
+    const valeur = Number.isInteger(parPage) && parPage > 0 ? parPage : null;
+    if ((actuel.parPage ?? null) === valeur) return onglets;
+
+    return onglets.map((onglet) => {
+        if (onglet !== actuel) return onglet;
+        const { parPage: _ancien, ...reste } = onglet;
+        return valeur === null ? reste : { ...reste, parPage: valeur };
+    });
+}
+
+/**
+ * Les tailles de page à REPOSER après un F5, par identifiant d'onglet.
+ *
+ * @param {Array<{id: string, parPage?: number}>} onglets
+ * @returns {Record<string, number>}
+ */
+export function parPageARestaurer(onglets) {
+    if (!Array.isArray(onglets)) return {};
+
+    return Object.fromEntries(onglets
+        .filter((onglet) => onglet && onglet.id && Number.isInteger(onglet.parPage) && onglet.parPage > 0)
+        .map((onglet) => [onglet.id, onglet.parPage]));
+}
+
+/**
  * Décore UNE entrée d'onglet, et rend le tableau d'origine si elle n'existe pas.
  *
  * L'identité du tableau est le signal que l'appelant attend : il ne persiste que si elle

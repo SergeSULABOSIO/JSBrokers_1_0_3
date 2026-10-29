@@ -7,8 +7,10 @@ import {
 import {
     criteresARestaurer,
     memoriserCriteres,
+    memoriserParPage,
     memoriserSelection,
     ongletAMemoriser,
+    parPageARestaurer,
     selectionARestaurer,
 } from './criteres-persistes.js';
 import { dedoublonnerOnglets, ongletExistantPourRubrique } from './onglets-uniques.js';
@@ -1893,6 +1895,13 @@ export default class extends Controller {
      */
     _appliquerCriteresEnAttente(tabId) {
         if (!tabId) return;
+        // La taille de page D'ABORD : la recherche des filtres qui suit l'emporte (la dernière
+        // demande fait autorité) et la porte, puisque le cerveau l'a déjà retenue.
+        const parPage = tabId === this.activeWorkspaceTabId ? this._parPageEnAttente?.[tabId] : null;
+        if (parPage) {
+            delete this._parPageEnAttente[tabId];
+            this.notifyCerveau('ui:pagination.par-page-changed', { parPage, workspaceTabId: tabId });
+        }
         const criteres = this._criteresEnAttente?.[tabId];
         if (!criteres) return;
 
@@ -2378,10 +2387,14 @@ export default class extends Controller {
         // demander au serveur — et la sélection ne peut pas se désynchroniser des
         // critères qui l'ont produite, puisqu'on les enregistre du même geste.
         const avant = this.workspaceTabs;
-        const apres = memoriserSelection(
-            memoriserCriteres(avant, tabId, event.detail?.searchCriteria),
+        const apres = memoriserParPage(
+            memoriserSelection(
+                memoriserCriteres(avant, tabId, event.detail?.searchCriteria),
+                tabId,
+                event.detail?.selection,
+            ),
             tabId,
-            event.detail?.selection,
+            event.detail?.parPage,
         );
         if (apres === avant) return;
 
@@ -3220,6 +3233,8 @@ export default class extends Controller {
         // « la sélection est perdue après un rafraîchissement »). On la repose donc
         // après le rendu, pas avec les critères.
         this._selectionEnAttente = { ...(this._selectionEnAttente || {}), ...selectionARestaurer(this.workspaceTabs) };
+        // COMBIEN PAR PAGE revient avec l'onglet (F5 seulement : la copie durable ne le garde pas).
+        this._parPageEnAttente = { ...(this._parPageEnAttente || {}), ...parPageARestaurer(this.workspaceTabs) };
 
         // LE GROUPEMENT DES ONGLETS EN SURNOMBRE SE RECALCULE ICI AUSSI.
         //

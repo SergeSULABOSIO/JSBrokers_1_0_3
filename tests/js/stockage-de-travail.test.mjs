@@ -180,6 +180,7 @@ const ONGLETS = [
     {
         id: 'ws-a', entityName: 'Avenant', title: 'Avenants', url: '/admin/avenant/x',
         selection: [4, 5],
+        parPage: 50,
         criteres: {
             __echeance_avenant__: { operator: '=', value: 'echus', label: 'Échus' },
             // Son libellé est le NOM du portefeuille (souvent celui d'un gestionnaire).
@@ -215,6 +216,8 @@ test('la copie durable garde la disposition et les filtres structurés, rien qui
     assert.equal(copie.tabs[0].entityName, 'Avenant');
     // La sélection reste dans l'onglet du navigateur.
     assert.equal('selection' in copie.tabs[0], false);
+    // La taille de page aussi : elle survit au F5, pas à la fermeture (Serge, 2026-10-29).
+    assert.equal('parPage' in copie.tabs[0], false);
     assert.deepEqual(Object.keys(copie.tabs[0].criteres).sort(), ['__echeance_avenant__', '__mon_portefeuille__', 'endingAt', 'primeTotale', 'renouvelable']);
     // « Mon portefeuille » est GARDÉ (la restauration remplace tout le jeu de critères : sans
     // lui, le nouvel onglet montrait tout le cabinet), mais sous un libellé NEUTRE.

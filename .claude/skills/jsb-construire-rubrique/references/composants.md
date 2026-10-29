@@ -49,6 +49,28 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
   n'est pas un filtre prend une autre classe (`.jsb-vue-choix`, :2099), sinon `_syncPresetChips`
   le resynchronise comme un chip.
 - Tout chip survit au F5 (règle de Serge) : voir `etats-interface.md`.
+- Dans le workspace, les groupes passent dans le RAIL DES CHIPS (refonte de la colonne 3, C3) :
+  un bouton par groupe (`groupe.icone`, alias `filtre:*`, `RailDesChipsDiscernableTest`), la
+  rangée devient son panneau (`rail-chips_controller.js`, règles `rail-chips-regles.js`). Aucun
+  geste du pointeur n'épingle : sortie du pointeur ou du focus = fermé. Jamais en dialogue.
+
+### Barre du bas d'une liste — partagé (toutes les listes du workspace)
+- `.jsb-list-controls-bar` (`_list_manager.html.twig`) : état, pagination, **taille de page**,
+  totaux ; une hauteur `--jsb-barre-bas-h` commune au rail ; paliers de réduction par
+  `@container jsb-zone` (jamais un montant ni une monnaie tronqués, `BarreDuBasMontantsEntiersTest`).
+- **TAILLE DE PAGE (Serge, 2026-10-29)** — l'utilisateur choisit combien de fiches par page :
+  - choix PRÉVISIBLES (liste, pas une saisie) rendus par le serveur depuis
+    `App\Service\Liste\TailleDePage::CHOIX` (10, 20, 50, 100) ; **20 par défaut** ;
+  - le SERVEUR borne (`TailleDePage::depuis` dans la recherche dynamique) : chaque fiche chargée
+    est décomptée en tokens ; hors de la liste = le défaut ; le total de la sélection relit la
+    même page ;
+  - ce n'est PAS une préférence enregistrée : retenue par l'onglet (`parPage` de l'état du
+    Cerveau, rangée sur l'onglet par `memoriserParPage`), elle **survit au F5** (copie
+    `sessionStorage`) mais pas à la fermeture de l'onglet du navigateur (`copieLocale` l'écarte) ;
+  - **« Réinitialiser » la ramène à 20** (`reinitialiser: true` → `_handleSearchRequest`) ; un
+    chip, un terme ou « Tout retirer » la gardent ;
+  - masquée tant que la liste tient dans le plus petit choix. Tests : `TailleDePageTest`,
+    `criteres-persistes.test.mjs`, `stockage-de-travail.test.mjs`.
 
 ### Vue Cartes (pipe en colonnes) — **local** (Pistes)
 - Clé : `vue_cartes` du canevas de liste (`PisteListCanvasProvider.php:95-122`) : gabarit de

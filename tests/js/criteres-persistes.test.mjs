@@ -19,8 +19,28 @@ import {
     critereConservable,
     criteresARestaurer,
     memoriserCriteres,
+    memoriserParPage,
     ongletAMemoriser,
+    parPageARestaurer,
 } from '../../assets/controllers/criteres-persistes.js';
+
+// ── COMBIEN PAR PAGE (Serge, 2026-10-29) : il survit au F5, « Réinitialiser » l'efface ─────────
+test('la taille de page se range sur l’onglet ; null (Réinitialiser) l’efface ; undefined n’y touche pas', () => {
+    const onglets = [{ id: 'ws-a', criteres: {} }, { id: 'ws-b' }];
+    const avec50 = memoriserParPage(onglets, 'ws-a', 50);
+    assert.equal(avec50[0].parPage, 50);
+    assert.equal('parPage' in avec50[1], false);
+    assert.equal(memoriserParPage(avec50, 'ws-a', 50), avec50, 'inchangé : même tableau, rien à écrire');
+    assert.equal(memoriserParPage(avec50, 'ws-a', undefined), avec50, 'le contexte n’en dit rien');
+    assert.equal('parPage' in memoriserParPage(avec50, 'ws-a', null)[0], false, 'retour au défaut');
+    assert.equal(memoriserParPage(onglets, 'ws-z', 50), onglets, 'onglet inconnu');
+    assert.equal('parPage' in memoriserParPage(onglets, 'ws-a', -3)[0], false, 'valeur absurde = défaut');
+});
+
+test('au F5, seules les tailles choisies sont reposées', () => {
+    assert.deepEqual(parPageARestaurer([{ id: 'ws-a', parPage: 50 }, { id: 'ws-b' }, { id: 'ws-c', parPage: 'x' }]), { 'ws-a': 50 });
+    assert.deepEqual(parPageARestaurer(null), {});
+});
 
 const AGENT = { operator: '=', value: 42, label: 'Alice' };
 

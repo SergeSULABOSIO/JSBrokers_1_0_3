@@ -2264,7 +2264,9 @@ textarea:hover,
     white-space: nowrap;
     margin-bottom: 0;
 }
-.jsb-list-summary__select {
+/* Le sélecteur « Par page » a la facture de celui du totaliseur : une règle pour les deux. */
+.jsb-list-summary__select,
+.jsb-par-page__choix {
     border: 1px solid #dee2e6;
     border-radius: 0.375rem;
     background: transparent;
@@ -2274,7 +2276,18 @@ textarea:hover,
     max-width: 160px;
     cursor: pointer;
 }
-.jsb-list-summary__select:focus { outline: 2px solid #0047AB; outline-offset: 1px; }
+.jsb-list-summary__select:focus,
+.jsb-par-page__choix:focus { outline: 2px solid #0047AB; outline-offset: 1px; }
+/* COMBIEN PAR PAGE (Serge, 2026-10-29), après la pagination dans la barre du bas. */
+.jsb-list-controls-bar__par-page {
+    gap: 6px;
+    margin: 0;
+    flex-shrink: 0;
+    color: var(--text-muted, #6c757d);
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+.jsb-list-controls-bar__par-page[hidden] { display: none; }
 .jsb-list-summary__divider {
     width: 1px;
     height: 1rem;
@@ -2559,7 +2572,8 @@ textarea:hover,
     .jsb-list-manager .jsb-libelle-court { display: inline; }
     /* Le mot « Page » de la pagination part avec : deux « Page » côte à côte (« Page [1] / 2 »
        et « Page USD … ») se lisaient comme un seul numéro de page. */
-    .jsb-list-manager .jsb-pagination__mot { display: none; }
+    .jsb-list-manager .jsb-pagination__mot,
+    .jsb-list-manager .jsb-par-page__mot { display: none; }
 }
 @container jsb-zone (max-width: 1349.98px) {
     /* 3. L'heure, l'entité et l'onglet (avec leur « › ») : l'onglet actif et le titre les

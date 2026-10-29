@@ -1230,12 +1230,15 @@ trait ControllerUtilsTrait
             $criteria = array_merge($criteria, $extraCriteria);
             $parentContext = $payload['parentContext'] ?? null;
             $page = max(1, (int)($payload['page'] ?? 1));
+            // COMBIEN PAR PAGE : le choix de l'utilisateur (barre du bas), borné par le serveur —
+            // une valeur hors de la liste vaut le défaut (TailleDePage, 2026-10-29).
+            $parPage = \App\Service\Liste\TailleDePage::depuis($payload['parPage'] ?? null);
 
             // Appel du service de recherche refactorisé et sécurisé
             // CORRECTION : On passe le contexte du parent au service de recherche.
             $listeCanvas = $this->canvasBuilder->getListeCanvas($entityClass);
             [$criteria, $vueCartes, $basculerEnListe] = $this->preparerLaVueCartes($request, $entityClass, $criteria, $parentContext, $entreprise, $listeCanvas, isset($payload['totauxDeLaSelection']));
-            $searchResult = $this->searchService->search($entityClass, $criteria, $entreprise, $parentContext, $page, 20);
+            $searchResult = $this->searchService->search($entityClass, $criteria, $entreprise, $parentContext, $page, $parPage);
             $data = $searchResult['data'];
 
             // LE TOTAL DE LA SÉLECTION (chantier 4, commit 3 — décision de Serge : calculé par le
@@ -1250,8 +1253,8 @@ trait ControllerUtilsTrait
                 if ($proprietaire instanceof \App\Entity\Utilisateur && !$this->tokenAccountService->canAfford($proprietaire, 1)) {
                     return $this->tokensBlockedJson(new InsufficientTokensException(1, 0, $this->tokenAccountService->nextRenewalAt($proprietaire)));
                 }
-                // Une page compte vingt lignes : cent identifiants au plus suffisent largement.
-                $cochees = array_flip(\array_slice(array_map('intval', array_filter((array) $payload['totauxDeLaSelection'], 'is_numeric')), 0, 100));
+                // Une page compte au plus max(TailleDePage::CHOIX) lignes : autant d'identifiants suffisent.
+                $cochees = array_flip(\array_slice(array_map('intval', array_filter((array) $payload['totauxDeLaSelection'], 'is_numeric')), 0, max(\App\Service\Liste\TailleDePage::CHOIX)));
                 $selection = array_values(array_filter($data, static fn (object $ligne): bool => isset($cochees[(int) $ligne->getId()])));
                 $this->canvasBuilder->batchPreloadForCollection($selection);
                 $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
@@ -1326,7 +1329,7 @@ trait ControllerUtilsTrait
                 [$criteresCherches, $vueCartes, $basculerEnListe] = $this->preparerLaVueCartes(
                     $request, $entityClass, $initialCriteria, null, $entreprise, $this->canvasBuilder->getListeCanvas($entityClass),
                 );
-                $searchResult = $this->searchService->search($entityClass, $criteresCherches, $entreprise, null, 1, 20);
+                $searchResult = $this->searchService->search($entityClass, $criteresCherches, $entreprise, null, 1, \App\Service\Liste\TailleDePage::PAR_DEFAUT);
                 $data = $searchResult['data'];
 
                 // MÉTRAGE TOKENS (lecture) au chargement initial de la liste. En cas
@@ -1346,7 +1349,7 @@ trait ControllerUtilsTrait
                     'currentPage'  => 1,
                     'totalPages'   => $searchResult['totalPages'],
                     'totalItems'   => $searchResult['totalItems'],
-                    'itemsPerPage' => 20,
+                    'itemsPerPage' => \App\Service\Liste\TailleDePage::PAR_DEFAUT,
                 ];
                 // VIDE DÈS L'OUVERTURE (« Mon portefeuille » cache tout, typiquement) : la liste
                 // dit pourquoi, et propose le bon geste.

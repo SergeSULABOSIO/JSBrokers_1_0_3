@@ -28,6 +28,8 @@ export default class extends BaseController {
         'rowCheckbox',
         'paginationContainer',
         'controlsBar',
+        'parPage',
+        'parPageChoix',
     ];
 
     /**
@@ -970,6 +972,7 @@ export default class extends BaseController {
      * @private
      */
     _renderPagination(meta) {
+        this._afficherParPage(meta);
         if (!this.hasPaginationContainerTarget) return;
         if (!meta || !meta.totalPages || (meta.totalPages <= 1 && meta.totalItems <= (meta.itemsPerPage || 20))) {
             this.paginationContainerTarget.innerHTML = '';
@@ -1027,6 +1030,30 @@ export default class extends BaseController {
         this.element.classList.add('list-manager-has-pagination');
     }
 
+
+    /**
+     * COMBIEN PAR PAGE : le sélecteur dit la taille que le SERVEUR a appliquée (`itemsPerPage`),
+     * et ne paraît que si la liste dépasse le plus petit choix — sinon il n'aurait rien à changer.
+     * @param {object|null|undefined} meta
+     * @private
+     */
+    _afficherParPage(meta) {
+        if (!this.hasParPageTarget || !this.hasParPageChoixTarget) return;
+        const choix = [...this.parPageChoixTarget.options].map((option) => Number(option.value));
+        const taille = Number(meta?.itemsPerPage);
+        if (choix.includes(taille)) this.parPageChoixTarget.value = String(taille);
+        this.parPageTarget.hidden = !(Number(meta?.totalItems) > Math.min(...choix));
+    }
+
+    /** Un autre nombre par page : le cerveau le retient pour CET onglet et repart de la page 1. */
+    changerParPage(event) {
+        const parPage = parseInt(event.currentTarget.value, 10);
+        if (!Number.isInteger(parPage) || parPage < 1) return;
+        this.notifyCerveau('ui:pagination.par-page-changed', {
+            parPage,
+            ...(this.workspaceTabId ? { workspaceTabId: this.workspaceTabId } : {}),
+        });
+    }
 
     /**
      * Gère les clics sur les boutons de pagination via délégation d'événement.

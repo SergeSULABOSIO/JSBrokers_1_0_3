@@ -40,7 +40,7 @@ ci-dessous est remplie dans le plan (fiche de rubrique, case « États »), écr
 | Plafonné | Le chiffre dit qu'il est plafonné (« + de USD 900 000 ») | `plafond_transformees` (`PisteListCanvasProvider.php:100`) ; infobulle `_tableau.html.twig:28-29` ; commit `93f949d6` |
 | Élément masqué par un filtre | Après enregistrement : avertissement qui nomme le filtre + « Retirer ce filtre » | `verifierLaFicheEnregistree` (`ControllerUtilsTrait.php:1043`) ; `fiche-hors-filtre.js:45` ; `cerveau_controller.js:1256` ; test `fiche-hors-filtre.test.mjs` |
 | Après enregistrement | Toast de succès ; aucun commentaire si rien n'a été enregistré | `messageDEtape` (`vue-cartes-regles.js:85-96`) : fiche fermée sans enregistrement → aucun message |
-| Après F5 | Onglet, vue, chips, critères et sélection restaurés | cookie de vue `preparerLaVueCartes` (`ControllerUtilsTrait.php:1267`) ; `criteres-persistes.js` ; `choix-persiste.js` ; `echange-perimetre-persiste.js` ; tests `selection-persistee.test.mjs`, `criteres-persistes.test.mjs`, `premier-rendu.test.mjs` |
+| Après F5 | Onglet, vue, chips, critères, sélection et taille de page restaurés (la taille de page : F5 seulement, « Réinitialiser » la ramène à 20 — `composants.md`, barre du bas) | cookie de vue `preparerLaVueCartes` (`ControllerUtilsTrait.php:1267`) ; `criteres-persistes.js` ; `choix-persiste.js` ; `echange-perimetre-persiste.js` ; tests `selection-persistee.test.mjs`, `criteres-persistes.test.mjs`, `premier-rendu.test.mjs` |
 
 Un état sans mécanisme existant s'écrit « aucun mécanisme : à concevoir » dans le plan, avec
 l'échelon de `SKILL.md` §5.

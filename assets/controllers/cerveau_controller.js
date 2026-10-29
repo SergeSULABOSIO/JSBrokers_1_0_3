@@ -228,6 +228,19 @@ export default class extends Controller {
             case 'dialog:search.open-request':
                 this.broadcast('dialog:search.open-request', payload); // Relay to search-bar-dialog
                 break;
+            case 'ui:pagination.par-page-changed': {
+                // COMBIEN PAR PAGE (Serge, 2026-10-29) : retenu par l'onglet NOMMÉ, il repart de la
+                // page 1. « Réinitialiser » l'efface (_handleSearchRequest), le F5 le repose
+                // (workspace-manager, depuis l'onglet mémorisé).
+                const cible = cibleDeRecherche(payload.workspaceTabId, this.currentWorkspaceTabId, this.activeTabId);
+                const etat = cible.affiche ? this._getActiveTabState() : this.tabsState[cible.workspaceTabId]?.[cible.listeId];
+                if (!etat) break;
+                etat.parPage = payload.parPage;
+                etat.currentPage = 1;
+                this.broadcast('app:loading.start', { originatorId: etat.elementId, workspaceTabId: cible.workspaceTabId });
+                this._requestListRefresh(cible.listeId, { page: 1 }, cible.workspaceTabId);
+                break;
+            }
             case 'ui:pagination.page-changed': {
                 const pageState = this._getActiveTabState();
                 pageState.currentPage = payload.page;
@@ -242,7 +255,7 @@ export default class extends Controller {
             case 'ui:search.submitted': // Point d'entrée unique pour toute soumission de recherche
                 // L'émetteur NOMME son onglet de rubrique : sans lui, la recherche partait sur
                 // l'onglet affiché, quel qu'il soit (routage-onglet.js).
-                this._handleSearchRequest(payload.criteria, payload.workspaceTabId);
+                this._handleSearchRequest(payload.criteria, payload.workspaceTabId, payload.reinitialiser === true);
                 break;
             case 'ui:search.reset-request':
                 // RELAYÉ À LA BARRE DE RECHERCHE de l'onglet, seule à connaître ses critères par
@@ -1044,6 +1057,9 @@ export default class extends Controller {
                     criteria: tabState.searchCriteria || {},
                     parentContext,
                     page: tabState.currentPage ?? 1,
+                    // LA MÊME PAGE : sinon le serveur la recoupait à 20 lignes, et une ligne cochée
+                    // au-delà sortait du total.
+                    ...(tabState.parPage ? { parPage: tabState.parPage } : {}),
                     totauxDeLaSelection: ids,
                 }),
             })
@@ -1234,6 +1250,8 @@ export default class extends Controller {
                 parentContext: affiche && targetTabId === this.activeTabId ? this._getParentContextForSearch() : null,
                 ...payload,
                 page: payload.page ?? tabState.currentPage ?? 1,
+                // Combien par page : le choix de l'onglet ; absent, le défaut du serveur.
+                ...(tabState.parPage ? { parPage: tabState.parPage } : {}),
             }),
         })
             .then(response => {
@@ -1276,6 +1294,9 @@ export default class extends Controller {
                     numericAttributesAndValues: tabState.numericAttributesAndValues,
                     formCanvas: tabState.activeTabFormCanvas,
                     searchCriteria: tabState.searchCriteria,
+                    // Combien par page (null = le défaut) : le gestionnaire d'espace le range sur
+                    // l'onglet, avec ses filtres, pour le F5.
+                    parPage: tabState.parPage ?? null,
                     workspaceTabId,
                     // L'utilisateur a changé d'onglet pendant la requête : l'écran n'est pas concerné.
                     arrierePlan: workspaceTabId !== this.currentWorkspaceTabId,
@@ -1590,9 +1611,12 @@ export default class extends Controller {
      * @param {string|null} [workspaceTabId=null] - L'onglet de rubrique NOMMÉ par l'émetteur.
      *   Sans lui, la recherche visait l'onglet affiché au moment où elle arrivait — un filtre
      *   posé en différé (restauration, ouverture par l'assistant) pouvait tomber sur un autre.
+     * @param {boolean} [reinitialiser=false] - « Réinitialiser » : revenir aux défauts, taille de
+     *   page comprise (Serge, 2026-10-29). Une autre recherche (chip, terme, « Tout retirer »)
+     *   garde la taille choisie.
      * @private
      */
-    _handleSearchRequest(criteria = {}, workspaceTabId = null) {
+    _handleSearchRequest(criteria = {}, workspaceTabId = null, reinitialiser = false) {
         const cible = cibleDeRecherche(workspaceTabId, this.currentWorkspaceTabId, this.activeTabId);
         const etat = cible.affiche
             ? this._getActiveTabState()
@@ -1602,6 +1626,7 @@ export default class extends Controller {
         if (!etat) return;
         etat.searchCriteria = criteria;
         etat.currentPage = 1; // toute nouvelle recherche repart de la page 1
+        if (reinitialiser) delete etat.parPage;
 
         // Notifie le début du chargement pour afficher le squelette et la barre de progression.
         this.broadcast('app:loading.start', { originatorId: etat.elementId });
