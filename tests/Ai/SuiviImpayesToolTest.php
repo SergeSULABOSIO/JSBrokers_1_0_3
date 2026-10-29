@@ -230,6 +230,12 @@ class SuiviImpayesToolTest extends TestCase
         $this->assertSame(1200.0, $result->data['totaux']['totalSoldePrime']);
         $this->assertSame(3, $result->data['total']);
         $this->assertTrue($result->data['tronque']);
+        // Les totaux de l'ENSEMBLE voyagent avec le tableau : sa ligne de totaux porte « TOTAL (3) »
+        // et ces chiffres-là, jamais la somme de la page (incident du 2026-10-29).
+        $this->assertSame(
+            ['total' => 3, 'totaux' => ['soldePrime' => 1200.0, 'soldeCommission' => 90.0]],
+            $result->data['presentation']['ensemble'],
+        );
         $this->assertNull($result->uiAction);
         // Un axe de dette est posé : la répartition serait redondante et trompeuse.
         $this->assertArrayNotHasKey('repartition', $result->data);

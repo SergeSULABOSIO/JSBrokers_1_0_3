@@ -1663,6 +1663,16 @@ class AiContextBuilder
           (5) TOTAUX : dernière ligne « | **TOTAL** | … | **1 911 633,28 [MONNAIE]** | », sur les colonnes
               de « presentation.totaliser » quand il y en a, sinon sur les montants et les
               quantités. JAMAIS de total sur une date, un identifiant ni un taux.
+              TABLEAU TRONQUÉ (l'outil a trouvé plus d'éléments qu'il n'en renvoie : « tronque »,
+              ou « total » plus grand que le nombre de lignes) : la ligne de totaux ne SOMME
+              JAMAIS les lignes affichées sous le mot « TOTAL ». Elle reprend
+              « presentation.ensemble.totaux » — calculés par l'outil sur TOUS les éléments, la
+              même source que l'écran — et s'écrit « | **TOTAL (N)** | … |, N = « presentation.
+              ensemble.total ». Sans ces totaux, écris « **Sous-total (k affichés)** ». Un
+              total de page annoncé pour l'ensemble contredit l'écran (incident du
+              2026-10-29 : 257 517,61 sur 10 lignes, donné pour 42 tranches qui en faisaient
+              1 793 201,44). Et un total demandé plus tard se RELIT par l'outil : il ne se
+              recopie pas d'un tableau tronqué.
           (6) TRONCATURE DITE : 20 lignes au plus. S'il en reste, ajoute dessous, en italique,
               « *N éléments au total, 20 affichés* » — un tableau tronqué muet se lit comme un
               inventaire complet, et le courtier croit avoir vu toute sa dette.
@@ -1997,7 +2007,13 @@ class AiContextBuilder
             . "\n          — remettre en forme, ajouter une ligne de totaux, trier, résumer, traduire, expliquer"
             . "\n          ou corriger ta réponse précédente. Ces chiffres-là, tu les as : refais le travail"
             . "\n          demandé directement, dans ce tour, sans relire les mêmes données et sans redemander"
-            . "\n          à l'utilisateur de quel client ou de quelle période il parle.";
+            . "\n          à l'utilisateur de quel client ou de quelle période il parle."
+            . "\n          SAUF UNE MESURE SUR L'ENSEMBLE QUAND TU N'EN AS VU QU'UNE PARTIE. Si le tableau du fil"
+            . "\n          était TRONQUÉ (« N éléments au total, k affichés »), un total, un compte, une moyenne"
+            . "\n          ou un maximum sur les N ne se calcule PAS sur les k lignes : relis-le par l'outil"
+            . "\n          (ses « totaux » portent l'ensemble). Une mesure est VRAIE quelle que soit la façon"
+            . "\n          dont on te la demande — et c'est l'écran qui la montre (incident du 2026-10-29 :"
+            . "\n          le total de 10 lignes donné pour 42 tranches contredisait la barre du bas).";
     }
 
     /**

@@ -165,6 +165,18 @@ final class TableauMarkdown
      */
     private function ligneDeTotaux(array $roles, array $lignes, ?array $presentation, ?string $monnaie): ?string
     {
+        // UN TABLEAU TRONQUÉ N'A PAS DE « TOTAL » FAIT DE SES LIGNES (incident du 2026-10-29 : la
+        // somme de 10 lignes sur 42, intitulée TOTAL, a été reprise par Ket pour les 42 — l'écran
+        // disait autre chose). Complet : la somme des lignes, « TOTAL ». Tronqué : les totaux de
+        // l'ENSEMBLE que l'outil a calculés à la source, « TOTAL (N) » ; à défaut, la somme des
+        // lignes AFFICHÉES, « Sous-total (k affichés) ».
+        $affichees = array_slice($lignes, 0, self::MAX_LIGNES);
+        $ensemble = \is_array($presentation['ensemble'] ?? null) ? $presentation['ensemble'] : [];
+        $totalDeLEnsemble = max(\count($lignes), (int) ($ensemble['total'] ?? 0));
+        $tronque = $totalDeLEnsemble > \count($affichees);
+        $totauxDeLEnsemble = $tronque && \is_array($ensemble['totaux'] ?? null) ? $ensemble['totaux'] : [];
+        $lignes = $affichees;
+
         $declares = $presentation['totaliser'] ?? null;
         $aSommer = \is_array($declares)
             ? array_values(array_intersect(array_map('strval', $declares), array_keys($roles)))
@@ -174,6 +186,14 @@ final class TableauMarkdown
             ));
 
         $sommes = [];
+        if ($totauxDeLEnsemble !== []) {
+            foreach ($aSommer as $colonne) {
+                if (isset($totauxDeLEnsemble[$colonne])) {
+                    $sommes[$colonne] = (float) $totauxDeLEnsemble[$colonne];
+                }
+            }
+            $aSommer = [];
+        }
         foreach ($aSommer as $colonne) {
             $somme = 0.0;
             $vue = false;
@@ -197,12 +217,17 @@ final class TableauMarkdown
             return null;
         }
 
+        $libelle = match (true) {
+            !$tronque                => '**TOTAL**',
+            $totauxDeLEnsemble !== [] => sprintf('**TOTAL (%d)**', $totalDeLEnsemble),
+            default                  => sprintf('**Sous-total (%d affichés)**', \count($lignes)),
+        };
         $cellules = [];
         $premiere = true;
         foreach ($roles as $colonne => $role) {
             $cellules[] = match (true) {
                 isset($sommes[$colonne]) => '**' . $this->valeurNumerique($role, $sommes[$colonne], $monnaie) . '**',
-                $premiere                => '**TOTAL**',
+                $premiere                => $libelle,
                 default                  => '',
             };
             $premiere = false;

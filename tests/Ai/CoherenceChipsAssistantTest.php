@@ -5,6 +5,7 @@ namespace App\Tests\Ai;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
 use App\Ai\Tool\RechercherEntitesTool;
+use App\Ai\Tool\SuiviImpayesTool;
 use App\Ai\Tool\VigieEcheancesTool;
 use App\Entity\Avenant;
 use App\Entity\ChargementPourPrime;
@@ -458,6 +459,21 @@ class CoherenceChipsAssistantTest extends KernelTestCase
                 array_column($liste->data['items'], 'id'),
                 "Chips « {$libelle} » : mêmes tranches, même ordre d'urgence."
             );
+
+            // LES MONTANTS, PAS SEULEMENT LES COMPTES (Serge, 2026-10-29 : « l'UI et Ket doivent
+            // avoir la même source des calculs et des données »). Les soldes que Ket totalise sur
+            // l'ensemble égalent la somme des soldes de la liste que montre la rubrique.
+            $impayes = static::getContainer()->get(SuiviImpayesTool::class)->execute(['axes' => $args['axes']], $scope);
+            if ($impayes->status === AiToolResult::STATUS_OK && isset($impayes->data['totaux'])) {
+                $tout = $this->service()->search(Tranche::class, $axes + $factory->pour('Tranche', $invite), $entreprise, null, 1, 1000);
+                $somme = static fn (string $champ): float => round(array_sum(array_map(
+                    static fn (Tranche $t): float => max(0.0, (float) ($t->{$champ} ?? 0)),
+                    $tout['data'],
+                )), 2);
+                $this->assertSame((int) $tout['totalItems'], $impayes->data['totaux']['nb'], "Chips « {$libelle} » : même ensemble.");
+                $this->assertEqualsWithDelta($somme('primeSoldeDue'), $impayes->data['totaux']['totalSoldePrime'], 0.005, "Chips « {$libelle} » : même solde de prime que l'écran.");
+                $this->assertEqualsWithDelta($somme('solde_restant_du'), $impayes->data['totaux']['totalSoldeCommission'], 0.005, "Chips « {$libelle} » : même solde de commission que l'écran.");
+            }
         }
 
         // Un vert sur des ensembles tous vides ne prouverait rien : le semis doit

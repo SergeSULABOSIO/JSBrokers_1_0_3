@@ -230,6 +230,15 @@ final class SuiviImpayesTool implements AiToolInterface, AiToolConditionnel
                 'primePayeeLe'    => Colonnes::DATE,
                 'soldePrime'      => Colonnes::MONTANT,
                 'soldeCommission' => Colonnes::MONTANT,
+            ], null, [
+                // L'ENSEMBLE, pas la page : les totaux de TOUTES les tranches filtrées, calculés
+                // par TranchePaiementService — la source de la liste de l'écran. Le tableau de
+                // 10 lignes porte donc « TOTAL (42) » avec ces chiffres-là.
+                'total' => $resultat['totalItems'],
+                'totaux' => [
+                    'soldePrime' => $resultat['totaux']['totalSoldePrime'] ?? null,
+                    'soldeCommission' => $resultat['totaux']['totalSoldeCommission'] ?? null,
+                ],
             ]),
             'totaux' => $resultat['totaux'],
             'repartition' => $this->repartition($axes, $resultat['totaux']),

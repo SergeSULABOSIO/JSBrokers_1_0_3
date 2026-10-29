@@ -77,6 +77,36 @@ class TableauMarkdownTest extends TestCase
     }
 
     /**
+     * UN TABLEAU TRONQUÉ N'A PAS DE « TOTAL » FAIT DE SES LIGNES (incident du 2026-10-29 : la
+     * somme de 10 lignes sur 42, intitulée TOTAL, a été reprise par Ket pour les 42 tranches —
+     * la barre du bas de l'écran disait 1 793 201,44, Ket 257 517,61). Tronqué : les totaux de
+     * l'ENSEMBLE calculés par l'outil, « TOTAL (N) » ; à défaut, « Sous-total (k affichés) ».
+     */
+    public function testUnTableauTronqueNeDonneJamaisSaSommeDePagePourLeTotal(): void
+    {
+        $lignes = [
+            ['client' => 'A', 'soldePrime' => 683.34],
+            ['client' => 'B', 'soldePrime' => 1358.22],
+        ];
+        $roles = ['client' => Colonnes::TEXTE, 'soldePrime' => Colonnes::MONTANT];
+
+        $avecEnsemble = $this->rendu()->rendre($lignes, Colonnes::de($roles, null, ['total' => 42, 'totaux' => ['soldePrime' => 1793201.44]]));
+        $this->assertStringContainsString('| **TOTAL (42)** |', $avecEnsemble);
+        $this->assertStringContainsString('**1 793 201,44**', $avecEnsemble);
+        $this->assertStringNotContainsString('2 041,56', $avecEnsemble, 'La somme de la page n’est jamais donnée pour l’ensemble.');
+
+        $sansTotaux = $this->rendu()->rendre($lignes, Colonnes::de($roles, null, ['total' => 42]));
+        $this->assertStringContainsString('| **Sous-total (2 affichés)** |', $sansTotaux);
+        $this->assertStringContainsString('**2 041,56**', $sansTotaux);
+        $this->assertStringNotContainsString('**TOTAL', $sansTotaux);
+
+        // Complet (l'ensemble tient dans les lignes) : le total est celui des lignes.
+        $complet = $this->rendu()->rendre($lignes, Colonnes::de($roles, null, ['total' => 2, 'totaux' => ['soldePrime' => 9.99]]));
+        $this->assertStringContainsString('| **TOTAL** |', $complet);
+        $this->assertStringContainsString('**2 041,56**', $complet);
+    }
+
+    /**
      * UN MONTANT PORTE LA MONNAIE DE TRAVAIL DU CABINET (chantier 5) — son code, après le
      * nombre comme le prescrivent les consignes de Ket — et non un « $ » écrit d'office, faux
      * pour un cabinet en CDF. La monnaie se lit UNE fois par tableau, pas une fois par cellule.

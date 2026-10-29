@@ -80,9 +80,16 @@ final class Colonnes
      *                                         quantités est rarement voulu, et un total faux
      *                                         est pire qu'un total absent
      *
-     * @return array{colonnes: array<string, string>, totaliser: list<string>}
+     * @param array{total: int, totaux?: array<string, float|int>}|null $ensemble
+     *        L'ENSEMBLE dont les lignes ne sont qu'une page : combien d'éléments, et les totaux
+     *        de chaque colonne sur TOUS (calculés par l'outil, à la source). Sans lui, la ligne
+     *        de totaux d'un tableau tronqué n'est qu'un sous-total — jamais « TOTAL » (incident
+     *        du 2026-10-29 : 257 517,61 sur 10 lignes annoncé pour 42 tranches, l'écran disait
+     *        1 793 201,44).
+     *
+     * @return array{colonnes: array<string, string>, totaliser: list<string>, ensemble?: array}
      */
-    public static function de(array $roles, ?array $totaliser = null): array
+    public static function de(array $roles, ?array $totaliser = null, ?array $ensemble = null): array
     {
         $colonnes = [];
         foreach ($roles as $cle => $role) {
@@ -104,7 +111,19 @@ final class Colonnes
                 && \in_array($colonnes[$cle], self::ROLES_SOMMABLES, true),
         ));
 
-        return ['colonnes' => $colonnes, 'totaliser' => $totaliser];
+        $presentation = ['colonnes' => $colonnes, 'totaliser' => $totaliser];
+        if ($ensemble !== null && isset($ensemble['total'])) {
+            $presentation['ensemble'] = [
+                'total' => (int) $ensemble['total'],
+                'totaux' => array_filter(
+                    \is_array($ensemble['totaux'] ?? null) ? $ensemble['totaux'] : [],
+                    static fn ($valeur, $cle) => \in_array((string) $cle, $totaliser, true) && (\is_int($valeur) || \is_float($valeur)),
+                    ARRAY_FILTER_USE_BOTH,
+                ),
+            ];
+        }
+
+        return $presentation;
     }
 
     /**

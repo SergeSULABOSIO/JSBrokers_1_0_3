@@ -227,6 +227,12 @@ final class RepliPrecis
         }
 
         $presentation = is_array($data['presentation'] ?? null) ? $data['presentation'] : null;
+        // Le tableau doit savoir s'il est TRONQUÉ : sa ligne de totaux n'est un « TOTAL » que
+        // sur l'ensemble (TableauMarkdown::ligneDeTotaux).
+        $totalTrouve = (int) ($data['totalItems'] ?? $data['total'] ?? 0);
+        if ($presentation !== null && $totalTrouve > 0 && !isset($presentation['ensemble']['total'])) {
+            $presentation['ensemble']['total'] = $totalTrouve;
+        }
         $tableau = $this->tableauMarkdown->rendre($lignes, $presentation);
         if ($tableau === null) {
             return null;
