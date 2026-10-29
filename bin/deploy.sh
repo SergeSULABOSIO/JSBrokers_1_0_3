@@ -858,6 +858,12 @@ executer "rm -f '$PUBLIC_DIR/maintenance.flag'"
 MAINTENANCE_OUVERTE=0
 ok "Site rouvert"
 
+# LE WORKER DE KET RELIT LE NOUVEAU CODE (2026-10-29). Il s'arrête après le message en cours ;
+# le cron « app:ket:worker » (chaque minute) le relance sur cette version. Sans worker, sans
+# effet. Sans cette ligne, il exécuterait l'ancien code jusqu'à sa limite de durée (55 min).
+executer "APP_ENV=prod $PHP bin/console messenger:stop-workers --no-interaction"
+ok "Worker de Ket : arret demande (le cron le relance sur la nouvelle version)"
+
 # ===========================================================================
 titre "11/11  Controle"
 # ===========================================================================

@@ -659,7 +659,7 @@ class AssistantIaController extends AbstractController
      * de recoller un fil après un F5 sans tout recharger.
      */
     #[Route('/api/messages/{idEntreprise}/{idConversation}/etat', name: 'api.message.etat', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS], methods: ['GET'])]
-    public function etatDesTaches(int $idEntreprise, int $idConversation, Request $request): JsonResponse
+    public function etatDesTaches(int $idEntreprise, int $idConversation, Request $request, \App\Ai\Traitement\PoulsDuWorker $pouls): JsonResponse
     {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
         if (!$this->moduleAutorise($invite)) {
@@ -679,6 +679,9 @@ class AssistantIaController extends AbstractController
             // besoin qu'il déduise l'inactivité d'une liste vide.
             'enCours'           => $this->tacheRepository->aUnTraitementOuvert($conversation),
             'conversationTitre' => $conversation->getTitre(),
+            // KET PEUT-IL RÉPONDRE ? En file, seulement si son worker bat (PoulsDuWorker, source
+            // unique) : sinon le chat le DIT, au lieu de laisser croire que la question avance.
+            'ketDisponible'     => $pouls->ketDisponible(),
         ]);
     }
 

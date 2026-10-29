@@ -530,22 +530,53 @@ Les heures sont exprimées **en heure de Kinshasa**.
 0 3 * * 0 /usr/bin/find /home/josearac/logs -name '*.log' -size +20M -exec /usr/bin/truncate -s 0 {} \; ; /usr/bin/find /home/josearac/logs -name 'deploy-*.log' -mtime +60 -delete
 ```
 
-### Worker Messenger : inutile au premier déploiement
+### Worker de Ket (`app:ket:worker`) — cron chaque minute, verrou
 
 Les e-mails partent en **synchrone** en production (`when@prod` de
 `config/packages/messenger.yaml`), et `ASSISTANT_ASYNC=0` / `IMPORT_ASYNC=0`
-gardent tout le reste dans la requête. **Rien n'attend dans la file.**
+gardent Ket et les imports dans la requête : aujourd'hui, **rien n'attend dans la
+file**. Le worker devient indispensable le jour où `ASSISTANT_ASYNC=1` — Ket ne
+répond plus alors que si un worker tourne. Le cron peut être posé dès maintenant :
+il est sans effet tant que la file est vide.
 
-Le cron ci-dessous n'est à créer que le jour d'un passage à
-`ASSISTANT_ASYNC=1` :
+Ligne à saisir dans cPanel → **Tâches Cron** (paramètre « Une fois par minute »,
+`* * * * *`) :
 
 ```cron
-*/5 * * * * /usr/bin/flock -n /home/josearac/joseara/var/worker.lock -c "cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=256M bin/console messenger:consume async --time-limit=280 --memory-limit=200M --limit=100 --env=prod --no-interaction -q" >> /home/josearac/logs/worker.log
+* * * * * cd /home/josearac/joseara && /opt/alt/php82/usr/bin/php -d memory_limit=256M bin/console app:ket:worker --time-limit=3300 --memory-limit=200M --env=prod --no-interaction >> /home/josearac/logs/worker-ket.log 2>&1
 ```
 
-`flock -n` empêche deux workers de se superposer · `--time-limit=280` fait
-mourir le worker avant le cron suivant · `--memory-limit` le tue avant que PHP
-ne fuie · `-q` évite un e-mail à chaque passage.
+- **Un seul worker, jamais deux** : `app:ket:worker` prend un verrou de fichier
+  sans attendre (`flock`, dans `var/worker/worker-prod.lock`). Tenu par le worker en
+  place, le lancement de la minute sort aussitôt, en silence. Le verrou est tenu par
+  le noyau : un worker tué (plantage, redémarrage du serveur) le rend aussitôt.
+- **Il s'arrête proprement et il est remplacé** : `--time-limit=3300` (55 min) et
+  `--memory-limit=200M` ; la minute suivante en relance un. `bin/deploy.sh` demande
+  son arrêt après chaque déploiement (`messenger:stop-workers`) : il est relancé sur
+  le nouveau code.
+- **Son pouls** : il écrit l'heure dans `var/worker/pouls-prod` toutes les 30 s.
+  Plus de 2 minutes sans battement (avec `ASSISTANT_ASYNC=1`) : le chat affiche
+  « Ket est momentanément indisponible, réessayez dans quelques instants » et la
+  console (Tableau de bord → Supervision) affiche « Worker de Ket : ABSENT ».
+- `/opt/alt/php82/usr/bin/php`, pas le `php` du PATH (binaire CGI, piège n° 1).
+  Le journal est dans `~/logs` : l'entretien du dimanche le borne.
+
+**Vérifier qu'il fonctionne** (une à deux minutes après l'avoir créé) :
+
+```bash
+# 1. Le worker a démarré : « [OK] Consuming messages from transport "async". »
+tail -n 20 ~/logs/worker-ket.log
+# 2. Il n'y en a qu'UN :
+ps -u josearac -o pid,etime,args | grep '[a]pp:ket:worker'
+# 3. Le verrou tient : un lancement à la main sort aussitôt.
+cd ~/joseara && /opt/alt/php82/usr/bin/php bin/console app:ket:worker --env=prod -v
+#    → « Un worker de Ket tourne déjà : rien à faire. »
+# 4. Il bat : l'écart doit rester sous 120 secondes.
+echo $(( $(date +%s) - $(cat ~/joseara/var/worker/pouls-prod) ))
+```
+
+Puis, dans la console : Tableau de bord → bloc Supervision → « Worker de Ket :
+actif » (ou « aucun worker requis » tant que `ASSISTANT_ASYNC=0`).
 
 ---
 

@@ -336,6 +336,27 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   `tests/Support/JournauxDeDebogageParRequete` (env test) les remet à zéro à chaque requête.
   `HttpKernelBrowser` capture une réponse dans son propre tampon : `FluxNdjson` ne ferme que les
   tampons de PHP.
+- **WORKER DE KET (2026-10-29)** — sans lui, une question à Ket en file (`ASSISTANT_ASYNC=1`)
+  n'obtient jamais de réponse. Le worker de `symfony serve` (`--time-limit=3600`) s'arrêtait au
+  bout d'une heure et n'était JAMAIS relancé (mesuré : 10 h 44 min 13 s → 11 h 44, aucun
+  successeur) ; aucun script n'appelle `messenger:stop-workers` hors déploiement.
+  - **Une seule commande, partout** : `app:ket:worker` (`WorkerDeKetCommand`) — verrou de
+    fichier sans attente (`flock`, `var/worker/worker-<env>.lock`) ; tenu par un autre, elle sort
+    aussitôt ; libre, elle lance `messenger:consume async --time-limit --memory-limit`. Lancée
+    CHAQUE MINUTE : jamais deux workers, et un worker arrêté est remplacé dans la minute.
+  - **Production** : cron cPanel chaque minute, ligne exacte et vérification dans
+    `deploiement/README.md` (« Worker de Ket ») ; `bin/deploy.sh` envoie `messenger:stop-workers`
+    après la réouverture (le cron relance sur le nouveau code).
+  - **Développement** : `powershell -ExecutionPolicy Bypass -File bin\worker-ket-dev.ps1` installe
+    une tâche planifiée Windows (php-win.exe, aucune fenêtre, `--time-limit=900`) — plus besoin de
+    terminal ouvert ; `-Retirer` l'enlève. `symfony serve` lance la même commande (même verrou).
+    Dépannage immédiat : `php bin/console app:ket:worker -v` (dit « tourne déjà » s'il y en a un).
+  - **Le signal** : le worker BAT toutes les 30 s (`BattementDuWorkerSubscriber` →
+    `var/worker/pouls-<env>`) ; `PoulsDuWorker` est la SOURCE UNIQUE de l'état (vivant ≤ 120 s).
+    Absent, le chat affiche « Ket est momentanément indisponible, réessayez dans quelques
+    instants » (`ketDisponible` du point d'état) et la console (Tableau de bord → Supervision)
+    « Worker de Ket : ABSENT » — en dev comme en prod. Tests : `WorkerDeKetTest`,
+    `assistant-etapes.test.mjs`.
 - Vérifications faites en production (chantier 1) : requêtes REGEXP de détection des charges
   dans les champs texte (lecture seule, phpMyAdmin) — aucune trace, contre-épreuve valide ;
   journal du limiteur du formulaire de contact `var/log/contact-AAAA-MM-JJ.log` (IP retenue =

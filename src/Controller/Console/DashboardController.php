@@ -422,13 +422,15 @@ class DashboardController extends AbstractConsoleController
      * plateforme entière, pas celui d'une vue.
      */
     #[Route('/dashboard/block/supervision', name: 'console.dashboard.block_supervision', methods: ['GET'])]
-    public function blockSupervision(): Response
+    public function blockSupervision(\App\Ai\Traitement\PoulsDuWorker $pouls): Response
     {
         $this->assertDomaine('console.supervision.index');
 
         return $this->render('console/dashboard/_block_supervision.html.twig', [
             'defauts' => $this->erreurRepository->ouvertsRecents(6),
             'totaux'  => $this->erreurRepository->totaux([]),
+            // LE WORKER DE KET (PoulsDuWorker, source unique — celle que lit aussi le chat).
+            'worker'  => $pouls->constat(),
         ]);
     }
 }

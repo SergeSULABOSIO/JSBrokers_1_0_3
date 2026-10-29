@@ -53,7 +53,7 @@ import { formatNombre } from '../number-format.js';
 import { documentLocale } from '../locale.js';
 import {
     verbeEtape, compteurEtape, resumeActivite,
-    explicationEtape, coulissesEtape, dureeEtape,
+    explicationEtape, coulissesEtape, dureeEtape, cleDAttente,
 } from './assistant-etapes.js';
 import { appliquerTitre, ongletDeConversation, titreAffiche } from './assistant-conversation-titre.js';
 
@@ -981,6 +981,8 @@ export default class extends Controller {
             await this._appliquerEtatDeTache(tache);
         }
 
+        // Ket peut-il répondre ? Son worker bat-il (PoulsDuWorker) ? Sinon l'attente se dit panne.
+        this._ketDisponible = etat.ketDisponible;
         // L'étape vient de la tâche EN COURS : c'est la seule qui travaille.
         const enCours = (etat.taches || []).find((t) => t.statut === 'en_cours');
         this._majIndicateur(enCours || null);
@@ -1072,7 +1074,7 @@ export default class extends Controller {
         }
         const etape = tacheEnCours?.etape || null;
         this.setTypingLabel(
-            etape ? verbeEtape(etape.cle) : verbeEtape('attente'),
+            etape ? verbeEtape(etape.cle) : verbeEtape(cleDAttente(this._ketDisponible)),
             etape ? compteurEtape(etape) : '',
         );
         this.typingTarget.hidden = false;

@@ -26,7 +26,21 @@ import {
     explicationEtape,
     coulissesEtape,
     dureeEtape,
+    cleDAttente,
 } from '../../assets/controllers/assistant-etapes.js';
+
+// ── KET INDISPONIBLE (Serge, 2026-10-29) : son worker ne bat plus, l'attente se DIT panne ─────────
+test('sans worker vivant, la question en attente affiche l’indisponibilité, pas « attend son tour »', () => {
+    assert.equal(cleDAttente(false), 'indisponible');
+    assert.equal(`Ket ${verbeEtape(cleDAttente(false))}`, 'Ket est momentanément indisponible, réessayez dans quelques instants.');
+    assert.notEqual(explicationEtape('indisponible'), '', 'la partie dépliée dit pourquoi');
+});
+
+test('worker vivant, ou serveur qui ne dit rien : une simple attente', () => {
+    assert.equal(cleDAttente(true), 'attente');
+    assert.equal(cleDAttente(undefined), 'attente', 'un serveur plus ancien ne fabrique pas de panne');
+    assert.equal(verbeEtape(cleDAttente(true)), VERBES.attente);
+});
 
 test('chaque étape du serveur a son verbe d’usager', () => {
     assert.equal(verbeEtape('comprehension'), 'réfléchit…');

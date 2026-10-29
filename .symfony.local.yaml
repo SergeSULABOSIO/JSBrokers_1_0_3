@@ -1,18 +1,18 @@
 # Configuration locale de `symfony serve`.
 #
 # LE WORKER DE L'ASSISTANT. Sans lui, une question déposée en file n'obtient
-# jamais de réponse : la bulle « Ket réfléchit… » tourne indéfiniment. Le
-# déclarer ici, c'est laisser `symfony serve` le démarrer avec le serveur et le
-# relancer à chaque modification du code — la friction « il faut penser à lancer
-# un worker » disparaît, et c'est elle qui aurait fait échouer la refonte en
-# développement.
+# jamais de réponse — le chat le dit désormais (« Ket est momentanément
+# indisponible… », PoulsDuWorker). Le déclarer ici, c'est laisser `symfony serve`
+# le démarrer avec le serveur et le relancer à chaque modification du code.
 #
-# Tant que ASSISTANT_ASYNC vaut 0, le traitement a lieu pendant la requête et ce
-# worker n'a rien à consommer côté assistant : le déclarer est sans effet, et
-# le rend disponible pour le jour de la bascule.
+# ⚠ `symfony serve` NE LE RELANCE PAS quand il s'arrête de lui-même (limite de
+# durée) : mesuré le 2026-10-29, démarré à 10 h 44 min 13 s, arrêté à 11 h 44
+# (`--time-limit=3600`), jamais remplacé. Le filet est la tâche planifiée Windows
+# de `bin/worker-ket-dev.ps1`, qui lance la MÊME commande chaque minute ; le verrou
+# de `app:ket:worker` garantit qu'il n'y en a jamais deux.
 workers:
     messenger_async:
-        cmd: ['symfony', 'console', 'messenger:consume', 'async', '-v', '--time-limit=3600', '--memory-limit=256M']
+        cmd: ['symfony', 'console', 'app:ket:worker', '--time-limit=3600']
         # Redémarre le worker quand le code change : sinon il continuerait à
         # exécuter l'ancienne version, et on chercherait longtemps pourquoi un
         # correctif « ne prend pas ».

@@ -6,6 +6,27 @@
 
    Le compteur d'occurrences est repris ici : sans lui, six lignes se
    ressemblent toutes et rien ne dit par laquelle commencer. #}
+{# LE WORKER DE KET (2026-10-29) : quand Ket traite en file, une question ne reçoit de réponse
+   que si son worker bat. Absent, c'est le PREMIER signal du bloc — une panne silencieuse que
+   l'équipe doit voir sans la chercher. Même source que le chat (PoulsDuWorker). #}
+<div class="px-3 pt-3 d-flex align-items-center gap-2 flex-wrap cs-worker-ket cs-worker-ket--{{ worker.asynchrone ? worker.etat : 'synchrone' }}" style="font-size:.78rem;">
+    {% if not worker.asynchrone %}
+        <span class="cs-badge cs-badge--muted">Worker de Ket</span>
+        <span class="text-muted">Ket répond pendant la requête : aucun worker requis.</span>
+    {% elseif worker.etat == 'vivant' %}
+        <span class="cs-badge cs-badge--cobalt">Worker de Ket : actif</span>
+        <span class="text-muted">dernier signe il y a {{ worker.depuis }} s</span>
+    {% else %}
+        <span class="cs-badge cs-badge--danger">Worker de Ket : ABSENT</span>
+        <strong style="color:var(--danger-dark, #842029);">
+            {%- if worker.depuis is null -%}
+                aucun signe de vie — les questions posées à Ket attendent sans réponse.
+            {%- else -%}
+                aucun signe depuis {{ (worker.depuis / 60)|round(0, 'floor') }} min — les questions posées à Ket attendent sans réponse.
+            {%- endif -%}
+        </strong>
+    {% endif %}
+</div>
 <div class="px-3 pt-3 pb-1 d-flex align-items-center gap-3 flex-wrap" style="font-size:.78rem;">
     <span><strong style="font-size:1.05rem; color:#b3261e;">{{ totaux.ouverts }}</strong> <span class="text-muted">à traiter</span></span>
     <span><strong style="font-size:1.05rem;">{{ totaux.occurrences24h }}</strong> <span class="text-muted">actifs sur 24 h</span></span>

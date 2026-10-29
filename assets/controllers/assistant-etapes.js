@@ -33,6 +33,9 @@ export const VERBES = {
     // d'être traitée, et le dire évite de laisser croire que Ket travaille sur
     // trois choses à la fois — elle n'en traite jamais qu'une.
     attente:       'a bien reçu, votre message attend son tour…',
+    // Son worker ne bat plus (PoulsDuWorker) : la question attendrait sans fin. On le DIT, au
+    // lieu de laisser croire qu'elle avance (Serge, 2026-10-29).
+    indisponible:  'est momentanément indisponible, réessayez dans quelques instants.',
     comprehension: 'réfléchit…',
     clarification: 'demande une précision…',
     planification: 'prépare le travail…',
@@ -53,6 +56,7 @@ export const VERBES = {
  */
 export const EXPLICATIONS = {
     attente:       'La question est en file : Ket n’en traite qu’une à la fois.',
+    indisponible:  'Le service qui traite les questions de Ket ne répond pas : votre message est gardé, il sera traité à sa reprise.',
     comprehension: 'Ket relit votre question pour établir ce que vous voulez dire, avant d’agir.',
     clarification: 'La demande est ambiguë : Ket préfère demander plutôt que de deviner.',
     planification: 'Ket choisit les outils dont elle a besoin et prépare ses appels.',
@@ -173,6 +177,18 @@ export function dureeEtape(ms, locale = 'fr-FR') {
  * @param {string} cle
  * @returns {string}
  */
+/**
+ * L'ÉTAT D'UNE QUESTION QUI N'EST PAS ENCORE TRAITÉE : en file d'attente, ou en panne. Le serveur
+ * dit si Ket peut répondre (`ketDisponible` du point d'état) ; seul `false` vaut panne — une
+ * réponse plus ancienne, sans ce champ, reste une simple attente.
+ *
+ * @param {boolean|undefined} ketDisponible
+ * @returns {'attente'|'indisponible'}
+ */
+export function cleDAttente(ketDisponible) {
+    return ketDisponible === false ? 'indisponible' : 'attente';
+}
+
 export function verbeEtape(cle) {
     return VERBES[cle] || VERBES.comprehension;
 }
