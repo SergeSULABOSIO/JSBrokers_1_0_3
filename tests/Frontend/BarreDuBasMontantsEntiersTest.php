@@ -75,7 +75,8 @@ class BarreDuBasMontantsEntiersTest extends TestCase
     public function testLEtatCedeParPartiesEntieresEtSaitSeDireCourt(): void
     {
         $feuille = self::feuille();
-        preg_match('/\.jsb-list-manager > \.jsb-list-controls-bar > \.jsb-list-controls-bar__display\s*\{([^}]*)\}/', $feuille, $etat);
+        // L'état est dans la pastille qu'il partage avec la taille de page (2026-10-29).
+        preg_match('/\.jsb-list-manager > \.jsb-list-controls-bar \.jsb-list-controls-bar__etat > \.jsb-list-controls-bar__display\s*\{([^}]*)\}/', $feuille, $etat);
         self::assertMatchesRegularExpression('/flex-wrap:\s*wrap;/', $etat[1] ?? '', 'Une partie qui ne tient pas passe à la ligne, hors de la vue.');
         self::assertMatchesRegularExpression('/overflow:\s*hidden;/', $etat[1] ?? '');
 

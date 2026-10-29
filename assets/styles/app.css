@@ -2264,9 +2264,7 @@ textarea:hover,
     white-space: nowrap;
     margin-bottom: 0;
 }
-/* Le sélecteur « Par page » a la facture de celui du totaliseur : une règle pour les deux. */
-.jsb-list-summary__select,
-.jsb-par-page__choix {
+.jsb-list-summary__select {
     border: 1px solid #dee2e6;
     border-radius: 0.375rem;
     background: transparent;
@@ -2276,18 +2274,44 @@ textarea:hover,
     max-width: 160px;
     cursor: pointer;
 }
-.jsb-list-summary__select:focus,
-.jsb-par-page__choix:focus { outline: 2px solid #0047AB; outline-offset: 1px; }
-/* COMBIEN PAR PAGE (Serge, 2026-10-29), après la pagination dans la barre du bas. */
+.jsb-list-summary__select:focus { outline: 2px solid #0047AB; outline-offset: 1px; }
+/* COMBIEN PAR PAGE, LA FIN DE LA PHRASE DE L'ÉTAT (Serge, 2026-10-29) : « … · [20] par page ».
+   Le nombre se lit comme les chiffres de l'état (gras), en cobalt avec sa flèche : c'est le
+   seul qui se change. « par page » ne s'efface jamais — sans lui, le nombre ne disait rien. */
 .jsb-list-controls-bar__par-page {
-    gap: 6px;
-    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0 0 0 6px;
     flex-shrink: 0;
+    font-size: 0.8rem;
     color: var(--text-muted, #6c757d);
-    font-size: 0.78rem;
     white-space: nowrap;
 }
 .jsb-list-controls-bar__par-page[hidden] { display: none; }
+.jsb-par-page__sep { color: var(--border-medium, #ced4da); }
+.jsb-par-page__choix {
+    height: 24px;
+    padding: 0 2px 0 6px;
+    border: 1px solid var(--border-light, #dee2e6);
+    border-radius: 6px;
+    background-color: var(--bg-white, #ffffff);
+    color: var(--cobalt, #0047AB);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 0.15s ease-out, background-color 0.15s ease-out;
+}
+.jsb-par-page__choix:hover {
+    border-color: var(--cobalt, #0047AB);
+    background-color: var(--bg-cobalt-subtle, #e8f0fb);
+}
+.jsb-par-page__choix:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--cobalt-focus-ring, rgba(0, 71, 171, 0.35));
+}
+@media (prefers-reduced-motion: reduce) { .jsb-par-page__choix { transition: none; } }
 .jsb-list-summary__divider {
     width: 1px;
     height: 1rem;
@@ -2517,14 +2541,21 @@ textarea:hover,
    Une partie seule trop longue (un message d'action) se termine par « … ». Une partie
    repoussée reste lue par les lecteurs d'écran ; celles que masque le palier 3 (heure,
    entité, onglet) ne le sont plus — elles redisent ce que l'écran nomme déjà. */
-.jsb-list-manager > .jsb-list-controls-bar > .jsb-list-controls-bar__display {
+/* La pastille de l'état (état + taille de page) : elle rétrécit, et c'est l'état qui cède,
+   jamais la taille de page. */
+.jsb-list-manager > .jsb-list-controls-bar > .jsb-list-controls-bar__etat {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+.jsb-list-manager > .jsb-list-controls-bar .jsb-list-controls-bar__etat > .jsb-list-controls-bar__display {
+    display: flex;
     flex: 0 1 auto;
     min-width: 0;
     flex-wrap: wrap;
     height: var(--jsb-control-h);
     overflow: hidden;
 }
-.jsb-list-manager > .jsb-list-controls-bar > .jsb-list-controls-bar__display > span {
+.jsb-list-manager > .jsb-list-controls-bar .jsb-list-controls-bar__etat > .jsb-list-controls-bar__display > span {
     line-height: var(--jsb-control-h);
     white-space: nowrap;
     min-width: 0;
@@ -2572,8 +2603,7 @@ textarea:hover,
     .jsb-list-manager .jsb-libelle-court { display: inline; }
     /* Le mot « Page » de la pagination part avec : deux « Page » côte à côte (« Page [1] / 2 »
        et « Page USD … ») se lisaient comme un seul numéro de page. */
-    .jsb-list-manager .jsb-pagination__mot,
-    .jsb-list-manager .jsb-par-page__mot { display: none; }
+    .jsb-list-manager .jsb-pagination__mot { display: none; }
 }
 @container jsb-zone (max-width: 1349.98px) {
     /* 3. L'heure, l'entité et l'onglet (avec leur « › ») : l'onglet actif et le titre les

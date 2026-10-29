@@ -68,23 +68,31 @@
     >
         {% if usage|default('generic') != 'dialog' %}
         <div class="jsb-list-controls-bar" data-list-manager-target="controlsBar">
-            <div class="jsb-list-controls-bar__display jsb-control-pill"
-                 role="status" aria-live="polite" aria-atomic="true"
-                 data-view-manager-target="display">Prêt.</div>
+            {# L'ÉTAT ET LA TAILLE DE PAGE, UNE SEULE PASTILLE (Serge, 2026-10-29 : « ils traitent du
+               même sujet » ; isolé et sans texte, le sélecteur n'était « pas du tout intuitif »).
+               Elle se lit comme une phrase : « 20 affiché(s) sur 42 › 1 sélection(s) · [20] par
+               page ». L'état reste une zone annoncée, réécrite par le cerveau : le sélecteur la
+               SUIT, il n'y entre pas (il y serait effacé et relu à chaque mise à jour). #}
+            <div class="jsb-list-controls-bar__etat jsb-control-pill">
+                <div class="jsb-list-controls-bar__display"
+                     role="status" aria-live="polite" aria-atomic="true"
+                     data-view-manager-target="display">Prêt.</div>
+                {# COMBIEN PAR PAGE : des choix prévisibles, rendus par le serveur
+                   (TailleDePage::CHOIX, qui borne aussi la requête). 20 par défaut ; il survit au
+                   F5, pas à la fermeture de l'onglet du navigateur ; « Réinitialiser » le ramène à
+                   20. Masqué tant que la liste tient dans le plus petit choix. #}
+                <label class="jsb-list-controls-bar__par-page" data-list-manager-target="parPage" hidden>
+                    <span class="jsb-par-page__sep" aria-hidden="true">·</span>
+                    <select class="jsb-par-page__choix" aria-label="Fiches par page"
+                            data-list-manager-target="parPageChoix" data-action="change->list-manager#changerParPage">
+                        {% for taille in constant('App\\Service\\Liste\\TailleDePage::CHOIX') %}
+                            <option value="{{ taille }}"{{ taille == constant('App\\Service\\Liste\\TailleDePage::PAR_DEFAUT') ? ' selected' : '' }}>{{ taille }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="jsb-par-page__mot">par page</span>
+                </label>
+            </div>
             <div data-list-manager-target="paginationContainer" class="jsb-list-controls-bar__pagination jsb-control-pill"></div>
-            {# COMBIEN PAR PAGE (Serge, 2026-10-29) : des choix prévisibles, rendus par le serveur
-               (TailleDePage::CHOIX, qui borne aussi la requête). 20 par défaut ; il survit au F5,
-               pas à la fermeture de l'onglet du navigateur ; « Réinitialiser » le ramène à 20.
-               Masqué tant que la liste tient dans le plus petit choix. #}
-            <label class="jsb-list-controls-bar__par-page jsb-control-pill" data-list-manager-target="parPage" hidden>
-                <span class="jsb-par-page__mot">Par page</span>
-                <select class="jsb-par-page__choix" aria-label="Fiches par page"
-                        data-list-manager-target="parPageChoix" data-action="change->list-manager#changerParPage">
-                    {% for taille in constant('App\\Service\\Liste\\TailleDePage::CHOIX') %}
-                        <option value="{{ taille }}"{{ taille == constant('App\\Service\\Liste\\TailleDePage::PAR_DEFAUT') ? ' selected' : '' }}>{{ taille }}</option>
-                    {% endfor %}
-                </select>
-            </label>
             <div class="jsb-list-controls-bar__totals jsb-control-pill">
                 {{ include('components/_list_summary.html.twig') }}
             </div>

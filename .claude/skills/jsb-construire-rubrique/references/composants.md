@@ -55,8 +55,8 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
   geste du pointeur n'épingle : sortie du pointeur ou du focus = fermé. Jamais en dialogue.
 
 ### Barre du bas d'une liste — partagé (toutes les listes du workspace)
-- `.jsb-list-controls-bar` (`_list_manager.html.twig`) : état, pagination, **taille de page**,
-  totaux ; une hauteur `--jsb-barre-bas-h` commune au rail ; paliers de réduction par
+- `.jsb-list-controls-bar` (`_list_manager.html.twig`) : état + **taille de page** (une seule
+  pastille, `.jsb-list-controls-bar__etat`), pagination, totaux ; une hauteur `--jsb-barre-bas-h` commune au rail ; paliers de réduction par
   `@container jsb-zone` (jamais un montant ni une monnaie tronqués, `BarreDuBasMontantsEntiersTest`).
 - **TAILLE DE PAGE (Serge, 2026-10-29)** — l'utilisateur choisit combien de fiches par page :
   - choix PRÉVISIBLES (liste, pas une saisie) rendus par le serveur depuis
@@ -69,6 +69,10 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
     `sessionStorage`) mais pas à la fermeture de l'onglet du navigateur (`copieLocale` l'écarte) ;
   - **« Réinitialiser » la ramène à 20** (`reinitialiser: true` → `_handleSearchRequest`) ; un
     chip, un terme ou « Tout retirer » la gardent ;
+  - elle FINIT LA PHRASE DE L'ÉTAT, dans la même pastille : « 20 affiché(s) sur 42 › 1
+    sélection(s) · [20] par page » (Serge, 2026-10-29 : isolée et sans texte, elle n'était « pas
+    du tout intuitive ») ; « par page » ne s'efface jamais ; le sélecteur SUIT la zone annoncée
+    (`role=status`), il n'y entre pas — le cerveau la réécrit ;
   - masquée tant que la liste tient dans le plus petit choix. Tests : `TailleDePageTest`,
     `criteres-persistes.test.mjs`, `stockage-de-travail.test.mjs`.
 
