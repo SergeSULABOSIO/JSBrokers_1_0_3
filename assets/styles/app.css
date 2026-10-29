@@ -2350,7 +2350,139 @@ textarea:hover,
     min-height: 0;
 }
 .jsb-list-manager > * { grid-column: 2; min-width: 0; }
-.jsb-list-manager > .jsb-preset-filters-bar { grid-row: 1; }
+
+/* LE RAIL DES CHIPS (C3) : la troisième colonne, à droite, quand la rubrique a des chips. Un
+   bouton par groupe (son icône, sa pastille) ; la rangée des chips devient le PANNEAU du rail,
+   en surimpression contre lui — la liste ne cède plus une rangée entière à ses filtres. */
+.jsb-list-manager:has(> .jsb-rail-chips) {
+    position: relative;
+    grid-template-columns: var(--jsb-rail-w) minmax(0, 1fr) var(--jsb-rail-w);
+}
+.jsb-list-manager > .jsb-rail-chips {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    /* LE RETRAIT DROIT : la poignée de Ket, centrée sur le bord gauche de sa colonne, déborde
+       dans la colonne 3 exactement comme celle de la colonne 2 à gauche (même `.ws-edge-handle`)
+       — même retrait, lu par DispositionColonneTroisTest. */
+    padding: 4px var(--jsb-rail-retrait) 4px 0;
+    overflow-y: auto;
+    scrollbar-width: none;
+    background-color: var(--bg-white, #ffffff);
+    border-left: 1px solid var(--border-light, #dee2e6);
+    /* Au-dessus de l'entête collante du tableau (100), comme le rail d'outils. */
+    z-index: 110;
+}
+.jsb-list-manager > .jsb-rail-chips::-webkit-scrollbar { display: none; }
+.jsb-rail-chips__bouton {
+    position: relative;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background-color: transparent;
+    color: var(--text-muted, #6c757d);
+    /* Il grandit DEPUIS SON BORD DROIT, vers la liste — le côté où son panneau s'ouvre ; le
+       miroir du rail d'outils. */
+    transform-origin: right center;
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+}
+.jsb-rail-chips__bouton:not(:focus-visible):hover {
+    transform: scale(1.08);
+    background-color: var(--bg-muted, #e9ecef);
+    color: var(--text-dark-secondary, #343a40);
+    box-shadow: 0 2px 6px var(--cobalt-shadow, rgba(0, 71, 171, 0.25));
+}
+.jsb-rail-chips__bouton.is-ouvert {
+    background-color: var(--bg-cobalt-subtle, #e8f0fb);
+    color: var(--cobalt, #0047AB);
+}
+.jsb-rail-chips__bouton:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--cobalt-focus-ring, rgba(0, 71, 171, 0.35));
+}
+.jsb-rail-chips__icone { display: inline-flex; }
+/* Le bouton « Vue » porte les deux icônes ; la vue de la liste choisit (vue-cartes la bascule). */
+.is-vue-cartes .jsb-rail-chips__icone--liste,
+.is-vue-liste .jsb-rail-chips__icone--cartes { display: none; }
+/* LA PASTILLE : ce groupe masque des données. La couleur n'est pas seule à le dire : le nom
+   accessible du bouton porte la valeur, et la ligne des filtres l'écrit en toutes lettres. */
+.jsb-rail-chips__pastille {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--cobalt, #0047AB);
+    box-shadow: 0 0 0 2px var(--bg-white, #ffffff);
+}
+.jsb-rail-chips__pastille[hidden] { display: none; }
+
+/* LE PANNEAU : la rangée des chips, hors du flux, contre le rail. Fermé, il est invisible —
+   ni lu ni atteignable au clavier (visibility) ; ouvert, il ne montre que le groupe visé
+   (rail-chips pose `hidden` sur les autres). `top` est posé par rail-chips, à hauteur du
+   bouton du groupe. Décalé de la largeur du rail, mesuré depuis le bord de la LISTE (Edge ne
+   lui donne pas sa zone de grille pour bloc conteneur : `right: 0` recouvrait le rail). */
+.jsb-list-manager > .jsb-preset-filters-bar {
+    position: absolute;
+    top: 0;
+    right: var(--jsb-rail-w);
+    z-index: 115;
+    max-width: calc(100% - 2 * var(--jsb-rail-w) - 8px);
+    flex-wrap: nowrap;
+    /* LE PANNEAU EST UNE PILULE (Serge, 2026-10-29 : « optimise les gouttières, marges et
+       bordure », « bien arrondir les coins »). Un seul anneau blanc de 3 px, régulier, autour de
+       la piste grise ; rayons PLEINS partout — panneau, piste, chips —, donc concentriques. Le
+       cadre de 8 px de rayon et ses gouttières inégales (6 px / 12 px) faisaient deux boîtes. */
+    padding: 3px;
+    border: 1px solid var(--border-light, #dee2e6);
+    border-radius: 999px;
+    box-shadow: var(--shadow-md, 0 4px 16px rgba(0, 0, 0, 0.10));
+    visibility: hidden;
+    opacity: 0;
+    transform: translateX(6px);
+    transition: opacity 0.15s ease-out, transform 0.15s ease-out, visibility 0s linear 0.15s;
+}
+.jsb-list-manager > .jsb-preset-filters-bar.is-ouvert {
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+    transition: opacity 0.15s ease-out, transform 0.15s ease-out, visibility 0s;
+}
+.jsb-list-manager > .jsb-preset-filters-bar > [hidden] { display: none; }
+/* La piste grise : 3 px de gouttière, sans le contour de survol de `.jsb-control-pill` (le
+   panneau a déjà le sien) ni sa hauteur minimale. */
+.jsb-list-manager > .jsb-preset-filters-bar > .jsb-preset-filters-wrap {
+    min-height: 0;
+    padding: 3px;
+    border: 0;
+    border-radius: 999px;
+}
+.jsb-list-manager > .jsb-preset-filters-bar .jsb-preset-filters__titre {
+    padding: 0 8px 0 9px;
+    margin-right: 2px;
+}
+.jsb-list-manager > .jsb-preset-filters-bar .jsb-preset-chip,
+.jsb-list-manager > .jsb-preset-filters-bar .jsb-vue-choix {
+    padding: 4px 11px;
+    border-radius: 999px;
+}
+@media (prefers-reduced-motion: reduce) {
+    .jsb-rail-chips__bouton,
+    .jsb-list-manager > .jsb-preset-filters-bar,
+    .jsb-list-manager > .jsb-preset-filters-bar.is-ouvert { transition: none; }
+    .jsb-rail-chips__bouton:not(:focus-visible):hover,
+    .jsb-list-manager > .jsb-preset-filters-bar { transform: none; }
+}
 .jsb-list-manager > .table-scroll-wrapper,
 .jsb-list-manager > [data-list-manager-target="emptyStateContainer"] { grid-row: 2; }
 .jsb-list-manager > .jsb-list-controls-bar {
@@ -7689,10 +7821,11 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
    d'écran ne doit pas lire deux fois la même page.
    ⚠ Le chip « Statut » se masque par son ENVELOPPE : chips-defilement.js sort le titre du
    groupe dans `.jsb-preset-filters-wrap` — masquer le seul groupe laissait une pilule
-   « Statut » vide. */
+   « Statut » vide. Son bouton au rail des chips part avec lui : il ouvrait un panneau vide. */
 .is-vue-cartes .table-enhanced,
 .is-vue-cartes .jsb-preset-filters-wrap:has([data-preset-criterion="__transformation_piste__"]),
-.is-vue-cartes [data-preset-criterion="__transformation_piste__"] { display: none; }
+.is-vue-cartes [data-preset-criterion="__transformation_piste__"],
+.is-vue-cartes .jsb-rail-chips__bouton[data-groupe="__transformation_piste__"] { display: none; }
 .is-vue-liste .jsb-pipe { display: none; }
 
 /* La bascule « Vue », à droite de la rangée des chips (enveloppée elle aussi). */

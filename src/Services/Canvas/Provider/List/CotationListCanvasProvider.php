@@ -73,6 +73,7 @@ class CotationListCanvasProvider implements ListCanvasProviderInterface
                 [
                     "critere" => CotationSouscriptionScope::CRITERION_KEY,
                     "libelle" => "Statut",
+                    "icone" => "filtre:statut",
                     "options" => [
                         ["value" => CotationSouscriptionScope::STATUT_SOUSCRITES, "label" => CotationSouscriptionScope::libelle(CotationSouscriptionScope::STATUT_SOUSCRITES), "icon" => "action:completed"],
                         ["value" => CotationSouscriptionScope::STATUT_EN_ATTENTE, "label" => CotationSouscriptionScope::libelle(CotationSouscriptionScope::STATUT_EN_ATTENTE), "icon" => "action:ongoing"],

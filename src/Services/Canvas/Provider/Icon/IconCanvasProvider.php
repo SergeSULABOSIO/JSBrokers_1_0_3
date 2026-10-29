@@ -180,6 +180,25 @@ class IconCanvasProvider
         'action:activite'     => 'mdi:calendar-clock',          // ancienneté de la dernière activité (carte de piste)
         'action:vue-liste'    => 'mdi:format-list-bulleted',    // vue Liste (tableau)
         'action:word'         => 'tabler:file-type-docx', // export « Word » (.doc HTML-Word)
+
+        // ── GROUPES DE CHIPS (rail des chips de la colonne 3, refonte du 2026-10-27, C3) ──
+        // Un dessin PAR GROUPE (« Prime », « Échéance »…) : l'icône d'une valeur ne désigne pas
+        // son groupe (« Toutes » est le même filtre dans 23 groupes). Neutres, distinctes des
+        // mascottes et des alias `action:*` (RailDesChipsDiscernableTest) ; même sens, même
+        // dessin — l'échéance des Tranches est celle des Avenants. Choisies par Serge le
+        // 2026-10-29.
+        'filtre:prime'              => 'mdi:cash',
+        'filtre:commission'         => 'mdi:percent',
+        'filtre:retro'              => 'mdi:share-variant',
+        'filtre:echeance'           => 'mdi:calendar-end',
+        'filtre:regularisation'     => 'mdi:calculator-variant-outline',
+        'filtre:reglement'          => 'mdi:cash-check',
+        'filtre:statut'             => 'mdi:progress-check',
+        'filtre:type-beneficiaire'  => 'mdi:account-multiple-outline',
+        'filtre:justificatif'       => 'mdi:receipt-text-outline',
+        'filtre:periode'            => 'mdi:calendar-range',
+        'filtre:presentation'       => 'mdi:table',
+        'filtre:beneficiaire'       => 'mdi:account-cash-outline',
     ];
 
     /**

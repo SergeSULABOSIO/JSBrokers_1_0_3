@@ -285,7 +285,8 @@ class ProductionIntermediaireRubriqueTest extends WebTestCase
 
         // La coquille : le gestionnaire de vue, sa barre d'outils, sa recherche, ses totaux.
         self::assertStringContainsString('data-controller="view-manager"', $html);
-        self::assertStringContainsString('data-controller="list-manager"', $html);
+        // `list-manager`, et le rail des chips à côté (refonte de la colonne 3, C3).
+        self::assertStringContainsString('data-controller="list-manager', $html);
         self::assertStringContainsString('jsb-list-controls-bar__totals', $html);
         self::assertStringContainsString('ui:toolbar.refresh-request', $html);
 

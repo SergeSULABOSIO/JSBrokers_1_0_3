@@ -42,6 +42,7 @@ class DemandeCongeListCanvasProvider implements ListCanvasProviderInterface
                     // chips, mails et assistant nomment un même état d'un même mot.
                     "critere" => CongeStatutScope::CRITERION_KEY,
                     "libelle" => "Statut",
+                    "icone" => "filtre:statut",
                     "options" => CongeStatutScope::optionsChips(),
                 ],
             ],

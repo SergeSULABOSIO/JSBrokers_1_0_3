@@ -92,6 +92,8 @@ class AvenantListCanvasProvider implements ListCanvasProviderInterface
                 [
                     "critere" => AvenantEcheanceScope::CRITERION_KEY,
                     "libelle" => "Échéance",
+                    // L'icône du GROUPE, au rail des chips (même sens que celle des Tranches).
+                    "icone" => "filtre:echeance",
                     "options" => [
                         ["value" => AvenantEcheanceScope::STATUT_ECHUS, "label" => AvenantEcheanceScope::libelle(AvenantEcheanceScope::STATUT_ECHUS), "icon" => "action:alert"],
                         ["value" => AvenantEcheanceScope::STATUT_30J, "label" => AvenantEcheanceScope::libelle(AvenantEcheanceScope::STATUT_30J), "icon" => "action:calendar"],

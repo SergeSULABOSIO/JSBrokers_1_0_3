@@ -55,6 +55,7 @@ class ProductionIntermediaireListCanvasProvider implements ListCanvasProviderInt
                     // et donc que l'identifiant d'une ligne reste un entier.
                     'critere' => ProductionScope::CLE_STATUT,
                     'libelle' => 'Statut',
+                    'icone' => 'filtre:statut',
                     // Sans critère, le serveur montre les souscrites (`statutDemande`) : ce
                     // chip-là s'allume, et le groupe n'offre pas de « Toutes » qu'il refuserait.
                     'defaut' => ProductionScope::STATUT_PAR_DEFAUT,
@@ -74,6 +75,7 @@ class ProductionIntermediaireListCanvasProvider implements ListCanvasProviderInt
                     // seul moyen de lire l'une sans l'autre.
                     'critere' => ProductionScope::CLE_TYPE,
                     'libelle' => 'Type',
+                    'icone' => 'filtre:type-beneficiaire',
                     'options' => ProductionScope::optionsChips(
                         ProductionScope::CLE_TYPE,
                         [
@@ -95,6 +97,7 @@ class ProductionIntermediaireListCanvasProvider implements ListCanvasProviderInt
                     // à être offert.
                     'critere' => ProductionScope::CLE_BENEFICIAIRE,
                     'libelle' => 'Bénéficiaire',
+                    'icone' => 'filtre:beneficiaire',
                     'options' => ProductionScope::optionsBeneficiaire(),
                 ],
             ],

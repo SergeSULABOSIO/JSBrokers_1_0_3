@@ -98,6 +98,7 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
                     // compte comptable (6611 pour un salarié, 632 pour un externe).
                     "critere" => ReversementScope::CLE_TYPE,
                     "libelle" => "Type",
+                    "icone" => "filtre:type-beneficiaire",
                     "options" => ReversementScope::optionsChips(
                         ReversementScope::CLE_TYPE,
                         [
@@ -110,6 +111,7 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
                 [
                     "critere" => ReversementScope::CLE_JUSTIFICATIF,
                     "libelle" => "Justificatif",
+                    "icone" => "filtre:justificatif",
                     "options" => ReversementScope::optionsChips(
                         ReversementScope::CLE_JUSTIFICATIF,
                         [
@@ -122,6 +124,7 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
                 [
                     "critere" => ReversementScope::CLE_PERIODE,
                     "libelle" => "Période",
+                    "icone" => "filtre:periode",
                     "options" => ReversementScope::optionsChips(
                         ReversementScope::CLE_PERIODE,
                         [
@@ -150,7 +153,10 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
                     // de choisir une maille. Deux notions dans un même chip se lisaient
                     // comme une seule.
                     "critere" => ReversementScope::CLE_VIREMENT,
-                    "libelle" => "Virement",
+                    // « AFFICHAGE », PAS « VIREMENT » (plan v3, 2026-10-27) : le groupe choisit une
+                    // maille de lecture, il ne filtre rien — son titre le dit.
+                    "libelle" => "Affichage",
+                    "icone" => "filtre:presentation",
                     // LA MAILLE DE LECTURE, PAS UN FILTRE : « Détail » ne masque rien, il ventile
                     // (totaux identiques). La ligne des filtres actifs ne l'annonce donc pas.
                     "presentation" => true,
@@ -173,6 +179,7 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
                     // la rubrique les porte toutes les deux.
                     "critere" => ReversementScope::CLE_BENEFICIAIRE,
                     "libelle" => "Bénéficiaire",
+                    "icone" => "filtre:beneficiaire",
                     "options" => [
                         // Deux options qui ne portent pas de valeur mais un SÉLECTEUR : au
                         // clic, la liste est demandée à l'autocomplétion générique — déjà

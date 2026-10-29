@@ -124,6 +124,7 @@ class PisteListCanvasProvider implements ListCanvasProviderInterface
                 [
                     "critere" => PisteTransformationScope::CRITERION_KEY,
                     "libelle" => "Statut",
+                    "icone" => "filtre:statut",
                     "options" => [
                         ...$this->optionsDesEtapes(),
                         ["value" => PisteTransformationScope::STATUT_EN_COURS, "label" => PisteTransformationScope::libelle(PisteTransformationScope::STATUT_EN_COURS), "icon" => "action:ongoing"],

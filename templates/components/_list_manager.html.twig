@@ -29,7 +29,12 @@
         {# LA VUE CARTES (Pistes seulement) : un second contrôleur sur le MÊME socle. Il ne
            remplace rien de la liste ; il en présente les lignes en colonnes. La vue rendue
            vient du serveur (cookie) : aucun flash, dans un sens comme dans l'autre. #}
-        data-controller="list-manager{{ vueCartes|default(null) ? ' vue-cartes' : '' }}"
+        {# LE RAIL DES CHIPS (refonte de la colonne 3, C3) : la rangée des chips devient le
+           panneau de ce rail — même élément, aucun doublon. Jamais en dialogue. #}
+        {% set railDesChips = usage|default('generic') != 'dialog' and listeCanvas.filtres_predefinis is defined and listeCanvas.filtres_predefinis is not empty %}
+        {% set idPanneauChips = 'panneau-chips-' ~ random() %}
+        data-controller="list-manager{{ vueCartes|default(null) ? ' vue-cartes' : '' }}{{ railDesChips ? ' rail-chips' : '' }}"
+        {% if railDesChips %}data-rail-chips-delai-value="300"{% endif %}
         {% if vueCartes|default(null) %}data-vue-cartes-etapes-value='{{ listeCanvas.vue_cartes.etapes|json_encode|e('html_attr') }}'{% endif %}
         data-list-manager-nb-elements-value="{{ data|length }}"
         data-list-manager-entite-value="{{ entite_nom }}"
@@ -78,12 +83,17 @@
            sous la barre de contrôles : elle était saturée (statut + pagination + totaux),
            les chips s'y empilaient mal. #}
         {% if listeCanvas.filtres_predefinis is defined and listeCanvas.filtres_predefinis is not empty %}
-            <div class="jsb-preset-filters-bar">
+            {# Au rail, la rangée devient un PANNEAU en surimpression, contre le rail : fermé, il
+               est invisible (ni lu, ni atteignable au clavier) ; ouvert, il ne montre que le
+               groupe visé, et se ferme quand le pointeur ou le focus s'en va. #}
+            <div class="jsb-preset-filters-bar" id="{{ idPanneauChips }}" role="region" aria-label="Filtres rapides"
+                 data-rail-chips-target="panneau"
+                 data-action="mouseleave->rail-chips#quitter keydown->rail-chips#tabulation">
                 {% for groupe in listeCanvas.filtres_predefinis %}
                     <div class="jsb-preset-filters jsb-control-pill" role="group"
                          aria-label="{{ groupe.libelle | default('Filtres rapides') }}"
                          data-preset-criterion="{{ groupe.critere }}"
-                         {# La maille de lecture (Virement : groupé / détail), pas un filtre : la
+                         {# La maille de lecture (Affichage : groupé / détail), pas un filtre : la
                             ligne des filtres actifs ne l'annonce pas. #}
                          {% if groupe.presentation|default(false) %}data-preset-presentation="true"{% endif %}>
                         {# Le CRITÈRE est écrit une seule fois, en tête du groupe : les boutons
@@ -193,6 +203,40 @@
                         {% endfor %}
                     </div>
                 {% endif %}
+            </div>
+            {# LE RAIL DES CHIPS, à droite de la liste : un bouton par groupe, à son icône
+               (`groupe.icone`, RailDesChipsDiscernableTest). Une pastille quand le groupe masque
+               des données ; le nom accessible dit sa valeur (« Prime : Impayée »), posé par
+               rail-chips d'après les chips. Survol stable (300 ms) ou clic = aperçu ; au clavier,
+               le focus entre dans le panneau. #}
+            <div class="jsb-rail-chips" role="group" aria-label="Filtres rapides"
+                 data-rail-chips-target="rail" data-action="mouseleave->rail-chips#quitter">
+                {% if vueCartes|default(null) %}
+                    {# LA VUE, EN TÊTE : l'icône de la vue active (chacune a la sienne). Les deux
+                       sont rendues ; la classe de vue de la liste (`is-vue-*`, posée par
+                       vue-cartes à la bascule) choisit — aucun rechargement. #}
+                    <button type="button" class="jsb-rail-chips__bouton"
+                            data-rail-chips-target="bouton" data-groupe="__vue__" data-titre="Vue" data-presentation="true"
+                            data-action="click->rail-chips#basculer mouseenter->rail-chips#survoler mouseleave->rail-chips#quitter"
+                            aria-expanded="false" aria-controls="{{ idPanneauChips }}"
+                            aria-label="Vue">
+                        {% for vue in ['cartes', 'liste'] %}
+                            <span class="jsb-rail-chips__icone jsb-rail-chips__icone--{{ vue }}" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:vue-' ~ vue), {width: '20px', height: '20px'}) }}</span>
+                        {% endfor %}
+                    </button>
+                {% endif %}
+                {% for groupe in listeCanvas.filtres_predefinis %}
+                    {% set titreDuGroupe = groupe.titre | default(groupe.libelle | default('Filtrer')) %}
+                    <button type="button" class="jsb-rail-chips__bouton"
+                            data-rail-chips-target="bouton" data-groupe="{{ groupe.critere }}" data-titre="{{ titreDuGroupe }}"
+                            {% if groupe.presentation|default(false) %}data-presentation="true"{% endif %}
+                            data-action="click->rail-chips#basculer mouseenter->rail-chips#survoler mouseleave->rail-chips#quitter"
+                            aria-expanded="false" aria-controls="{{ idPanneauChips }}"
+                            aria-label="{{ titreDuGroupe }}">
+                        <span class="jsb-rail-chips__icone" aria-hidden="true">{{ ux_icon(resolve_icon_name(groupe.icone), {width: '20px', height: '20px'}) }}</span>
+                        <span class="jsb-rail-chips__pastille" data-rail-chips-pastille hidden></span>
+                    </button>
+                {% endfor %}
             </div>
         {% endif %}
         {% endif %}

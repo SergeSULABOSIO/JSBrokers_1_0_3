@@ -235,7 +235,8 @@ class SearchCanvasProvider
                 \App\Services\Search\ReversementScope::CLE_TYPE => 'Type de bénéficiaire',
                 \App\Services\Search\ReversementScope::CLE_JUSTIFICATIF => 'Justificatif',
                 \App\Services\Search\ReversementScope::CLE_PERIODE => 'Période du versement',
-                \App\Services\Search\ReversementScope::CLE_VIREMENT => 'Virement',
+                // La maille de lecture, nommée comme son groupe de chips : elle ne filtre rien.
+                \App\Services\Search\ReversementScope::CLE_VIREMENT => 'Affichage',
             ];
             foreach ($libellesSynthetiques as $cle => $libelle) {
                 array_unshift($searchCriteria, [

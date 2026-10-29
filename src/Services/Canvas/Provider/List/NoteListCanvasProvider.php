@@ -109,6 +109,7 @@ class NoteListCanvasProvider implements ListCanvasProviderInterface
             "critere" => NoteReglementScope::CRITERION_KEY,
             "libelle" => NoteReglementScope::LIBELLE_AXE,
             "titre" => NoteReglementScope::TITRE_CHIPS,
+            "icone" => "filtre:reglement",
             "options" => $options,
         ];
     }

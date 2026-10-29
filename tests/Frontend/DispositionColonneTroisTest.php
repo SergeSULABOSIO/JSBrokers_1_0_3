@@ -314,6 +314,38 @@ class DispositionColonneTroisTest extends TestCase
         self::assertMatchesRegularExpression('/padding:\s*\d+px\s+0\s+\d+px\s+var\(--jsb-rail-retrait\);/', self::regle('.context-toolbar__defilant'));
     }
 
+    /**
+     * LE RAIL DES CHIPS (C3), à droite : même règle que le rail d'outils face à la poignée de la
+     * colonne 2 — la poignée de Ket (même `.ws-edge-handle`, centrée sur le bord gauche de la
+     * colonne 4) déborde d'autant dans la colonne 3, et le rail s'en retire du même retrait
+     * (demande de Serge, 2026-10-28). Sa colonne a la largeur du rail d'outils, retrait compris.
+     */
+    public function testLaPoigneeDeKetNeRecouvreAucunBoutonDuRailDesChips(): void
+    {
+        $menu = (string) preg_replace('#/\*.*?\*/#s', '', (string) file_get_contents(__DIR__ . '/../../assets/styles/interactive-menu.css'));
+        self::assertMatchesRegularExpression('/\.ws-col4-handle\s*\{[^}]*right:\s*var\(--ws-col4-width\);[^}]*translate\(50%/', $menu, 'La poignée de Ket est centrée sur le bord gauche de la colonne 4.');
+
+        self::assertMatchesRegularExpression('/padding:\s*\d+px\s+var\(--jsb-rail-retrait\)\s+\d+px\s+0;/', self::regle('.jsb-list-manager > .jsb-rail-chips'), 'Les boutons commencent avant le retrait droit.');
+        self::assertMatchesRegularExpression('/grid-template-columns:\s*var\(--jsb-rail-w\)\s+minmax\(0,\s*1fr\)\s+var\(--jsb-rail-w\);/', self::regle('.jsb-list-manager:has(> .jsb-rail-chips)'));
+    }
+
+    /**
+     * LA RANGÉE DES CHIPS DEVIENT LE PANNEAU DU RAIL — le même élément, jamais un doublon : un bouton
+     * par groupe, qui la désigne (`aria-controls`) ; jamais en dialogue ; aucune transition sous
+     * `prefers-reduced-motion`.
+     */
+    public function testLaRangeeDesChipsDevientLePanneauDuRail(): void
+    {
+        $liste = (string) file_get_contents(__DIR__ . '/../../templates/components/_list_manager.html.twig');
+        self::assertMatchesRegularExpression("/set railDesChips = usage\|default\('generic'\) != 'dialog' and listeCanvas\.filtres_predefinis/", $liste);
+        // Les valeurs entre guillemets sont sautées : `click->rail-chips#…` contient un « > ».
+        self::assertMatchesRegularExpression('/class="jsb-preset-filters-bar" id="\{\{ idPanneauChips \}\}"(?:[^>"]|"[^"]*")*data-rail-chips-target="panneau"/s', $liste);
+        self::assertMatchesRegularExpression('/\{% for groupe in listeCanvas\.filtres_predefinis %\}\s*\{% set titreDuGroupe[^%]*%\}\s*<button type="button" class="jsb-rail-chips__bouton"(?:[^>"]|"[^"]*")*aria-controls="\{\{ idPanneauChips \}\}"/s', $liste);
+        self::assertSame(1, substr_count($liste, 'class="jsb-preset-filters-bar"'), 'Une seule rangée de chips : le panneau.');
+
+        self::assertMatchesRegularExpression('/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.jsb-rail-chips__bouton,/', self::feuille());
+    }
+
     /** Un panneau sans liste (squelette, échec) se décale du rail au lieu d'être masqué. */
     public function testUnPanneauSansListeNEstPasMasqueParLeRail(): void
     {

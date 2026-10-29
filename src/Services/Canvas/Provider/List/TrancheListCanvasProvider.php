@@ -8,6 +8,15 @@ use App\Services\ServiceMonnaies;
 
 class TrancheListCanvasProvider implements ListCanvasProviderInterface
 {
+    /** L'icône de chaque GROUPE de chips, au rail des chips (alias `filtre:*`). */
+    private const ICONES_DES_GROUPES = [
+        TranchePaiementScope::AXE_PRIME => 'filtre:prime',
+        TranchePaiementScope::AXE_COMMISSION => 'filtre:commission',
+        TranchePaiementScope::AXE_RETRO => 'filtre:retro',
+        TranchePaiementScope::AXE_ECHEANCE => 'filtre:echeance',
+        TranchePaiementScope::AXE_REGULARISATION => 'filtre:regularisation',
+    ];
+
     public function __construct(private ServiceMonnaies $serviceMonnaies)
     {
     }
@@ -122,6 +131,9 @@ class TrancheListCanvasProvider implements ListCanvasProviderInterface
                 "critere" => $cle,
                 "libelle" => $axe['libelle'],
                 "titre" => $axe['titre'],
+                // L'icône du GROUPE, au rail des chips — pas celle de l'axe dans la recherche
+                // avancée (`$axe['icone']`), qui reste ce qu'elle est.
+                "icone" => self::ICONES_DES_GROUPES[$cle],
                 "options" => $options,
             ];
         }
