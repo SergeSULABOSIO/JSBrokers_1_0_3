@@ -26,6 +26,21 @@ faire.
 6. **Une action est libellée par la PROCHAINE action concrète** sur l'objet (une action par
    étape dans `vue_cartes.actions`).
 
+### Gestes d'une liste — trois mots, trois sens (standard Joseara, Serge, 2026-10-28)
+Un geste qui porte l'un de ces mots fait ce que dit le mot, partout — ligne des filtres, ×
+de la recherche, recherche avancée, état vide, Ket. Un quatrième mot pour l'un d'eux est
+refusé (« Effacer les filtres » est devenu « Tout retirer », 2026-10-29).
+- **Réinitialiser** = revenir aux critères PAR DÉFAUT de la liste (`CriteresParDefautDeListe`,
+  lus par le navigateur dans `initialCriteria`) — `search-bar_controller.js#resetAllFilters`,
+  relayé par le Cerveau (`ui:search.reset-request`). Offert SEULEMENT s'il changerait quelque
+  chose : `auxDefauts` (JS) et `LigneDesFiltres::auxDefauts` (PHP, état vide), une même décision
+  tenue par `tests/js/fixtures/ligne-des-filtres.json`.
+- **Tout retirer** = tout ce qui est retirable part (règle du chantier 6 : « Mon portefeuille »
+  seulement pour un administrateur du cabinet ; jamais la maille de lecture ni un critère
+  imposé) — `criteresApresRetrait`, et `CauseDeListeVide` pour l'état vide.
+- **Actualiser** = recharger avec les critères EN VIGUEUR, sans rien perdre (F5, bouton du rail).
+Ordre à l'écran : « Réinitialiser » puis « Tout retirer ».
+
 ### Erreurs, refus, toasts
 7. **Ce qui s'est passé, puis quoi faire.** Modèle : « Cette fiche a été modifiée depuis son
    ouverture (champs). Rien n'a été enregistré : rechargez-la pour repartir de son état actuel. »

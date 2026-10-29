@@ -44,6 +44,28 @@ class LigneDesFiltresPariteTest extends KernelTestCase
         );
     }
 
+    /** @return iterable<string, array{0: array<string, mixed>}> */
+    public static function casAuxDefauts(): iterable
+    {
+        $fixture = json_decode((string) file_get_contents(self::FIXTURE), true, 512, JSON_THROW_ON_ERROR);
+        foreach ($fixture['auxDefauts'] as $cas) {
+            yield $cas['nom'] => [$cas];
+        }
+    }
+
+    /**
+     * « Réinitialiser » ne s'offre que hors des défauts : sur la ligne des filtres (JS) comme sur
+     * l'état vide (serveur) — la même décision.
+     *
+     * @param array<string, mixed> $cas
+     *
+     * @dataProvider casAuxDefauts
+     */
+    public function testLaMemeDecisionQueLEcranPourReinitialiser(array $cas): void
+    {
+        self::assertSame($cas['attendu'], LigneDesFiltres::auxDefauts($cas['criteres'], $cas['defauts'], $cas['groupes'] ?? [], $cas['imposes'] ?? []));
+    }
+
     /**
      * Les groupes se lisent sur le CANEVAS comme la barre les lit dans le DOM rendu par
      * `_list_manager.html.twig` : titre du groupe, options à valeur, défaut d'un groupe sans

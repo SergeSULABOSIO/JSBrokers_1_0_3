@@ -948,7 +948,7 @@ export default class extends BaseController {
     }
 
     /**
-     * « Afficher tout le cabinet » / « Effacer les filtres » (chantier 6) : retire EXACTEMENT les
+     * « Afficher tout le cabinet » / « Tout retirer » (chantier 6) : retire EXACTEMENT les
      * critères que le serveur a mis sur le bouton (CauseDeListeVide) — « Mon portefeuille » n'y
      * figure que s'il doit partir. Le cerveau relance la recherche de CET onglet.
      * @param {{params: {cles?: string[]}}} event

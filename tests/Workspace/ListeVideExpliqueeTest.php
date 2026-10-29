@@ -18,7 +18,7 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
  *   — « Mon portefeuille » est la SEULE cause : « Aucune fiche dans votre portefeuille » et un
  *     lien « Afficher tout le cabinet » qui retire la chip — proposé à TOUS, la chip étant un
  *     confort de lecture (option A) ;
- *   — d'autres filtres sont actifs : « Effacer les filtres » retire ceux-là, et ne retire
+ *   — d'autres filtres sont actifs : « Tout retirer » retire ceux-là, et ne retire
  *     « Mon portefeuille » que pour un ADMINISTRATEUR du cabinet ;
  *   — rien ne filtre (ou le cabinet n'a aucune fiche) : « Aucune donnée ».
  * C'est le SERVEUR qui sait s'il existe des fiches hors filtres, et qui rend l'état vide.
@@ -134,6 +134,11 @@ final class ListeVideExpliqueeTest extends WebTestCase
     /** Les clés que porte le bouton d'un état vide, lues dans son attribut. */
     private static function clesDuBouton(string $html, string $libelle): ?array
     {
+        // Dans l'ÉTAT VIDE seulement : « Tout retirer » et « Réinitialiser » sont aussi sur la ligne
+        // des filtres (avant lui) et dans le dialogue de recherche avancée (après lui).
+        if (preg_match('/empty-state-container.*?(?=<template|data-controller="search-bar-dialog"|$)/s', $html, $etat)) {
+            $html = $etat[0];
+        }
         if (!preg_match('/<button\b((?:[^>"]|"[^"]*")*)>(?:(?!<\/button>).)*' . preg_quote($libelle, '/') . '/s', $html, $m)) {
             return null;
         }
@@ -157,7 +162,9 @@ final class ListeVideExpliqueeTest extends WebTestCase
         self::assertStringNotContainsString(self::CLIENT, $html, 'Préalable : le portefeuille cache le client.');
         self::assertStringContainsString('Aucune fiche dans votre portefeuille', $html);
         self::assertSame([PortefeuilleScope::CRITERION_KEY], self::clesDuBouton($html, 'Afficher tout le cabinet'));
-        self::assertNull(self::clesDuBouton($html, 'Effacer les filtres'));
+        self::assertNull(self::clesDuBouton($html, 'Tout retirer'));
+        // Aux défauts (« Mon portefeuille » posé d'office) : « Réinitialiser » ne changerait rien.
+        self::assertNull(self::clesDuBouton($html, 'Réinitialiser'));
 
         $reponse = $this->recherche($proprio, $e, $this->monPortefeuille($proprio));
         self::assertSame('portefeuille', $reponse['etatVide']['cause'] ?? null);
@@ -174,7 +181,7 @@ final class ListeVideExpliqueeTest extends WebTestCase
         self::assertStringContainsString('Aucune fiche dans votre portefeuille', $html);
         // Proposé à TOUS : la chip est un confort de lecture (option A).
         self::assertSame([PortefeuilleScope::CRITERION_KEY], self::clesDuBouton($html, 'Afficher tout le cabinet'));
-        self::assertNull(self::clesDuBouton($html, 'Effacer les filtres'));
+        self::assertNull(self::clesDuBouton($html, 'Tout retirer'));
 
         $reponse = $this->recherche($invite, $e, $this->monPortefeuille($invite));
         self::assertSame('portefeuille', $reponse['etatVide']['cause'] ?? null);
@@ -182,7 +189,7 @@ final class ListeVideExpliqueeTest extends WebTestCase
 
     // ── D'autres filtres actifs ─────────────────────────────────────────────────
 
-    public function testEffacerLesFiltresRetireLePortefeuillePourUnAdministrateurSeulement(): void
+    public function testToutRetirerRetireLePortefeuillePourUnAdministrateurSeulement(): void
     {
         ['proprio' => $proprio, 'invite' => $invite, 'entreprise' => $e] = $this->semer();
         $terme = ['nom' => ['operator' => 'LIKE', 'value' => 'introuvable-zz']];
@@ -190,12 +197,16 @@ final class ListeVideExpliqueeTest extends WebTestCase
         $this->seConnecter(self::PROPRIETAIRE);
         $admin = $this->recherche($proprio, $e, $terme + $this->monPortefeuille($proprio));
         self::assertSame('filtres', $admin['etatVide']['cause'] ?? null);
-        self::assertSame([PortefeuilleScope::CRITERION_KEY, 'nom'], self::clesDuBouton($admin['etatVide']['html'], 'Effacer les filtres'));
+        self::assertSame([PortefeuilleScope::CRITERION_KEY, 'nom'], self::clesDuBouton($admin['etatVide']['html'], 'Tout retirer'));
+        // « Réinitialiser » à côté (Serge, 2026-10-29) : un filtre s'ajoute aux défauts, y revenir
+        // changerait quelque chose. Il recharge les défauts, il ne porte aucune clé.
+        self::assertSame([], self::clesDuBouton($admin['etatVide']['html'], 'Réinitialiser'));
+        self::assertStringContainsString('click->list-manager#resetSearch', $admin['etatVide']['html']);
 
         $this->seConnecter(self::INVITE);
         $lecteur = $this->recherche($invite, $e, $terme + $this->monPortefeuille($invite));
         self::assertSame('filtres', $lecteur['etatVide']['cause'] ?? null);
-        self::assertSame(['nom'], self::clesDuBouton($lecteur['etatVide']['html'], 'Effacer les filtres'));
+        self::assertSame(['nom'], self::clesDuBouton($lecteur['etatVide']['html'], 'Tout retirer'));
     }
 
     /**
@@ -213,7 +224,7 @@ final class ListeVideExpliqueeTest extends WebTestCase
 
         $reponse = $this->recherche($invite, $e, ['nom' => ['operator' => 'LIKE', 'value' => 'introuvable-zz']] + $this->monPortefeuille($invite));
         self::assertSame('filtres', $reponse['etatVide']['cause'] ?? null);
-        self::assertSame([PortefeuilleScope::CRITERION_KEY, 'nom'], self::clesDuBouton($reponse['etatVide']['html'], 'Effacer les filtres'), 'Le délégué est administrateur : le portefeuille part aussi.');
+        self::assertSame([PortefeuilleScope::CRITERION_KEY, 'nom'], self::clesDuBouton($reponse['etatVide']['html'], 'Tout retirer'), 'Le délégué est administrateur : le portefeuille part aussi.');
 
         $resolveur = static::getContainer()->get(\App\Service\Workspace\WorkspaceAccessResolver::class);
         self::assertTrue($resolveur->estAdministrateurDuCabinet($invite));
@@ -231,7 +242,7 @@ final class ListeVideExpliqueeTest extends WebTestCase
         $html = $this->premierAffichage($proprio, $e);
         self::assertStringContainsString('Aucune donnée', $html);
         self::assertNull(self::clesDuBouton($html, 'Afficher tout le cabinet'));
-        self::assertNull(self::clesDuBouton($html, 'Effacer les filtres'));
+        self::assertNull(self::clesDuBouton($html, 'Tout retirer'));
 
         $reponse = $this->recherche($proprio, $e, ['nom' => ['operator' => 'LIKE', 'value' => 'x']]);
         self::assertSame('aucune_donnee', $reponse['etatVide']['cause'] ?? null);

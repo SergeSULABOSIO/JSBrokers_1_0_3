@@ -1129,14 +1129,17 @@ trait ControllerUtilsTrait
                 'button_2_class' => 'btn btn-link',
                 'button_2_icon' => 'lucide:rotate-cw',
             ],
+            // « TOUT RETIRER » : le geste et le mot de la ligne des filtres — la règle du chantier 6
+            // (« Mon portefeuille » ne part que pour un administrateur). Il s'appelait « Effacer
+            // les filtres » : un troisième mot pour un geste qui en a déjà un (Serge, 2026-10-29).
             \App\Service\Liste\CauseDeListeVide::FILTRES => [
                 'title' => 'Aucune fiche ne correspond à vos filtres',
                 'description' => 'Des fiches existent dans le cabinet, mais vos filtres les écartent.',
                 'icon_name' => 'lucide:search-x',
-                'button_2_text' => 'Effacer les filtres',
+                'button_2_text' => 'Tout retirer',
                 'button_2_action' => 'click->list-manager#retirerFiltres',
                 'button_2_cles' => $cles,
-                'button_2_icon' => 'lucide:rotate-cw',
+                'button_2_icon' => 'lucide:x',
             ],
             default => [
                 'title' => 'Aucune donnée',
@@ -1144,6 +1147,18 @@ trait ControllerUtilsTrait
                 'icon_name' => $icone,
             ],
         };
+        // « RÉINITIALISER » À CÔTÉ (Serge, 2026-10-29), comme sur la ligne des filtres : il recharge
+        // les critères PAR DÉFAUT de la liste, et ne s'offre que s'il changerait quelque chose — la
+        // MÊME décision que la ligne (LigneDesFiltres::auxDefauts, jumelle de `auxDefauts`).
+        if ($cause !== \App\Service\Liste\CauseDeListeVide::AUCUNE_DONNEE) {
+            $defauts = $parentContext === null
+                ? $this->getInitialSearchCriteria($entityClass, (int) $this->getInvite()->getId(), $entreprise)
+                : $this->criteresDUnOngletContextuel($entityClass);
+            $groupes = \App\Services\Search\LigneDesFiltres::groupesDuCanevas($this->canvasBuilder->getListeCanvas($entityClass)['filtres_predefinis'] ?? []);
+            if (!\App\Services\Search\LigneDesFiltres::auxDefauts($criteresVus, $defauts, $groupes, array_keys($criteresImposes))) {
+                $parametres['reinitialiser'] = true;
+            }
+        }
         // « Ajouter » : avec les mêmes droits que la barre d'outils (création permise). JAMAIS dans
         // un onglet contextuel : ses droits d'ajout se jugent sur la collection
         // (droitsSurLaCollection) — l'état vide ne doit pas rouvrir une porte fermée.

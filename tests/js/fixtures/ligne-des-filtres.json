@@ -104,5 +104,60 @@
         { "cle": "autre", "texte": "autre : jusqu'au 31/01/2026", "parDefaut": false, "retirable": true }
       ]
     }
+  ],
+  "auxDefauts": [
+    {
+      "nom": "mêmes valeurs, formes différentes (libellé, nombre / chaîne, opérateur absent)",
+      "criteres": { "__mon_portefeuille__": { "value": "414238" }, "__prime__": { "value": "impayee" } },
+      "defauts": { "__prime__": { "operator": "=", "value": "impayee", "label": "Impayée" }, "__mon_portefeuille__": { "value": 414238 } },
+      "attendu": true
+    },
+    {
+      "nom": "une autre valeur",
+      "criteres": { "__prime__": { "value": "payee" }, "__mon_portefeuille__": { "value": 414238 } },
+      "defauts": { "__prime__": { "value": "impayee" }, "__mon_portefeuille__": { "value": 414238 } },
+      "attendu": false
+    },
+    {
+      "nom": "un défaut retiré",
+      "criteres": { "__mon_portefeuille__": { "value": 414238 } },
+      "defauts": { "__prime__": { "value": "impayee" }, "__mon_portefeuille__": { "value": 414238 } },
+      "attendu": false
+    },
+    {
+      "nom": "un filtre ajouté ; une valeur vide (« Toutes ») compte comme absente",
+      "criteres": { "__prime__": { "value": "impayee" }, "client": { "value": "42" }, "__echeance__": { "value": "" } },
+      "defauts": { "__prime__": { "value": "impayee" } },
+      "attendu": false
+    },
+    {
+      "nom": "l'opérateur compte : « contient x » n'est pas « = x »",
+      "criteres": { "t": { "operator": "LIKE", "value": "x" } },
+      "defauts": { "t": { "value": "x" } },
+      "attendu": false
+    },
+    {
+      "nom": "les plages se comparent par leurs bornes",
+      "criteres": { "d": { "from": "01/01/2026" } },
+      "defauts": { "d": { "from": "01/01/2026", "to": "31/01/2026" } },
+      "attendu": false
+    },
+    {
+      "nom": "rien de part et d'autre",
+      "criteres": {},
+      "defauts": {},
+      "attendu": true
+    },
+    {
+      "nom": "hors comparaison : défaut d'un groupe sans « Toutes », maille de lecture, critère imposé",
+      "criteres": { "__statut__": { "value": "souscrites" }, "__virement__": { "value": "detail" } },
+      "defauts": { "__visibilite__": { "value": "moi" } },
+      "groupes": [
+        { "cle": "__statut__", "titre": "Statut", "defaut": "souscrites", "options": { "souscrites": "Souscrites" } },
+        { "cle": "__virement__", "titre": "Affichage", "presentation": true, "options": {} }
+      ],
+      "imposes": ["__visibilite__"],
+      "attendu": true
+    }
   ]
 }

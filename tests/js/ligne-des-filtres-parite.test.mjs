@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-import { filtresActifs } from '../../assets/controllers/search-bar-filtres.js';
+import { auxDefauts, filtresActifs } from '../../assets/controllers/search-bar-filtres.js';
 
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/ligne-des-filtres.json', import.meta.url), 'utf8'));
 
@@ -23,5 +23,13 @@ for (const cas of fixture.cas) {
             }),
             cas.attendu,
         );
+    });
+}
+
+// « Réinitialiser » ne s'offre que hors des défauts — sur la ligne des filtres (ici) comme sur
+// l'état vide (le serveur, LigneDesFiltres::auxDefauts) : la même décision.
+for (const cas of fixture.auxDefauts) {
+    test(`aux défauts — ${cas.nom}`, () => {
+        assert.equal(auxDefauts(cas.criteres, cas.defauts, { groupes: cas.groupes, imposes: cas.imposes }), cas.attendu);
     });
 }

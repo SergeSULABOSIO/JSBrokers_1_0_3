@@ -10,6 +10,9 @@
     @param array  button_2_cles  (Optionnel) Les critères que le bouton secondaire RETIRE — choisis
                                  par le serveur (CauseDeListeVide), lus par list-manager#retirerFiltres.
     @param string button_2_class (Optionnel) Classe du bouton secondaire (ex. un lien).
+    @param bool   reinitialiser  (Optionnel) Offre « Réinitialiser » (critères PAR DÉFAUT de la liste),
+                                 avant le bouton secondaire — décidé par le serveur : seulement si
+                                 les critères ne sont pas déjà ceux par défaut.
 #}
 <div class="empty-state-container">
     <div class="empty-state-content">
@@ -25,7 +28,14 @@
             <p class="empty-state-description">{{ description }}</p>
         {% endif %}
 
-        <div class="d-flex justify-content-center gap-2 mt-4">
+        <div class="d-flex justify-content-center flex-wrap gap-2 mt-4">
+            {# « Réinitialiser » puis « Tout retirer » : l'ordre de la ligne des filtres. #}
+            {% if reinitialiser is defined and reinitialiser %}
+                <button type="button" class="btn btn-outline-secondary empty-state-button-secondary" data-action="click->list-manager#resetSearch">
+                    <twig:UX:Icon name="lucide:rotate-cw" class="me-2" />
+                    Réinitialiser
+                </button>
+            {% endif %}
             {# NOUVEAU : Bouton d'action secondaire (ex: Réinitialiser) #}
             {% if button_2_text is defined and button_2_text and button_2_action is defined and button_2_action %}
                 <button type="button" class="{{ button_2_class|default('btn btn-secondary') }} empty-state-button-secondary" data-action="{{ button_2_action }}"

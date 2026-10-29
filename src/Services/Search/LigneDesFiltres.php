@@ -151,6 +151,59 @@ final class LigneDesFiltres
     }
 
     /**
+     * LES CRITÈRES SONT-ILS DÉJÀ CEUX PAR DÉFAUT ? — `auxDefauts`. Alors « Réinitialiser » ne
+     * changerait rien, et ne s'offre ni sur la ligne des filtres ni sur l'état vide. Comparés
+     * par opérateur (absent = « = ») et valeur ; une valeur vide compte comme absente ; la maille
+     * de lecture, un critère imposé et le défaut d'un groupe sans « Toutes » ne comptent pas.
+     *
+     * @param array<string, mixed>             $criteres
+     * @param array<string, mixed>             $defauts
+     * @param array<int, array<string, mixed>> $groupes cf. groupesDuCanevas
+     * @param string[]                         $imposes
+     */
+    public static function auxDefauts(array $criteres, array $defauts, array $groupes = [], array $imposes = []): bool
+    {
+        $horsComparaison = static function (string $cle, mixed $critere) use ($groupes, $imposes): bool {
+            if (in_array($cle, $imposes, true)) {
+                return true;
+            }
+            foreach ($groupes as $groupe) {
+                if (($groupe['cle'] ?? null) === $cle && (!empty($groupe['presentation'])
+                    || (isset($groupe['defaut']) && (string) $groupe['defaut'] === self::valeurDe($critere)))) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+        $actifs = static function (array $liste) use ($horsComparaison): array {
+            $signatures = [];
+            foreach ($liste as $cle => $critere) {
+                $signature = self::signature($critere);
+                if (!$horsComparaison((string) $cle, $critere) && $signature !== '') {
+                    $signatures[(string) $cle] = $signature;
+                }
+            }
+            ksort($signatures);
+
+            return $signatures;
+        };
+
+        return $actifs($criteres) === $actifs($defauts);
+    }
+
+    /** Ce qui distingue un critère : son opérateur et sa valeur, ou les bornes d'une plage (`signature`). */
+    private static function signature(mixed $critere): string
+    {
+        if (is_array($critere) && (!empty($critere['from']) || !empty($critere['to']))) {
+            return ($critere['from'] ?? '') . '…' . ($critere['to'] ?? '');
+        }
+        $valeur = self::valeurDe($critere);
+
+        return $valeur === '' ? '' : ((is_array($critere) && !empty($critere['operator']) ? $critere['operator'] : '=') . ' ' . $valeur);
+    }
+
+    /**
      * Le libellé lisible d'UN filtre, selon son type — `formatterTexteFiltre`.
      *
      * @param array<string, mixed>|null $def

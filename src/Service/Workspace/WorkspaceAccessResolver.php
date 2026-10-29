@@ -287,7 +287,7 @@ class WorkspaceAccessResolver
      * DÉLÉGUÉ « gestionnaire des invités » — les deux administrent. Le propriétaire seul garde
      * la suppression du cabinet et l'achat des tokens (gardés ailleurs). Ce n'est pas un
      * cumul de droits par rubrique : la qualité est conférée, pas déduite.
-     * Sert à « Effacer les filtres », qui ne retire « Mon portefeuille » que pour lui.
+     * Sert à « Tout retirer », qui ne retire « Mon portefeuille » que pour lui.
      */
     public function estAdministrateurDuCabinet(Invite $invite): bool
     {

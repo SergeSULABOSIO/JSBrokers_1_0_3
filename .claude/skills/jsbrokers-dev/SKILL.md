@@ -446,7 +446,9 @@ Inscrits le 2026-10-16 (décisions de Serge), après l'inventaire fait pour la s
    (`App\Service\Liste\CauseDeListeVide`, `ControllerUtilsTrait::etatVideParametres`) et rend
    l'état vide, au premier affichage comme à chaque recherche (`etatVide` de la réponse) :
    « Aucune donnée » ; « Aucune fiche dans votre portefeuille » + « Afficher tout le cabinet »
-   (proposé à tous) ; « Aucune fiche ne correspond à vos filtres » + « Effacer les filtres »,
+   (proposé à tous) ; « Aucune fiche ne correspond à vos filtres » + « Réinitialiser » (critères
+   par défaut, seulement s'il changerait quelque chose) + « Tout retirer » (ex-« Effacer les
+   filtres », 2026-10-29 — vocabulaire : `jsb-construire-rubrique/references/redaction-interface.md`),
    qui ne retire « Mon portefeuille » que pour un administrateur du cabinet
    (`WorkspaceAccessResolver::estAdministrateurDuCabinet` : le propriétaire ou le DÉLÉGUÉ
    « gestionnaire des invités » — décision de Serge ; seul le propriétaire supprime le cabinet

@@ -174,7 +174,10 @@ class CongeConfidentialiteTest extends WebTestCase
         self::assertResponseIsSuccessful();
         $html = (string) $this->client->getResponse()->getContent();
         self::assertStringContainsString('Aucune donnée', $html, 'Premier affichage : rien à montrer, et rien à suggérer.');
-        self::assertStringNotContainsString('Effacer les filtres', $html);
+        // Aucun geste proposé par l'état vide (« Tout retirer », « Réinitialiser ») : les mots
+        // existent aussi sur la ligne des filtres, ce sont les ACTIONS qui sont cherchées.
+        self::assertStringNotContainsString('list-manager#retirerFiltres', $html);
+        self::assertStringNotContainsString('list-manager#resetSearch', $html);
         self::assertStringNotContainsString('Des fiches existent', $html);
 
         // La recherche, MÊME sans le badge « Mes demandes » envoyé par le navigateur.
