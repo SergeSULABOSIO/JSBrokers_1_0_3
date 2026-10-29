@@ -2912,36 +2912,72 @@ tr.row-selected:hover > td {
   margin-bottom: 1.5rem;
 }
 
-/* Le bouton utilise déjà les styles .btn-primary de Bootstrap, qui correspondent à votre --primary-cobalt-blue */
-/* CORRECTION : Style pour les boutons avec icône et texte */
-.empty-state-button, .empty-state-button-secondary {
-  display: inline-flex; /* Permet d'aligner l'icône et le texte */
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1.25rem; /* Padding pour un aspect rectangulaire */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); /* Ombre discrète */
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Animation douce */
-  border-radius: 8px !important; /* Forme rectangulaire avec coins arrondis */
+/* LES GESTES DE L'ÉTAT VIDE (Serge, 2026-10-29 : « pas professionnels », « trop d'espace » ; la
+   sensibilité à la souris gardée, affinée). Une rangée compacte, trois niveaux qui se lisent sans
+   effort — discret, secondaire, principal —, jetons de la charte seulement. Ils remplacent trois
+   boutons Bootstrap de 38 px (dont le bleu #0d6efd, hors marque), qui passaient à la ligne. */
+.jsb-etat-vide__gestes {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 1.25rem;
 }
-
-.empty-state-button:hover {
-  transform: translateY(-2px); /* Léger mouvement vers le haut au survol */
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Ombre plus prononcée */
+.jsb-etat-vide__geste {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, background-color 0.15s ease-out, border-color 0.15s ease-out, color 0.15s ease-out;
 }
-
-.empty-state-button-secondary:hover {
-    transform: translateY(-2px); /* Léger mouvement vers le haut au survol */
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Ombre plus prononcée */
-    background-color: #495057;
-    border-color: #495057;
+.jsb-etat-vide__icone { width: 16px; height: 16px; flex-shrink: 0; }
+.jsb-etat-vide__geste:hover { transform: translateY(-1px); }
+.jsb-etat-vide__geste:active { transform: none; }
+.jsb-etat-vide__geste:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--cobalt-focus-ring, rgba(0, 71, 171, 0.35));
 }
-
-/* Cible l'icône SVG à l'intérieur du bouton */
-/* CORRECTION : Assure que les icônes font exactement 24px */
-.empty-state-button .me-2,
-.empty-state-button-secondary .me-2 {
-    width: 24px !important;
-    height: 24px !important;
+/* Discret : un mot, sans fond ni filet — il se révèle au survol. */
+.jsb-etat-vide__geste--discret {
+    background-color: transparent;
+    color: var(--text-muted, #6c757d);
+}
+.jsb-etat-vide__geste--discret:hover {
+    background-color: var(--bg-cobalt-subtle, #e8f0fb);
+    color: var(--cobalt, #0047AB);
+}
+/* Secondaire : surface blanche, filet net ; le filet passe au cobalt au survol. */
+.jsb-etat-vide__geste--secondaire {
+    background-color: var(--bg-white, #ffffff);
+    border-color: var(--border-medium, #ced4da);
+    color: var(--text-dark-secondary, #343a40);
+}
+.jsb-etat-vide__geste--secondaire:hover {
+    border-color: var(--cobalt, #0047AB);
+    color: var(--cobalt, #0047AB);
+    box-shadow: 0 2px 6px var(--cobalt-shadow, rgba(0, 71, 171, 0.25));
+}
+/* Principal : le cobalt de la marque, plein ; cobalt foncé au survol (charte, règle 4). */
+.jsb-etat-vide__geste--principal {
+    background-color: var(--cobalt, #0047AB);
+    color: var(--text-white, #ffffff);
+}
+.jsb-etat-vide__geste--principal:hover {
+    background-color: var(--cobalt-dark, #003380);
+    box-shadow: 0 2px 6px var(--cobalt-shadow, rgba(0, 71, 171, 0.25));
+}
+@media (prefers-reduced-motion: reduce) {
+    .jsb-etat-vide__geste { transition: none; }
+    .jsb-etat-vide__geste:hover { transform: none; }
 }
 
 /* --- 3.8 Panneau de description (volet de visualisation) --- */

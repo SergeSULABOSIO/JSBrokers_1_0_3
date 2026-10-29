@@ -1126,7 +1126,6 @@ trait ControllerUtilsTrait
                 'button_2_text' => 'Afficher tout le cabinet',
                 'button_2_action' => 'click->list-manager#retirerFiltres',
                 'button_2_cles' => $cles,
-                'button_2_class' => 'btn btn-link',
                 'button_2_icon' => 'lucide:rotate-cw',
             ],
             // « TOUT RETIRER » : le geste et le mot de la ligne des filtres — la règle du chantier 6

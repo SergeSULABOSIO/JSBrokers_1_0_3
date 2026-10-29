@@ -9,7 +9,8 @@
     @param string icon_name      (Optionnel) Le nom de l'icône UX à afficher.
     @param array  button_2_cles  (Optionnel) Les critères que le bouton secondaire RETIRE — choisis
                                  par le serveur (CauseDeListeVide), lus par list-manager#retirerFiltres.
-    @param string button_2_class (Optionnel) Classe du bouton secondaire (ex. un lien).
+    @param string button_2_class (Optionnel) Niveau du bouton secondaire : `jsb-etat-vide__geste--secondaire`
+                                 (défaut) ou `jsb-etat-vide__geste--discret`.
     @param bool   reinitialiser  (Optionnel) Offre « Réinitialiser » (critères PAR DÉFAUT de la liste),
                                  avant le bouton secondaire — décidé par le serveur : seulement si
                                  les critères ne sont pas déjà ceux par défaut.
@@ -28,33 +29,29 @@
             <p class="empty-state-description">{{ description }}</p>
         {% endif %}
 
-        <div class="d-flex justify-content-center flex-wrap gap-2 mt-4">
-            {# « Réinitialiser » puis « Tout retirer » : l'ordre de la ligne des filtres. #}
+        {# LES GESTES, SUR UNE RANGÉE, EN TROIS NIVEAUX (Serge, 2026-10-29 : « pas professionnels »,
+           « trop d'espace ») : discret (Réinitialiser), secondaire (Tout retirer, Afficher tout
+           le cabinet), principal (Ajouter). « Réinitialiser » puis « Tout retirer » : l'ordre de
+           la ligne des filtres. #}
+        <div class="jsb-etat-vide__gestes">
             {% if reinitialiser is defined and reinitialiser %}
-                <button type="button" class="btn btn-outline-secondary empty-state-button-secondary" data-action="click->list-manager#resetSearch">
-                    <twig:UX:Icon name="lucide:rotate-cw" class="me-2" />
+                <button type="button" class="jsb-etat-vide__geste jsb-etat-vide__geste--discret" data-action="click->list-manager#resetSearch">
+                    <twig:UX:Icon name="lucide:rotate-cw" class="jsb-etat-vide__icone" aria-hidden="true" />
                     Réinitialiser
                 </button>
             {% endif %}
-            {# NOUVEAU : Bouton d'action secondaire (ex: Réinitialiser) #}
             {% if button_2_text is defined and button_2_text and button_2_action is defined and button_2_action %}
-                <button type="button" class="{{ button_2_class|default('btn btn-secondary') }} empty-state-button-secondary" data-action="{{ button_2_action }}"
+                <button type="button" class="jsb-etat-vide__geste {{ button_2_class|default('jsb-etat-vide__geste--secondaire') }}" data-action="{{ button_2_action }}"
                         {%- if button_2_cles is defined %} data-list-manager-cles-param="{{ button_2_cles|json_encode }}"{% endif %}>
                     {% if button_2_icon is defined and button_2_icon %}
-                        <twig:UX:Icon name="{{ resolve_icon_name(button_2_icon) }}" class="me-2" />
+                        <twig:UX:Icon name="{{ resolve_icon_name(button_2_icon) }}" class="jsb-etat-vide__icone" aria-hidden="true" />
                     {% endif %}
                     {{ button_2_text }}
                 </button>
             {% endif %}
-
-            {# Bouton d'action principal (ex: Ajouter) #}
             {% if button_text is defined and button_text and button_action is defined and button_action %}
-                <button type="button" class="btn btn-primary empty-state-button" data-action="{{ button_action }}">
-                    {% if button_icon is defined and button_icon %}
-                        <twig:UX:Icon name="{{ resolve_icon_name(button_icon) }}" class="me-2" />
-                    {% else %}
-                        <twig:UX:Icon name="bi:plus-circle-fill" class="me-2" />
-                    {% endif %}
+                <button type="button" class="jsb-etat-vide__geste jsb-etat-vide__geste--principal" data-action="{{ button_action }}">
+                    <twig:UX:Icon name="{{ resolve_icon_name(button_icon|default('lucide:plus-circle')) }}" class="jsb-etat-vide__icone" aria-hidden="true" />
                     {{ button_text }}
                 </button>
             {% endif %}
