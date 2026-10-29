@@ -31,7 +31,8 @@ test('le libellé est gardé, la raison ajoutée — jamais le title effacé', (
 });
 
 test('un bouton désactivé ne joue pas : la barre et le menu des listes le refusent', () => {
-    assert.match(barre, /notify\(event\) \{[\s\S]{0,400}aria-disabled[\s\S]{0,80}return;/);
+    // Il ne joue pas — et il DIT pourquoi, à l'appui (C4 : au doigt, il n'y a pas de survol).
+    assert.match(barre, /notify\(event\) \{[\s\S]{0,500}aria-disabled[\s\S]{0,160}expliquerUnRefus\(button\);\s*return;/);
     assert.match(menu, /notify\(event\) \{[\s\S]{0,400}aria-disabled[\s\S]{0,80}return;/);
 });
 

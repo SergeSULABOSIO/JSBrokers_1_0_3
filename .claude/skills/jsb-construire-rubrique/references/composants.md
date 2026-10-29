@@ -111,7 +111,17 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
   ligne se focalise (touche Menu, Maj+F10). Rien d'autre à écrire : placement, clavier,
   fermetures, un seul menu ouvert. Le déclarer dans `ComposantsUniquesTest::MENUS`.
 - CSS : `.context-menu` (`app.css`).
-- Workspace : 4 actions puis « Autres actions », icônes seules ; dialogue : libellés.
+- Workspace : la barre est le RAIL D'OUTILS à gauche de la liste (refonte de la colonne 3) —
+  toutes les actions au rail, outils de la rubrique au rail autant qu'il en tient, puis « Plus » ;
+  icônes seules, infobulle à droite après 300 ms ; ↑/↓ au clavier (`barre-clavier.js`).
+  Dialogue : libellés.
+- **AU DOIGT (C4, 2026-10-29)** : chaque bouton des deux rails (outils, chips) porte son libellé
+  court `data-libelle` (gabarit, `BarreActions`), affiché SOUS l'icône par
+  `(hover: none), (pointer: coarse)` (`::before` + `order` — le `::after` est pris par la zone de
+  clic élargie et le chevron des familles) ; rails élargis (`--jsb-rail-w`). Un bouton refusé
+  dit sa raison À L'APPUI (`expliquerUnRefus`, infobulle unique à droite) — au doigt il n'y a
+  pas de survol. Un nouveau bouton de rail sans `data-libelle` fait échouer
+  `DispositionColonneTroisTest`.
 - Toute action d'écran a son entrée au manifeste `CouvertureDesEcrans` (`PariteEcranKetTest`).
 
 ### Onglets — partagé

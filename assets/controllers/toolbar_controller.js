@@ -4,7 +4,7 @@ import { BarreActions } from './barre-actions.js';
 import { MenuContextuel } from './menu-contextuel.js';
 import { DefilementRail } from './rail-defilement.js';
 import { outilsAuRail } from './rail-outils.js';
-import { fermerInfobulle } from './infobulle-moteur.js';
+import { expliquerUnRefus, fermerInfobulle } from './infobulle-moteur.js';
 
 /**
  * @class ToolbarController - REFACTORED (V3)
@@ -415,9 +415,11 @@ export default class extends Controller {
      */
     notify(event) {
         const button = event.currentTarget;
-        // Un bouton inactif (aria-disabled) reste survolable pour dire pourquoi — il ne joue pas.
+        // Un bouton inactif (aria-disabled) ne joue pas — il DIT pourquoi, au survol comme au geste
+        // (au doigt, il n'y a pas de survol : C4).
         if (button.getAttribute('aria-disabled') === 'true' || button.closest('[aria-disabled="true"]')) {
             event.preventDefault();
+            expliquerUnRefus(button);
             return;
         }
         // Le dernier outil joué : si la décision du rail le déplace, le focus le suivra.

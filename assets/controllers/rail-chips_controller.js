@@ -1,6 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 import { etatDuGroupe, transitionDuPanneau, PANNEAU_FERME, APERCU } from './rail-chips-regles.js';
 import { sommetDuFlyout } from './workspace-col2.js';
+import { indexVise } from './barre-clavier.js';
 
 /**
  * LE RAIL DES CHIPS (refonte de la colonne 3, C3) — la coquille : elle lit le DOM rendu par le
@@ -41,6 +42,7 @@ export default class extends Controller {
             subtree: true, attributes: true, attributeFilter: ['aria-pressed', 'class'], characterData: true, childList: true,
         });
         this._annoncer();
+        this._arretDeTabulation(this.boutonTargets.find((b) => b.getClientRects().length) || null);
     }
 
     disconnect() {
@@ -53,6 +55,26 @@ export default class extends Controller {
         this.element.removeEventListener('focusout', this.boundFocus);
         this.railTarget.removeEventListener('scroll', this.boundRecaler);
         window.removeEventListener('resize', this.boundRecaler);
+    }
+
+    /**
+     * LE CLAVIER DANS LE RAIL (C4) : ↑/↓ d'un bouton à l'autre, Début et Fin aux extrémités —
+     * la règle du rail d'outils (barre-clavier.js). Un seul arrêt de tabulation : le bouton
+     * courant ; Tab sort du rail.
+     */
+    parcourir(event) {
+        const boutons = this.boutonTargets.filter((b) => b.getClientRects().length);
+        const index = boutons.indexOf(event.target.closest?.('button'));
+        const vise = indexVise(event.key, index, boutons.length, true);
+        if (vise === null) return;
+        event.preventDefault();
+        this._arretDeTabulation(boutons[vise]);
+        boutons[vise].focus();
+    }
+
+    /** @private */
+    _arretDeTabulation(courant) {
+        this.boutonTargets.forEach((b) => b.setAttribute('tabindex', b === courant ? '0' : '-1'));
     }
 
     /** Survol d'un bouton : l'aperçu ne s'ouvre qu'après un survol STABLE. */
@@ -103,6 +125,7 @@ export default class extends Controller {
         if (!cible) return;
         event.preventDefault();
         this._jouer({ type: 'echap' });
+        if (this.boutonTargets.includes(cible)) this._arretDeTabulation(cible);
         cible.focus();
     }
 
@@ -235,6 +258,10 @@ export default class extends Controller {
         const groupe = this.etat.groupe;
         const focusDedans = this._dedans(document.activeElement);
         this._jouer({ type: 'echap' });
-        if (focusDedans) this.boutonTargets.find((b) => b.dataset.groupe === groupe)?.focus();
+        const bouton = this.boutonTargets.find((b) => b.dataset.groupe === groupe);
+        if (focusDedans && bouton) {
+            this._arretDeTabulation(bouton);
+            bouton.focus();
+        }
     }
 }

@@ -34,6 +34,7 @@
             class="btn btn-default"
             type="button"
             aria-label="Ajouter un élément"
+            data-libelle="Ajouter"
             title="Ajouter">
             <twig:UX:Icon name="{{ resolve_icon_name('gridicons:add') }}" class="toolbar-icon" aria-hidden="true" />
         </button>
@@ -45,6 +46,7 @@
             class="btn btn-default"
             type="button"
             aria-label="Modifier l'élément sélectionné"
+            data-libelle="Modifier"
             title="Modifier"
             style="display:none;">
             <twig:UX:Icon name="{{ resolve_icon_name('tabler:edit') }}" class="toolbar-icon" aria-hidden="true" />
@@ -57,6 +59,7 @@
             class="btn btn-default"
             type="button"
             aria-label="Ouvrir l'élément sélectionné"
+            data-libelle="Ouvrir"
             title="Ouvrir"
             style="display:none;">
             <twig:UX:Icon name="{{ resolve_icon_name('fad:open') }}" class="toolbar-icon" aria-hidden="true" />
@@ -69,6 +72,7 @@
             class="btn btn-icon-danger"
             type="button"
             aria-label="Supprimer la sélection"
+            data-libelle="Supprimer"
             title="Supprimer"
             style="display:none;">
             <twig:UX:Icon name="{{ resolve_icon_name('fluent:delete-20-filled') }}" class="toolbar-icon" aria-hidden="true" />
@@ -97,22 +101,22 @@
          data-toolbar-target="outilsRail">
         <button data-controller="ripple" data-action="click->toolbar#notify"
                 data-toolbar-event-name-param="ui:toolbar.select-all-request" data-outil="0"
-                class="btn btn-default" type="button" aria-label="Sélectionner tout" title="Sélectionner tout">
+                class="btn btn-default" type="button" aria-label="Sélectionner tout" data-libelle="Tout cocher" title="Sélectionner tout">
             <twig:UX:Icon name="{{ resolve_icon_name('material-symbols:check-box') }}" class="toolbar-icon" aria-hidden="true" />
         </button>
         <button data-controller="ripple" data-action="click->toolbar#notify"
                 data-toolbar-event-name-param="ui:toolbar.refresh-request" data-outil="1"
-                class="btn btn-default" type="button" aria-label="Actualiser la liste" title="Actualiser">
+                class="btn btn-default" type="button" aria-label="Actualiser la liste" data-libelle="Actualiser" title="Actualiser">
             <twig:UX:Icon name="{{ resolve_icon_name('ci:arrows-reload-01') }}" class="toolbar-icon" aria-hidden="true" />
         </button>
         <button data-controller="ripple" data-action="click->toolbar#notify"
                 data-toolbar-event-name-param="ui:toolbar.settings-request" data-outil="2"
-                class="btn btn-default" type="button" aria-label="Paramètres de la rubrique" title="Paramètres">
+                class="btn btn-default" type="button" aria-label="Paramètres de la rubrique" data-libelle="Paramètres" title="Paramètres">
             <twig:UX:Icon name="{{ resolve_icon_name('material-symbols:settings') }}" class="toolbar-icon" aria-hidden="true" />
         </button>
         <button data-controller="ripple" data-action="click->toolbar#notify"
                 data-toolbar-event-name-param="ui:toolbar.close-request" data-outil="3"
-                class="btn btn-icon-danger" type="button" aria-label="Quitter la rubrique" title="Quitter la rubrique">
+                class="btn btn-icon-danger" type="button" aria-label="Quitter la rubrique" data-libelle="Quitter" title="Quitter la rubrique">
             <twig:UX:Icon name="{{ resolve_icon_name('hugeicons:logout-04') }}" class="toolbar-icon" aria-hidden="true" />
         </button>
     </div>
@@ -130,6 +134,7 @@
         aria-expanded="false"
         aria-controls="{{ idMenuPlus }}"
         aria-label="Plus d'outils"
+        data-libelle="Plus"
         title="Plus">
         <twig:UX:Icon name="{{ resolve_icon_name('action:options') }}" class="toolbar-icon" aria-hidden="true" />
     </button>

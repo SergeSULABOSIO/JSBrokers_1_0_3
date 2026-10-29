@@ -2,7 +2,7 @@ import { grouperActions } from './actions-groupees.js';
 import { positionnerMenu } from './menu-flottant.js';
 import { CircuitIcones } from './circuit-icones.js';
 import { indexVise } from './barre-clavier.js';
-import { fermerInfobulle } from './infobulle-moteur.js';
+import { expliquerUnRefus, fermerInfobulle } from './infobulle-moteur.js';
 
 /**
  * BARRE D'ACTIONS SPÉCIFIQUES — rendu PARTAGÉ par la barre d'outils du workspace et
@@ -107,8 +107,12 @@ export class BarreActions {
      * est grisée.
      * @private
      */
-    _activer(geste) {
-        if (this.desactivation !== null) return;
+    _activer(geste, bouton = null) {
+        // Grisée : le geste ne joue pas, il dit pourquoi (au doigt, il n'y a pas de survol).
+        if (this.desactivation !== null) {
+            if (bouton) expliquerUnRefus(bouton);
+            return;
+        }
         geste();
     }
 
@@ -209,7 +213,9 @@ export class BarreActions {
 
         this._habiller(button, action.icon, action.label);
 
-        button.addEventListener('click', () => this._activer(() => this.declencher(action)));
+        // Le libellé court : affiché sous l'icône sur un écran tactile (C4).
+        button.dataset.libelle = action.label;
+        button.addEventListener('click', () => this._activer(() => this.declencher(action), button));
 
         return button;
     }
@@ -252,6 +258,7 @@ export class BarreActions {
         button.setAttribute('type', 'button');
         button.setAttribute('title', groupe.label);
         button.setAttribute('aria-label', groupe.label);
+        button.dataset.libelle = groupe.label;
         button.setAttribute('aria-haspopup', 'menu');
         button.setAttribute('aria-expanded', 'false');
         // Le chevron « ce bouton déploie un menu » est un ::after CSS, PAS un élément :
@@ -294,7 +301,7 @@ export class BarreActions {
                 const ouvert = !menu.hidden;
                 this.fermerMenu();
                 if (!ouvert) this._ouvrirMenu(button, menu);
-            });
+            }, button);
         });
 
         wrapper.append(button, menu);

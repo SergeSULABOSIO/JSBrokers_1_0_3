@@ -220,6 +220,35 @@ class DispositionColonneTroisTest extends TestCase
         $barre = (string) file_get_contents(__DIR__ . '/../../assets/controllers/barre-actions.js');
         self::assertStringContainsString("from './barre-clavier.js'", $barre);
         self::assertStringContainsString("getAttribute('aria-orientation') === 'vertical'", $barre);
+
+        // Le rail des chips aussi (C4) : une barre d'outils verticale, la même règle des flèches.
+        $liste = (string) file_get_contents(__DIR__ . '/../../templates/components/_list_manager.html.twig');
+        self::assertMatchesRegularExpression('/class="jsb-rail-chips" role="toolbar" aria-orientation="vertical"(?:[^>"]|"[^"]*")*data-action="[^"]*keydown->rail-chips#parcourir"/', $liste);
+        $rail = (string) file_get_contents(__DIR__ . '/../../assets/controllers/rail-chips_controller.js');
+        self::assertStringContainsString("import { indexVise } from './barre-clavier.js';", $rail);
+        self::assertStringContainsString('indexVise(event.key, index, boutons.length, true)', $rail);
+    }
+
+    /**
+     * LE TACTILE (C4) : ni survol ni infobulle au doigt — chaque bouton des DEUX rails porte son
+     * libellé court (`data-libelle`), affiché sous l'icône par `(hover: none), (pointer: coarse)`.
+     * Un bouton refusé dit sa raison à l'APPUI (au doigt, il ne la disait jamais).
+     */
+    public function testAuDoigtChaqueBoutonDesRailsSeLitEtUnRefusSExplique(): void
+    {
+        foreach (self::barre()->query('//button[contains(concat(" ", normalize-space(@class), " "), " btn ")]') as $bouton) {
+            self::assertNotSame('', $bouton->getAttribute('data-libelle'), 'Bouton du rail sans libellé : ' . $bouton->getAttribute('aria-label'));
+        }
+        $liste = (string) file_get_contents(__DIR__ . '/../../templates/components/_list_manager.html.twig');
+        self::assertSame(2, substr_count($liste, 'data-libelle="'), 'Le bouton « Vue » et chaque bouton de groupe du rail des chips.');
+        $actions = (string) file_get_contents(__DIR__ . '/../../assets/controllers/barre-actions.js');
+        self::assertSame(2, substr_count($actions, 'button.dataset.libelle = '), 'Actions et familles d’actions rendues par BarreActions.');
+
+        self::assertMatchesRegularExpression('/@media \(hover: none\), \(pointer: coarse\) \{\s*\.jsb-zone-liste \{ --jsb-rail-w:/', self::feuille());
+        self::assertStringContainsString('content: attr(data-libelle);', self::feuille());
+
+        self::assertStringContainsString('expliquerUnRefus(button);', (string) file_get_contents(self::CONTROLEUR));
+        self::assertStringContainsString('if (bouton) expliquerUnRefus(bouton);', $actions);
     }
 
     /**

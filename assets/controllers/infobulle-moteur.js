@@ -54,6 +54,8 @@ const etat = {
     cible: null,
     proprietaire: null,
     minuterie: null,
+    // La raison d'un refus, montrée au geste, se referme seule (expliquerUnRefus).
+    minuterieRefus: null,
     parLeClavier: false,
     observateur: null,
     // Une ouverture EN ATTENTE (délai d'intention) : partagée comme la bulle, pour qu'un menu
@@ -205,6 +207,32 @@ export function afficherInfobulle(cible, sections, point) {
         { largeur: window.innerWidth, hauteur: window.innerHeight });
     b.style.left = `${position.left}px`;
     b.style.top = `${position.top}px`;
+}
+
+/**
+ * UN BOUTON REFUSÉ DIT POURQUOI, AU GESTE (refonte de la colonne 3, C4). Au doigt, il n'y a pas
+ * de survol : la raison d'un bouton inactif (chantier 20 : « Ajouter — vous n'avez pas le droit
+ * de créer ») ne s'affichait jamais, et l'appui ne faisait rien, sans un mot. Le geste la montre
+ * désormais dans LA bulle, à droite du bouton (comme au survol du rail), le temps de la lire.
+ *
+ * @param {HTMLElement} bouton porte sa raison dans `title` (ou `data-infobulle-titre` pendant un survol)
+ * @param {number} [delaiDeLecture] ms avant de la refermer
+ */
+export function expliquerUnRefus(bouton, delaiDeLecture = 5000) {
+    const titre = bouton.getAttribute('title');
+    const texte = (titre !== null ? titre : (bouton.dataset.infobulleTitre || '')).trim();
+    if (!texte) return;
+    const r = bouton.getBoundingClientRect();
+    afficherInfobulle(bouton, [{ titre: null, lignes: [], texte, classe: null }], { x: r.right, y: r.top });
+    // À DROITE DU BOUTON, comme au survol du rail (la position « au curseur » la rabattait à gauche,
+    // par-dessus le menu de la colonne 1).
+    const b = bulle();
+    const position = positionADroite(r, { largeur: b.offsetWidth, hauteur: b.offsetHeight },
+        { largeur: window.innerWidth, hauteur: window.innerHeight });
+    b.style.left = `${position.left}px`;
+    b.style.top = `${position.top}px`;
+    clearTimeout(etat.minuterieRefus);
+    etat.minuterieRefus = setTimeout(() => fermerInfobulle(bouton), delaiDeLecture);
 }
 
 function construire(b, sections) {

@@ -2520,6 +2520,49 @@ textarea:hover,
     .jsb-rail-chips__bouton:not(:focus-visible):hover,
     .jsb-list-manager > .jsb-preset-filters-bar { transform: none; }
 }
+
+/* LE TACTILE (refonte de la colonne 3, C4). Au doigt, ni survol ni infobulle : le libellé de
+   chaque bouton des DEUX rails est TOUJOURS visible, sous l'icône (le modèle de la colonne 1,
+   `.nav-item`/`.nav-text`) — `data-libelle`, posé par le serveur et par BarreActions. Les rails
+   s'élargissent, et la colonne que chaque liste leur réserve suit (`--jsb-rail-w`). La raison
+   d'un bouton refusé se lit à l'appui (expliquerUnRefus). Ni grossissement ni ombre : au doigt,
+   `:hover` reste collé après l'appui. */
+@media (hover: none), (pointer: coarse) {
+    .jsb-zone-liste { --jsb-rail-w: calc(68px + var(--jsb-rail-retrait)); }
+    .context-toolbar--rail .btn[data-libelle],
+    .jsb-rail-chips__bouton[data-libelle] {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        width: 60px;
+        height: auto;
+        min-height: 44px;
+        padding: 4px 2px;
+    }
+    /* `::before`, placé SOUS l'icône (`order`) : le `::after` des boutons de la barre est déjà
+       pris — zone de clic élargie au doigt (interactive-menu.css), chevron d'une famille. */
+    .context-toolbar--rail .btn[data-libelle]::before,
+    .jsb-rail-chips__bouton[data-libelle]::before {
+        content: attr(data-libelle);
+        order: 1;
+        max-width: 56px;
+        font-size: 0.625rem;
+        font-weight: 600;
+        line-height: 1.15;
+        text-align: center;
+        white-space: normal;
+        /* Un mot trop long se coupe à une SYLLABE (« Commis-sion »), pas n'importe où. */
+        hyphens: auto;
+        overflow-wrap: break-word;
+    }
+    .context-toolbar--rail .btn:not([aria-disabled="true"]):not(:focus-visible):hover,
+    .jsb-rail-chips__bouton:not(:focus-visible):hover {
+        transform: none;
+        box-shadow: none;
+    }
+}
 .jsb-list-manager > .table-scroll-wrapper,
 .jsb-list-manager > [data-list-manager-target="emptyStateContainer"] { grid-row: 2; }
 .jsb-list-manager > .jsb-list-controls-bar {

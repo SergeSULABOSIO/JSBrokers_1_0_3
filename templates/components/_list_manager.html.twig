@@ -230,14 +230,16 @@
                des données ; le nom accessible dit sa valeur (« Prime : Impayée »), posé par
                rail-chips d'après les chips. Survol stable (300 ms) ou clic = aperçu ; au clavier,
                le focus entre dans le panneau. #}
-            <div class="jsb-rail-chips" role="group" aria-label="Filtres rapides"
-                 data-rail-chips-target="rail" data-action="mouseleave->rail-chips#quitter">
+            {# Une barre d'outils VERTICALE (APG) : un seul arrêt de tabulation, ↑/↓ entre les
+               boutons (C4, barre-clavier.js — la règle du rail d'outils). #}
+            <div class="jsb-rail-chips" role="toolbar" aria-orientation="vertical" aria-label="Filtres rapides"
+                 data-rail-chips-target="rail" data-action="mouseleave->rail-chips#quitter keydown->rail-chips#parcourir">
                 {% if vueCartes|default(null) %}
                     {# LA VUE, EN TÊTE : l'icône de la vue active (chacune a la sienne). Les deux
                        sont rendues ; la classe de vue de la liste (`is-vue-*`, posée par
                        vue-cartes à la bascule) choisit — aucun rechargement. #}
                     <button type="button" class="jsb-rail-chips__bouton"
-                            data-rail-chips-target="bouton" data-groupe="__vue__" data-titre="Vue" data-presentation="true"
+                            data-rail-chips-target="bouton" data-groupe="__vue__" data-titre="Vue" data-libelle="Vue" data-presentation="true"
                             data-action="click->rail-chips#basculer mouseenter->rail-chips#survoler mouseleave->rail-chips#quitter"
                             aria-expanded="false" aria-controls="{{ idPanneauChips }}"
                             aria-label="Vue">
@@ -249,7 +251,7 @@
                 {% for groupe in listeCanvas.filtres_predefinis %}
                     {% set titreDuGroupe = groupe.titre | default(groupe.libelle | default('Filtrer')) %}
                     <button type="button" class="jsb-rail-chips__bouton"
-                            data-rail-chips-target="bouton" data-groupe="{{ groupe.critere }}" data-titre="{{ titreDuGroupe }}"
+                            data-rail-chips-target="bouton" data-groupe="{{ groupe.critere }}" data-titre="{{ titreDuGroupe }}" data-libelle="{{ titreDuGroupe }}"
                             {% if groupe.presentation|default(false) %}data-presentation="true"{% endif %}
                             data-action="click->rail-chips#basculer mouseenter->rail-chips#survoler mouseleave->rail-chips#quitter"
                             aria-expanded="false" aria-controls="{{ idPanneauChips }}"
