@@ -140,12 +140,15 @@ export default class extends Controller {
                 this.currentWorkspaceTabId = payload.workspaceTabId || null;
                 if (this.currentWorkspaceTabId) {
                     // On réinitialise l'état de cet onglet ET on y stocke le nom de la rubrique
-                    this.tabsState[this.currentWorkspaceTabId] = { __rubricName: payload.entityName || 'Inconnu' };
+                    // Le nom LISIBLE de la rubrique (« Production intermédiaires »), celui de son
+                    // onglet ; à défaut, l'entité — l'état de la barre du bas affichait la classe
+                    // (« ProductionIntermediaire »).
+                    this.tabsState[this.currentWorkspaceTabId] = { __rubricName: payload.rubriqueLibelle || payload.entityName || 'Inconnu' };
                 } else {
                     this.tabsState = {}; // Compat. si workspaceTabId absent
                 }
                 this.loadWorkspaceComponent(payload.componentName, payload.entityName, payload.idEntreprise, payload.idInvite);
-                this.displayState.rubricName = payload.entityName || 'Inconnu'; // Fallback si pas de workspaceTabId
+                this.displayState.rubricName = payload.rubriqueLibelle || payload.entityName || 'Inconnu'; // Fallback si pas de workspaceTabId
                 break;
             case 'ui:workspace-tab.switched': // Onglet workspace déjà chargé activé par l'utilisateur
                 this.currentWorkspaceTabId = payload.workspaceTabId || null;

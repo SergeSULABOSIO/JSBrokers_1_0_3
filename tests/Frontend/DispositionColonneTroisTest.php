@@ -375,6 +375,27 @@ class DispositionColonneTroisTest extends TestCase
         self::assertMatchesRegularExpression('/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.jsb-rail-chips__bouton,/', self::feuille());
     }
 
+    /**
+     * LE TITRE ET LES ONGLETS, UNE SEULE RANGÉE (C5) — deux rangées de moins au-dessus des
+     * données. La rangée porte le bandeau des onglets (il traverse toujours l'entête) ; la barre
+     * d'onglets y garde sa largeur propre (le repli « +N » la mesure). Et l'état de la barre du
+     * bas nomme la rubrique comme son onglet (« Production intermédiaires »), pas par sa classe.
+     */
+    public function testLeTitreEtLesOngletsTiennentSurUneRangee(): void
+    {
+        $vue = (string) preg_replace('/\{#.*?#\}/s', '', (string) file_get_contents(self::VUE));
+        self::assertMatchesRegularExpression(
+            '/<div class="jsb-entete-rubrique">\s*<div class="jsb-entete-rubrique__titre">.*?class="rubrique-title".*?<\/h2>\s*<\/div>\s*<div class="list-tabs-wrapper jsb-onglets-barre"/s',
+            $vue,
+        );
+        self::assertMatchesRegularExpression('/background-color:\s*var\(--bg-light/', self::regle('.jsb-entete-rubrique'));
+        self::assertMatchesRegularExpression('/flex:\s*1 1 auto;[^}]*background-color:\s*transparent;/s', self::regle('.jsb-entete-rubrique > .list-tabs-wrapper'));
+
+        $cerveau = (string) file_get_contents(__DIR__ . '/../../assets/controllers/cerveau_controller.js');
+        self::assertStringContainsString('__rubricName: payload.rubriqueLibelle || payload.entityName', $cerveau);
+        self::assertSame(2, substr_count((string) file_get_contents(__DIR__ . '/../../assets/controllers/workspace-manager_controller.js'), 'rubriqueLibelle:'));
+    }
+
     /** Un panneau sans liste (squelette, échec) se décale du rail au lieu d'être masqué. */
     public function testUnPanneauSansListeNEstPasMasqueParLeRail(): void
     {

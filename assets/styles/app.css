@@ -436,22 +436,53 @@ textarea:hover,
     border-bottom: 1px solid #dee2e6;
 }
 
+/* LE TITRE ET LES ONGLETS, UNE RANGÉE (refonte de la colonne 3, C5). La rangée porte le
+   bandeau des onglets (fond clair, filet bas) : il traverse l'entête de bord à bord. Le titre
+   cède sa place aux onglets jusqu'à 40 % de la largeur, puis se termine par « … » ; la barre
+   d'onglets prend le reste et replie derrière « +N » ce qui ne tient pas. */
+.jsb-entete-rubrique {
+    display: flex;
+    align-items: flex-end;
+    min-width: 0;
+    background-color: var(--bg-light, #f8f9fa);
+    border-bottom: 1px solid var(--border-light, #dee2e6);
+}
+.jsb-entete-rubrique__titre {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 40%;
+    align-self: center;
+    padding: 4px 12px 4px 10px;
+}
+/* La barre d'onglets n'a plus son propre fond ni son filet : la rangée les porte. */
+.jsb-entete-rubrique > .list-tabs-wrapper {
+    flex: 1 1 auto;
+    background-color: transparent;
+    border-bottom: 0;
+}
+
 .rubrique-title {
     font-weight: bold;
     color: #343a40;
-    font-size: 1.1rem;
-    /* 0 et non 7 px : la barre d'onglets n'est plus dans ce bloc — elle traverse
-       l'entête, sous la rangée du titre. Les 7 px n'espaçaient plus rien, ils
-       épaississaient la rangée. */
+    font-size: 1.05rem;
     margin-bottom: 0;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Icône de la rubrique (entête du view-manager) — remplace les styles inline.
    NE PAS nommer `.rubrique-icon` : cette classe existe déjà dans
-   interactive-menu.css (icônes 18px du menu) et gagnerait la cascade. */
+   interactive-menu.css (icônes 18px du menu) et gagnerait la cascade.
+   28 px (40 avant C5) : elle tient dans la hauteur d'un onglet. */
 .rubrique-header-icon {
-    width: 40px;
-    height: 40px;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
     color: #343a40; /* --text-dark-secondary : couleur des titres */
 }
 

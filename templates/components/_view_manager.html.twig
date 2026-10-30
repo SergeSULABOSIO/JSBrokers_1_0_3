@@ -20,17 +20,19 @@
     {# SECTION 1 : PANNEAU SUPÉRIEUR FIXE (HEADER & OUTILS)             #}
     {# ================================================================== #}
     <div class="sticky-header bg-white shadow-sm">
-        <div class="d-flex align-items-center p-2">
-            <div class="me-2">
+        {# LE TITRE ET LES ONGLETS, UNE SEULE RANGÉE (refonte de la colonne 3, C5) : ils
+           occupaient deux rangées (titre ≈ 56 px, onglets ≈ 45 px) au-dessus de la recherche —
+           autant de lignes de données en moins. La rangée PORTE le bandeau (fond, filet bas) :
+           il traverse toujours l'entête de bord à bord, le titre à gauche, les onglets à
+           droite. La barre d'onglets garde sa largeur propre (le repli « +N » la mesure). #}
+        <div class="jsb-entete-rubrique">
+            <div class="jsb-entete-rubrique__titre">
                 {# NOUVEAU : On utilise la fonction `resolve_icon_name` pour gérer les alias d'icônes #}
                 <twig:UX:Icon
                     name="{{ resolve_icon_name(entityCanvas.parametres.icone | default('lucide:file-text')) }}"
                     class="rubrique-header-icon"
                     aria-hidden="true"
                 />
-            </div>
-            {# NOUVEAU : Ajout de min-width: 0 pour résoudre un bug de dépassement de flexbox qui empêchait le défilement des onglets. #}
-            <div class="flex-grow-1" style="min-width: 0;">
                 <h2 class="rubrique-title">
                     {{ entityCanvas.parametres.description | default('Rubrique') }}
                     {# Guidage : rappel de l'élément sélectionné dont les onglets
@@ -39,23 +41,13 @@
                     <span class="rubrique-context d-none" data-view-manager-target="selectionContext"></span>
                 </h2>
             </div>
-        </div>
 
-        {# LA BARRE D'ONGLETS TRAVERSE L'ENTÊTE, comme celle des rubriques traverse la
-           colonne 3. Elle vivait AUPARAVANT dans la colonne du titre, à droite de l'icône
-           de rubrique : son bandeau y aurait commencé 56 px trop loin et se serait arrêté
-           avant le bord — un bandeau qui ne traverse pas ne se lit pas comme le socle des
-           onglets, mais comme une boîte posée au milieu. Elle est donc sœur de la rangée
-           du titre, et non plus sa fille.
-
-           Les cibles Stimulus sont retrouvées n'importe où dans l'élément du contrôleur :
-           ce déplacement ne change rien au JavaScript.
-
-           DÉBORDEMENT : au-delà d'une dizaine d'onglets, la barre partait hors du cadre et
+        {# DÉBORDEMENT : au-delà d'une dizaine d'onglets, la barre partait hors du cadre et
            n'offrait qu'une barre de défilement fine — les onglets hors champ étaient
            invisibles ET introuvables (Nielsen 6). Ceux qui ne tiennent pas sont repliés
            derrière « + N », qui les liste en surcouche. Le bandeau est le référent de
-           positionnement de ce panneau. #}
+           positionnement de ce panneau. Les cibles Stimulus sont retrouvées n'importe où
+           dans l'élément du contrôleur : la rangée commune ne change rien au JavaScript. #}
         <div class="list-tabs-wrapper jsb-onglets-barre" data-view-manager-target="tabsWrapper">
             <div class="list-tabs-container jsb-onglets-rangee"
                  role="tablist"
@@ -95,6 +87,7 @@
                  data-view-manager-target="tabsOverflowPanel"
                  role="list"
                  aria-label="Onglets repliés"></div>
+        </div>
         </div>
         {# LA RECHERCHE, SEULE SUR SA RANGÉE (refonte de la colonne 3) : la barre d'outils
            est descendue en rail, à gauche de la liste (SECTION 2). #}

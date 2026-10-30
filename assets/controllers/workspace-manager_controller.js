@@ -2207,6 +2207,8 @@ export default class extends Controller {
             this.notifyCerveau('ui:component.load', {
                 componentName,
                 entityName,
+                // Le NOM LISIBLE de la rubrique (celui de son onglet), pour l'état de la barre du bas.
+                rubriqueLibelle: title,
                 idEntreprise: this.idEntrepriseValue,
                 idInvite: this.idInviteValue
             });
@@ -2829,6 +2831,7 @@ export default class extends Controller {
                     this.notifyCerveau('ui:component.load', {
                         componentName: tabData.componentName,
                         entityName: tabData.entityName,
+                        rubriqueLibelle: tabData.title,
                         idEntreprise: this.idEntrepriseValue,
                         idInvite: this.idInviteValue,
                         workspaceTabId: tabId
