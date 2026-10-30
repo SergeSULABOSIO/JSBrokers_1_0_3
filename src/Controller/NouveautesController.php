@@ -35,7 +35,15 @@ class NouveautesController extends AbstractController
     #[Route('/nouveautes', name: 'app_changelog')]
     public function index(Request $request, CacheInterface $cache): Response
     {
-        // Page publique : la langue ne peut pas dépendre du compte connecté, on
+        // RÉSERVÉE À L'ÉQUIPE JOSEARA (Serge, 2026-10-30). Les messages de commit décrivent nos
+        // corrections — failles comprises : publiés, ils montraient où chercher. 404 pour tout
+        // visiteur et tout utilisateur d'un cabinet (la page n'a pas à se faire connaître) ;
+        // les utilisateurs ne voient que des notes de version.
+        if (!$this->isGranted('ROLE_ADMIN')) {
+            throw $this->createNotFoundException();
+        }
+
+        // La langue ne dépend pas du compte connecté, on
         // l'expose via ?lang= (fr|en) comme les CGU. Elle n'habille que le chrome
         // (pied de page, bascule) : les mises à jour sont rédigées en français.
         $lang = $request->query->get('lang');
@@ -64,11 +72,15 @@ class NouveautesController extends AbstractController
             }
         );
 
-        return $this->render('nouveautes/index.html.twig', [
+        $reponse = $this->render('nouveautes/index.html.twig', [
             'pageName' => $lang === 'en' ? 'What\'s new' : 'Nouveautés de la plateforme',
             'lang'     => $lang,
             'commits'  => $commits,
             'jours'    => self::FENETRE_JOURS,
         ]);
+        // Jamais indexée, même si une adresse venait à circuler.
+        $reponse->headers->set('X-Robots-Tag', 'noindex, nofollow');
+
+        return $reponse;
     }
 }

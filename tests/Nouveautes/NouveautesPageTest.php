@@ -2,138 +2,123 @@
 
 namespace App\Tests\Nouveautes;
 
+use App\Entity\Utilisateur;
+use App\Enum\Departement;
 use App\Services\VersionService;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\Process\ExecutableFinder;
 
 /**
- * Page publique « Nouveautés de la plateforme » (route app_changelog) :
- *  - elle s'affiche sans authentification, dans les deux langues ;
- *  - chaque mise à jour porte sa date complète, sa référence, son titre et sa
- *    description — c'est tout l'intérêt de la page pour l'utilisateur ;
- *  - le nom/version devient un lien vers cette page partout où il s'affiche.
+ * AUCUN MESSAGE DE COMMIT N'EST PUBLIÉ HORS DE L'ÉQUIPE (Serge, 2026-10-30).
+ *
+ * La page « Nouveautés » (route app_changelog) publiait à tous — sans connexion — le premier
+ * paragraphe des commits des trente derniers jours, et le menu de l'espace de travail montrait
+ * le dernier en infobulle. Ces messages décrivent nos corrections, failles comprises
+ * (cloisonnement entre cabinets, écritures sans droit…) : une fuite d'information exploitable.
+ *
+ * Désormais : 404 pour tout visiteur et tout utilisateur d'un cabinet ; seule l'équipe Joseara
+ * (agents de la console, ROLE_ADMIN) la lit, et la page n'est jamais indexée. Aucun lien n'y
+ * mène hors de la console ; aucun message de commit dans le menu. Les utilisateurs ne voient
+ * que des notes de version (jsbrokers-dev §6).
  */
 class NouveautesPageTest extends WebTestCase
 {
-    public function testPageAccessibleAnonymementDansLesDeuxLangues(): void
+    private const AGENT = 'phpunit-nouveautes-agent@test.local';
+    private const COURTIER = 'phpunit-nouveautes-courtier@test.local';
+
+    private KernelBrowser $client;
+
+    protected function setUp(): void
     {
-        $client = static::createClient();
-
-        $client->request('GET', '/nouveautes?lang=fr');
-        $this->assertResponseIsSuccessful();
-
-        $client->request('GET', '/nouveautes?lang=en');
-        $this->assertResponseIsSuccessful();
+        $this->client = static::createClient();
+        $this->cleanUp();
     }
 
-    public function testChaqueEntreePorteDateReferenceTitreEtDescription(): void
+    protected function tearDown(): void
     {
-        $client = static::createClient();
-        $crawler = $client->request('GET', '/nouveautes?lang=fr');
-        $this->assertResponseIsSuccessful();
+        $this->cleanUp();
+        parent::tearDown();
+    }
 
-        $entrees = $crawler->filter('.chg-item');
+    private function em(): EntityManagerInterface
+    {
+        return static::getContainer()->get(EntityManagerInterface::class);
+    }
 
-        if (!self::gitEstDisponible()) {
-            // Sans git, la page doit expliquer la situation plutôt que planter.
-            $this->assertSame(0, $entrees->count());
-            $this->assertGreaterThan(0, $crawler->filter('.chg-empty')->count(), 'État dégradé attendu sans git.');
+    private function cleanUp(): void
+    {
+        $this->em()->getConnection()->executeStatement('DELETE FROM utilisateur WHERE email IN (?, ?)', [self::AGENT, self::COURTIER]);
+        $this->em()->clear();
+    }
 
-            return;
+    private function utilisateur(string $email, array $roles): Utilisateur
+    {
+        $u = (new Utilisateur())->setEmail($email)->setNom('PHPUnit')->setVerified(true)->setPassword('x');
+        $u->setRoles($roles);
+        if ($roles !== []) {
+            $u->setDepartement(Departement::DIRECTION);
         }
+        $this->em()->persist($u);
+        $this->em()->flush();
 
-        // Le dépôt est lisible : la page DOIT lister des mises à jour. Sans cette
-        // exigence, une régression d'accès à git (cf. l'environnement passé au
-        // processus fils) passerait inaperçue derrière l'état dégradé.
-        $this->assertGreaterThan(0, $entrees->count(), 'Le dépôt est lisible : le journal ne peut pas être vide.');
-
-        $premiere = $entrees->first();
-        $this->assertMatchesRegularExpression(
-            '/^\d+\.\d{2}$/',
-            trim($premiere->filter('.chg-version')->text()),
-            'Le numéro jalonne chaque livraison, mineur sur deux chiffres (1.00 … 1.99).',
-        );
-        $this->assertSame(1, $premiere->filter('time.chg-date')->count(), 'Date complète présente.');
-        $this->assertNotSame('', trim($premiere->filter('time.chg-date')->text()));
-        $this->assertMatchesRegularExpression(
-            '/^[0-9a-f]{7,40}$/',
-            trim($premiere->filter('code.chg-ref')->text()),
-            'Le code de référence du commit est affiché.',
-        );
-        $this->assertNotSame('', trim($premiere->filter('.chg-title')->text()), 'Titre du commit présent.');
-        $this->assertNotSame('', trim($premiere->filter('.chg-desc')->text()), 'Description de l’amélioration présente.');
-
-        // La date reste lisible par une machine autant que par un humain.
-        $this->assertNotSame('', $premiere->filter('time.chg-date')->attr('datetime'));
+        return $u;
     }
 
-    public function testEntreesAntechronologiques(): void
+    public function testUnVisiteurNeLaTrouvePas(): void
     {
-        $client = static::createClient();
-        $crawler = $client->request('GET', '/nouveautes?lang=fr');
+        $this->client->request('GET', '/nouveautes?lang=fr');
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('GET', '/nouveautes?lang=en');
+        self::assertResponseStatusCodeSame(404);
+    }
 
-        $dates = $crawler->filter('.chg-item time.chg-date')->each(
-            fn ($n) => new \DateTimeImmutable($n->attr('datetime'))
-        );
+    public function testUnUtilisateurDUnCabinetNeLaTrouvePasNonPlus(): void
+    {
+        $this->client->loginUser($this->utilisateur(self::COURTIER, []));
+        $this->client->request('GET', '/nouveautes?lang=fr');
+        self::assertResponseStatusCodeSame(404);
+    }
 
-        if (count($dates) < 2) {
-            $this->markTestSkipped('Historique trop court pour vérifier l’ordre.');
+    public function testLEquipeJosearaLaLitSansQuElleSoitIndexee(): void
+    {
+        $this->client->loginUser($this->utilisateur(self::AGENT, ['ROLE_ADMIN']));
+        $crawler = $this->client->request('GET', '/nouveautes?lang=fr');
+
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('noindex', (string) $this->client->getResponse()->headers->get('X-Robots-Tag'));
+        self::assertSame(1, $crawler->filter('meta[name="robots"][content*="noindex"]')->count());
+    }
+
+    public function testAucunLienPublicNyMene(): void
+    {
+        foreach (['/conditions-utilisation?lang=fr', '/login', '/'] as $page) {
+            $this->client->request('GET', $page);
+            self::assertStringNotContainsString('/nouveautes', (string) $this->client->getResponse()->getContent(), "$page mène encore aux nouveautés.");
         }
-
-        $triees = $dates;
-        usort($triees, fn ($a, $b) => $b <=> $a);
-        $this->assertEquals($triees, $dates, 'La mise à jour la plus récente vient en premier.');
     }
 
-    public function testPiedDePagePublicRenvoieVersLesNouveautes(): void
+    /** Le numéro de version reste affiché — sans lien ni message de commit. */
+    public function testLaVersionResteAfficheeSansLien(): void
     {
-        $client = static::createClient();
-        $crawler = $client->request('GET', '/conditions-utilisation?lang=fr');
-        $this->assertResponseIsSuccessful();
+        $crawler = $this->client->request('GET', '/login');
+        self::assertResponseIsSuccessful();
 
-        $hrefs = $crawler->filter('.public-footer__credit a')->each(fn ($a) => $a->attr('href'));
-        $this->assertContains('/nouveautes', $hrefs, 'Le pied de page public expose le lien des nouveautés.');
-    }
-
-    public function testEcranDeConnexionRenvoieVersLesNouveautes(): void
-    {
-        $client = static::createClient();
-        $crawler = $client->request('GET', '/login');
-        $this->assertResponseIsSuccessful();
-
-        $lien = $crawler->filter('a.auth__brand-version');
-        $this->assertSame(1, $lien->count(), 'Le panneau de marque affiche la version cliquable.');
-        $this->assertSame('/nouveautes', $lien->attr('href'));
-    }
-
-    /**
-     * Le numéro affiché à l'écran est bien celui produit par la règle de
-     * numérotation — mineur sur deux chiffres, de 00 à 99 avant bascule.
-     */
-    public function testLaVersionAfficheeSuitLaRegleDeNumerotation(): void
-    {
-        $client = static::createClient();
-        $crawler = $client->request('GET', '/login');
-        $this->assertResponseIsSuccessful();
-
-        $affichee = trim($crawler->filter('a.auth__brand-version')->text());
+        $version = $crawler->filter('.auth__brand-version');
+        self::assertSame(1, $version->count());
+        self::assertSame('p', $version->nodeName(), 'La version est un texte, plus un lien.');
         $attendue = static::getContainer()->get(VersionService::class)->getVersion();
-
-        $this->assertStringContainsString($attendue, $affichee);
-        $this->assertMatchesRegularExpression('/^\d+\.\d{2}$/', $attendue);
-
-        // Le mineur ne dépasse jamais 99 : au-delà, c'est le majeur qui monte.
+        self::assertStringContainsString($attendue, $version->text());
+        self::assertMatchesRegularExpression('/^\d+\.\d{2}$/', $attendue);
         [, $mineur] = explode('.', $attendue, 2);
-        $this->assertLessThanOrEqual(99, (int) $mineur, 'Après x.99 vient (x+1).00.');
+        self::assertLessThanOrEqual(99, (int) $mineur, 'Après x.99 vient (x+1).00.');
     }
 
-    /**
-     * Disponibilité de git, constatée SANS passer par le service : c'est ce qui
-     * permet d'exiger un journal non vide plutôt que d'accepter l'état dégradé.
-     */
-    private static function gitEstDisponible(): bool
+    /** Le menu de l'espace de travail ne montre plus le dernier commit en infobulle. */
+    public function testLeMenuNeMontrePlusLeDernierCommit(): void
     {
-        return is_dir(\dirname(__DIR__, 2) . '/.git')
-            && (new ExecutableFinder())->find('git') !== null;
+        $menu = (string) file_get_contents(__DIR__ . '/../../templates/components/_interactive_menu.html.twig');
+        self::assertStringNotContainsString('app_last_commit', $menu);
+        self::assertStringNotContainsString("path('app_changelog')", $menu);
     }
 }

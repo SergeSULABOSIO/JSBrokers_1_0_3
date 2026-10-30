@@ -49,18 +49,9 @@ class InfobulleUniqueRenduTest extends WebTestCase
         $page = $this->client->request('GET', sprintf('/espacedetravail/%d/%d', $invite->getId(), $entreprise->getId()));
         self::assertResponseIsSuccessful();
         self::assertMatchesRegularExpression('/\binfobulle\b/', (string) $page->filter('body')->attr('data-controller'));
-        $version = $page->filter('.company-version[data-infobulle]');
-        if ($version->count() > 0) { // git lisible sur ce poste : le dernier commit est connu
-            $commit = json_decode((string) $version->attr('data-infobulle'), true, 512, \JSON_THROW_ON_ERROR);
-            self::assertTrue(array_is_list($commit), 'Une liste de sections, pas un objet.');
-            self::assertSame('Dernière mise à jour', $commit[0]['titre'] ?? null);
-            self::assertSame('Réf.', $commit[0]['lignes'][0][0] ?? null, 'La référence dans une ligne : le titre passerait en majuscules.');
-            self::assertMatchesRegularExpression('/^[0-9a-f]{7,}$/', $commit[0]['lignes'][0][1] ?? '');
-            foreach (\array_slice($commit, 1) as $paragraphe) {
-                self::assertNotEmpty($paragraphe['texte'] ?? null, 'Chaque paragraphe du commit est un texte non vide.');
-            }
-            self::assertSame($version->attr('data-infobulle'), $page->filter('.company-brand')->attr('data-infobulle'), 'Le nom et la version disent la même chose.');
-        }
+        // AUCUN MESSAGE DE COMMIT dans le menu (Serge, 2026-10-30) : ni le nom ni la version ne
+        // portent plus l'infobulle du dernier commit — elle décrivait nos corrections à tous.
+        self::assertSame(0, $page->filter('.company-version[data-infobulle], .company-brand[data-infobulle]')->count());
 
         // La page des cabinets : le statut de propriété.
         $cabinets = $this->client->request('GET', '/admin/entreprise');

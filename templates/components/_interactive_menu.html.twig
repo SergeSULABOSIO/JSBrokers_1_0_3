@@ -254,40 +254,25 @@
         <div class="menu-col-2" id="ws-col2"
              data-workspace-manager-target="col2"
              data-action="mouseenter->workspace-manager#annulerFermetureFlyout mouseleave->workspace-manager#quitterFlyout">
-            {# Ligne 1: Marque Joseara — version compacte pour laisser de la place aux rubriques #}
-            {# Au survol du nom « Joseara » et de la version : infobulle sombre du
-               DERNIER commit (réf — date + explication), même pattern que les infobulles
-               Pistes/chat IA (l'infobulle unique, chantier 3). Présente seulement si git est
-               lisible (repli : rien). Ces deux liens n'ont AUCUN `title` : l'infobulle
-               native du navigateur se superposerait à la nôtre. #}
-            {% set _lc = app_last_commit() %}
-            {# La référence dans une LIGNE, pas dans le titre : le titre de section passe en
-               majuscules, et « B7A23D34 » n'est pas la référence git « b7a23d34 ». #}
-            {% set _commitInfobulle = _lc
-                ? ([{titre: 'Dernière mise à jour', lignes: [['Réf.', _lc.ref], ['Date', _lc.date|date('d/m/Y')]]}]
-                    |merge(_lc.subject ? [{texte: _lc.subject, classe: 'tip-fort'}] : [])
-                    |merge(_lc.paragraphs|default([])|filter(p => p)|map(p => {texte: p})))|json_encode
-                : null %}
+            {# Ligne 1: Marque Joseara — version compacte pour laisser de la place aux rubriques.
+               AUCUN MESSAGE DE COMMIT ICI (Serge, 2026-10-30) : l'infobulle du dernier commit
+               décrivait nos corrections, failles comprises, à tous les utilisateurs des
+               cabinets. Ils ne voient que des notes de version (règle de livraison, §6 de la skill de développement). #}
             <div class="menu-col-2-row-1">
                 {# La marque renvoie toujours vers la page d'accueil publique (/).
                    AUCUN attribut `title` ici : le navigateur en ferait une infobulle
                    native qui se superposerait à la nôtre (l'infobulle unique).
                    L'intitulé accessible passe par `aria-label`. #}
-                <a href="{{ path('app_index') }}" class="company-brand" aria-label="Joseara — retour à l'accueil"
-                   {% if _lc %}data-infobulle="{{ _commitInfobulle|e('html_attr') }}"{% endif %}>
+                <a href="{{ path('app_index') }}" class="company-brand" aria-label="Joseara — retour à l'accueil">
                     <img src="{{ asset(menu.colonne_2.logo) }}" alt="Logo" class="company-logo">
                     <h2 class="company-title">{{ menu.colonne_2.titre }}</h2>
                 </a>
                 <p class="company-description">{{ menu.colonne_2.description }}</p>
                 {# Version APPLICATIVE, auto-incrémentée à chaque commit (source : App\Services\VersionService).
-                   La version des CGU (App\Legal\Cgu) reste dédiée à la page des conditions.
-                   Au clic : le journal des nouveautés (30 derniers jours) ; au survol :
-                   l'infobulle du dernier commit, conservée — sans `title`, sinon
-                   l'infobulle native du navigateur se superpose à la nôtre. #}
-                <a href="{{ path('app_changelog') }}" class="company-version"
-                   {% if _lc %}data-infobulle="{{ _commitInfobulle|e('html_attr') }}" aria-label="Nouveautés de la plateforme — dernière mise à jour : {{ _lc.ref }} du {{ _lc.date|date('d/m/Y') }}"{% else %}aria-label="Nouveautés de la plateforme"{% endif %}>
+                   En texte seul : le journal des mises à jour est réservé à l'équipe Joseara. #}
+                <p class="company-version">
                     Version {{ app_version() }} — dernière mise à jour le {{ app_version_date()|date('d/m/Y') }}
-                </a>
+                </p>
             </div>
             {# Carte d'identité de l'entreprise courante #}
             {% if entreprise is defined and entreprise %}

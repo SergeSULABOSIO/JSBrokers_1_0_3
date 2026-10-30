@@ -3,6 +3,8 @@
 {% block title %}{{ pageName }} — Joseara{% endblock %}
 
 {% block stylesheets %}
+    {# Page interne à l'équipe Joseara : jamais indexée (cf. NouveautesController). #}
+    <meta name="robots" content="noindex, nofollow">
 {{ parent() }}
 <style>
     /* ============================================================
