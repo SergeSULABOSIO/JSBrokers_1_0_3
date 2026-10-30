@@ -25,12 +25,15 @@ use Symfony\Component\Serializer\Annotation\Groups;
  * La rubrique n'offre pas la création : ParametresCongeRepository::pourEntreprise() rend
  * celui du cabinet, ou en fabrique un aux valeurs par défaut. Deux jeux de réglages
  * concurrents, c'est un contrôle qui s'applique ou non selon la ligne qu'on a lue.
+ * La base le garantit aussi (index unique sur le cabinet, 2026-10-30) ; l'écran et Ket
+ * refusent avant, avec un motif (DecisionDeCreation::UNIQUE_PAR_CABINET).
  *
  * ── CHAQUE CONTRÔLE SE DÉSACTIVE ────────────────────────────────────────────────────
  * Un plafond nul ou absent signifie « pas de plafond ». Un cabinet qui ne veut pas d'un
  * contrôle doit pouvoir l'éteindre, sans quoi il apprendra à le contourner.
  */
 #[ORM\Entity(repositoryClass: ParametresCongeRepository::class)]
+#[ORM\UniqueConstraint(name: 'uniq_parametres_conge_entreprise', columns: ['entreprise_id'])]
 #[ORM\HasLifecycleCallbacks]
 class ParametresConge implements OwnerAwareInterface
 {
