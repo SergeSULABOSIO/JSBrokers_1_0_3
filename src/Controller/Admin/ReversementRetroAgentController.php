@@ -5,7 +5,8 @@
  * encaissée, reversée à l'agent interne qui a apporté l'affaire.
  *
  * ── UNE RUBRIQUE DE CONSULTATION ────────────────────────────────────────────────────
- * La CRÉATION n'a pas sa place ici, et le canevas la refuse (`creation_interdite`) : un
+ * La CRÉATION n'a pas sa place ici (DecisionDeCreation::ECRIVAIN_DEDIE : « Ajouter » absent,
+ * création refusée par le formulaire générique) : un
  * reversement ne s'enregistre pas sans justificatif, or les pièces d'une fiche s'attachent
  * APRÈS sa création. Ses deux portes restent le picker du rapport de production et
  * l'assistant, tous deux transactionnels — la pièce y part du même geste que le montant.

@@ -5,7 +5,7 @@ use App\Entity\Utilisateur;
 use App\Repository\EntrepriseRepository;
 use App\Entity\Invite;
 use App\Service\Document\DocumentFichier;
-use App\Service\Workspace\ParentObligatoire;
+use App\Service\Workspace\DecisionDeCreation;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\Canvas\Provider\Form\FormCanvasProviderInterface;
 use App\Token\TokenAccountService;
@@ -32,6 +32,8 @@ class FormCanvasProvider
         // Source unique des rubriques capables de porter des pièces : la carte est lue
         // dans les métadonnées Doctrine, jamais écrite à la main.
         private readonly DocumentFichier $documentFichier,
+        // « Peut-on créer cette fiche ? » — une seule décision, lue par tous les points d'entrée.
+        private readonly DecisionDeCreation $decisionDeCreation,
     ) {
         $this->providers = $providers;
     }
@@ -49,10 +51,11 @@ class FormCanvasProvider
                 $this->injecterActionAssistant($canvas, $entityClassName, $idEntreprise);
                 $this->injecterActionsDocuments($canvas, $entityClassName, $idEntreprise);
                 $this->injecterActionTelechargerDocuments($canvas, $entityClassName, $idEntreprise);
-                // UN ENFANT NE NAÎT QUE RATTACHÉ (ParentObligatoire) : la liste principale
-                // n'offre pas « Ajouter » (ajout-regles.js), l'onglet contextuel si.
-                if (($champParent = ParentObligatoire::champ($entityClassName)) !== null) {
-                    $canvas['parametres']['creation_depuis_le_parent'] = $champParent;
+                // « AJOUTER » : LA DÉCISION UNIQUE, pour une liste PRINCIPALE (aucun parent). Un
+                // onglet contextuel la recalcule avec le sien (ControllerUtilsTrait). La barre
+                // d'outils, le menu contextuel et l'état vide ne font que la lire.
+                if ($idEntreprise !== null && ($entreprise = $this->entrepriseRepository->find($idEntreprise)) !== null) {
+                    $canvas['parametres']['ajout'] = $this->decisionDeCreation->pour($entityClassName, $entreprise);
                 }
 
                 return $canvas;

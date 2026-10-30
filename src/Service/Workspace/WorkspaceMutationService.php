@@ -108,6 +108,10 @@ class WorkspaceMutationService
         // définitif et date d'émission, en une transaction. En dernier, et facultatif, pour
         // les tests qui construisent ce service à la main.
         private readonly ?\App\Service\Note\EmissionDeNote $emission = null,
+        // « Peut-on créer cette fiche ? » — la décision de l'écran, ici pour ses modes de
+        // création (un seul jeu de paramètres de congé par cabinet). En dernier et facultatif,
+        // pour la même raison.
+        private readonly ?DecisionDeCreation $decisionDeCreation = null,
     ) {
     }
 
@@ -320,6 +324,16 @@ class WorkspaceMutationService
             && ($refusOrphelin = ParentObligatoire::refusSiNonNomme($copie, $resolution['champs'])
                 ?? ParentObligatoire::refus($copie)) !== null) {
             $manquants = [$champParent => [$refusOrphelin]];
+        }
+
+        // UN SEUL JEU DE PARAMÈTRES DE CONGÉ PAR CABINET (DecisionDeCreation) : un BLOCAGE dès
+        // l'analyse — il n'y a rien à demander, on modifie l'existant.
+        if ($manquants === [] && $op->isCreate() && ParentObligatoire::champ($copie) === null
+            && ($refusMode = $this->decisionDeCreation?->refusALEcriture($copie, $scope->entreprise, null, false)) !== null) {
+            $base['impacts'] = [$refusMode];
+            $base['bloque'] = true;
+
+            return ['ok' => false, 'statut' => 'bloque'] + $base;
         }
 
         // La création est « promise » aux opérations suivantes du plan.
@@ -613,7 +627,10 @@ class WorkspaceMutationService
                 throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelle), $this->erreurs($form));
             }
             $this->refuserLesIncoherences($entity, $op->entityShortName, $libelle, $origine);
-            if (($refusOrphelin = ParentObligatoire::refus($entity)) !== null) {
+            // La règle de l'écran (DecisionDeCreation) — hors l'écrivain dédié : Ket EST le chemin
+            // dédié d'un reversement.
+            if (($refusOrphelin = $this->decisionDeCreation?->refusALEcriture($entity, $scope->entreprise, null, false)
+                ?? ParentObligatoire::refus($entity)) !== null) {
                 throw MutationException::bloque($refusOrphelin);
             }
             if ($op->premierAvenant) {

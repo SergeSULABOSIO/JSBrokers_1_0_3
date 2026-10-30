@@ -78,9 +78,6 @@ export default class extends Controller {
 
         this.selectos = [];
         this.activeFormCanvas = this.entityFormCanvasValue;
-        // L'onglet interne actif (`principal`, ou une collection contextuelle) : « Ajouter » en dépend.
-        this.ongletInterne = 'principal';
-        this.champParent = null;
         
         // UNE SEULE fonction liée : initialize() passe deux fois (Stimulus, puis connect()).
         // Deux bind() distincts posaient deux écouteurs, dont disconnect() n'ôtait que le
@@ -144,13 +141,9 @@ export default class extends Controller {
      */
     handleContextUpdate(event) {
         if (this.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
-        const { selection, formCanvas, tabId, champParent } = event.detail;
+        const { selection, formCanvas } = event.detail;
         this.selectos = selection || [];
         this.activeFormCanvas = formCanvas || {};
-        if (tabId) {
-            this.ongletInterne = tabId;
-            this.champParent = champParent ?? null;
-        }
         this.organizeButtons();
     }
 
@@ -295,10 +288,9 @@ export default class extends Controller {
         const selectionCount = this.selectos?.length || 0;
         const canvasParams = this.activeFormCanvas?.parametres || {};
 
-        // « Ajouter » : absent là où la création n'a pas de sens — rubrique fermée à la
-        // création, ou liste PRINCIPALE d'une entité qui ne naît que rattachée à son parent
-        // (Serge, 2026-10-30 : absent, pas grisé). Décision pure : ajout-regles.js.
-        const canAdd = ajoutOffert(canvasParams, this.ongletInterne, this.champParent);
+        // « Ajouter » : la décision du SERVEUR pour la liste active (DecisionDeCreation, posée
+        // dans `parametres.ajout`) — absent, pas grisé, là où la création n'a pas de sens.
+        const canAdd = ajoutOffert(canvasParams);
         const canEdit = selectionCount === 1 && !!canvasParams.endpoint_submit_url;
         const canDelete = selectionCount > 0 && !!canvasParams.endpoint_delete_url;
         const canOpen = selectionCount > 0; // L'ouverture est généralement toujours possible si sélection.

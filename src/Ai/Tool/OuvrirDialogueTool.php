@@ -36,6 +36,9 @@ final class OuvrirDialogueTool implements AiToolInterface, AiToolEcriture
         // Source unique « un nom dicté → un identifiant ». Sans elle, cet outil
         // réclamait un id que le modèle n'a pas : voir le paramètre « nom ».
         private readonly ResolveurDeReferences $resolveur,
+        // « Peut-on créer cette fiche ? » — la décision de l'écran. En dernier et facultatif :
+        // des tests construisent cet outil par arguments positionnels.
+        private readonly ?\App\Service\Workspace\DecisionDeCreation $decisionDeCreation = null,
     ) {
     }
 
@@ -164,6 +167,19 @@ final class OuvrirDialogueTool implements AiToolInterface, AiToolEcriture
         $level = $mode === 'edition' ? Invite::ACCESS_MODIFICATION : Invite::ACCESS_ECRITURE;
         if (!$this->accessResolver->can($scope->invite, $shortName, $level)) {
             return AiToolResult::horsPerimetre($labels[$shortName]);
+        }
+        // LA DÉCISION DE L'ÉCRAN (DecisionDeCreation) : un formulaire de création sans parent
+        // pour une tranche, un second jeu de paramètres de congé, un reversement hors de son
+        // chemin dédié… seraient refusés à l'enregistrement. On le dit au lieu de l'ouvrir.
+        if ($mode === 'creation' && $this->decisionDeCreation !== null) {
+            $decision = $this->decisionDeCreation->pour($fqcn, $scope->entreprise, null, verifierLeDroit: false);
+            if (!$decision['offert']) {
+                return AiToolResult::ok([
+                    'pret'     => false,
+                    'bloquant' => $decision['motif'],
+                    'note'     => 'Dis-le en UNE phrase, avec où créer cette fiche. N’ouvre AUCUN formulaire et n’annonce AUCUN bouton.',
+                ]);
+            }
         }
 
         $id = null;

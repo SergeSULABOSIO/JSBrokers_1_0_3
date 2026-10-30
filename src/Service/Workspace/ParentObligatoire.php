@@ -31,9 +31,9 @@ use Doctrine\Persistence\Proxy;
  * construction. Jamais depuis leur liste principale, qui ne sait pas à quoi les rattacher.
  *
  * Une règle, trois surfaces :
- * - l'écran : FormCanvasProvider pose `creation_depuis_le_parent` dans le canevas ; la
- *   barre d'outils, le menu contextuel et l'état vide de la liste PRINCIPALE n'offrent
- *   alors pas « Ajouter » (ajout-regles.js) ;
+ * - l'écran : la décision unique DecisionDeCreation (posée dans `parametres.ajout`) refuse la
+ *   création depuis la liste PRINCIPALE — barre d'outils, menu contextuel, état vide —, et
+ *   l'offre dans l'onglet contextuel de CE parent ;
  * - le serveur : handleFormSubmission refuse l'écriture d'une création sans parent ;
  * - Ket et la reprise : WorkspaceMutationService refuse de même.
  *

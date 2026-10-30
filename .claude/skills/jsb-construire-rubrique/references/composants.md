@@ -122,20 +122,30 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
   dit sa raison À L'APPUI (`expliquerUnRefus`, infobulle unique à droite) — au doigt il n'y a
   pas de survol. Un nouveau bouton de rail sans `data-libelle` fait échouer
   `DispositionColonneTroisTest`.
-- **« Ajouter » n'est offert que là où la création a un sens** (Serge, 2026-10-30) : ABSENT —
-  pas grisé — d'une rubrique fermée à la création (`creation_interdite`) et de la liste
-  PRINCIPALE d'une entité dépendante (`creation_depuis_le_parent`, registre
-  `ParentObligatoire`). Une entité entre au registre quand son formulaire ne permet pas de
-  choisir son parent ; si le formulaire impose le parent (obligatoire ET contrôlé par le
-  serveur : `PARENT_CHOISI`, ex. les rôles), la liste principale garde « Ajouter ». Le « + »
-  d'une collection dont l'ajout serait refusé cède la place à sa raison (`ajoutImpossible`, ex.
-  un invité qui a déjà son rôle Finance) ; présent dans l'onglet contextuel de SON parent seulement — le Cerveau
-  diffuse `champParent` (`parentLien.champ`) : la fiche Assureur, onglet « Cotations » (lien
-  `assureur`), n'offre pas « Ajouter », puisqu'une proposition naît de sa piste.
-  Une seule décision, `ajout-regles.js` (`ajoutOffert`), lue par la barre d'outils et le menu
-  contextuel ; l'état vide (trait + `_view_manager`) lit les mêmes clés, droit d'écriture compris
-  (`endpoint_submit_url`). Jamais de motif
-  « se crée depuis… » affiché sur un bouton grisé.
+- **TOUT POINT D'ENTRÉE QUI CRÉE UNE FICHE (liste, état vide, menu contextuel, tableau de bord,
+  Ket…) LIT LA MÊME DÉCISION SERVEUR ; AUCUN NE DÉCIDE SEUL** (Serge, 2026-10-30).
+  `App\Service\Workspace\DecisionDeCreation::pour(classe, cabinet, champParent)` →
+  `{offert, motif}` : droit d'écriture, puis MODE DE CRÉATION — écrivain dédié (reversement :
+  rapport de production ou Ket), unique par cabinet (paramètres des congés), depuis son parent
+  (`ParentObligatoire::PARENTS` : seulement dans le contexte de CE parent), libre (le reste, parent
+  choisi dans le formulaire compris : `PARENT_CHOISI`).
+  - Le serveur la pose dans le canevas, `parametres.ajout` : pour une liste principale
+    (`FormCanvasProvider`), pour chaque onglet contextuel avec SON lien vers le parent
+    (`renderCollectionOrList` ; la fiche Assureur, onglet « Cotations », lien `assureur`, n'offre
+    pas une proposition, qui naît de sa piste). La barre d'outils et le menu contextuel la lisent
+    (`ajout-regles.js#ajoutOffert`, fermé par défaut) ; l'état vide, les collections des dialogues
+    (`droitsSurLaCollection`), Ket (`ouvrir_dialogue`, `dialog-context`) aussi.
+  - Le serveur refuse par la MÊME fonction, dès l'entrée de `handleFormSubmission` (contexte lu
+    dans le POST : le parent du registre y est-il nommé ? une saisie différée l'a « promis »).
+  - « Ajouter » est ABSENT là où la décision le refuse, pas grisé. Le « + » d'une collection dont
+    l'ajout serait refusé pour une raison du parent cède la place à sa raison (`ajoutImpossible`,
+    ex. un invité qui a déjà son rôle Finance).
+  - Une entité entre au registre des entités dépendantes quand son formulaire ne permet pas de
+    choisir son parent ; si le formulaire impose le parent (obligatoire ET contrôlé par le
+    serveur), la création depuis la liste principale reste permise (rôles, conditions de partage).
+  - Garde-fou : `CreationPariteTest` construit les écrans réels (listes principales du menu, onglets
+    contextuels, deux lecteurs) et poste la création comme chaque point d'entrée : bouton affiché
+    ⇔ serveur accepte.
 - Toute action d'écran a son entrée au manifeste `CouvertureDesEcrans` (`PariteEcranKetTest`).
 
 ### Onglets — partagé

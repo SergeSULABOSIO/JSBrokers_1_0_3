@@ -118,6 +118,11 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   des rôles RolesEn* : sans collaborateur nommé, AuditableTrait posait l'invité connecté (rôle
   muet pour soi-même) ; un second rôle de la même famille est refusé
   (`RoleUniqueParFamille` : droits = union des rôles, un doublon rendait un retrait sans effet).
+- **TOUT POINT D'ENTRÉE QUI CRÉE UNE FICHE (liste, état vide, menu contextuel, tableau de bord,
+  Ket…) LIT LA MÊME DÉCISION SERVEUR ; AUCUN NE DÉCIDE SEUL** (Serge, 2026-10-30) :
+  `DecisionDeCreation` (droit + mode de création + parent du contexte), posée dans
+  `parametres.ajout` et appliquée par `handleFormSubmission` avec la même fonction. Détail dans
+  `jsb-construire-rubrique/references/composants.md` ; garde-fou `CreationPariteTest`.
 - **Le serveur garantit la règle** ; l'écran l'annonce (bouton masqué ou expliqué) mais ne la remplace pas.
 - Tests de parité opposables : `PariteEcranKetTest` (manifeste `CouvertureDesEcrans`),
   `CoherenceChipsAssistantTest`, `ReversementPariteEcranKetTest`, `ResponsableDePistePariteTest`.

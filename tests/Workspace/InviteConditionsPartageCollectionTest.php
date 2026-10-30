@@ -141,24 +141,21 @@ class InviteConditionsPartageCollectionTest extends KernelTestCase
         self::assertCount(0, $invite->getConditionsPartageAgent()->first()->getPistesAffectees());
     }
 
-    public function testLaRubriqueNOffreAucuneCreation(): void
+    public function testLaRubriqueOffreDeNouveauLaCreation(): void
     {
         $ids = $this->semer();
 
         $canvas = static::getContainer()->get(CanvasBuilder::class)
             ->getEntityFormCanvas(new ConditionPartage(), $ids['entrepriseId']);
 
-        // Une condition n'existe que RATTACHÉE : à un partenaire, à un agent, ou à une
-        // piste. La créer depuis la liste produirait une règle orpheline. Le drapeau
-        // GRISE « Ajouter » dans la barre d'outils et le menu contextuel — il ne le masque
-        // pas : un bouton absent laisserait croire à un droit manquant, là où un bouton
-        // inactif avec son infobulle dit où créer.
-        self::assertTrue(
-            $canvas['parametres']['creation_interdite'] ?? false,
-            "La rubrique Conditions de partage ne doit pas proposer d'ajout.",
-        );
+        // Le formulaire fait CHOISIR le bénéficiaire (partenaire OU agent) et le serveur l'exige
+        // (incoherencesMetier) : règle « parent imposé par le formulaire » — la liste principale
+        // reste permise (Serge, 2026-10-30). Aucun mode de création ne la ferme.
+        self::assertArrayNotHasKey('creation_interdite', $canvas['parametres']);
+        self::assertArrayNotHasKey(ConditionPartage::class, \App\Service\Workspace\DecisionDeCreation::ECRIVAIN_DEDIE
+            + \App\Service\Workspace\DecisionDeCreation::UNIQUE_PAR_CABINET + \App\Service\Workspace\ParentObligatoire::PARENTS);
 
-        // … mais elle reste ÉDITABLE et SUPPRIMABLE : le drapeau ne touche que la création.
+        // Et elle reste ÉDITABLE et SUPPRIMABLE.
         self::assertNotEmpty($canvas['parametres']['endpoint_submit_url'] ?? null);
         self::assertNotEmpty($canvas['parametres']['endpoint_delete_url'] ?? null);
     }

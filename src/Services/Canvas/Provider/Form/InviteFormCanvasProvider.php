@@ -113,6 +113,10 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
                     "icon"      => "depense",
                     "event"     => "ui:retroagent.reversement-request",
                     "url"       => "/admin/retro-agent/%id%/reversement-picker",
+                    // La garde réelle (RetroAgentController::assertPeutVerser) : personne ne se paie
+                    // soi-même, VERSER à un agent exige la GESTION DES INVITÉS — que `can()` applique
+                    // à l'entité Invite (gestion des rôles).
+                    "droit"     => ["entite" => "Invite", "niveau" => Invite::ACCESS_ECRITURE],
                     "condition" => ["field" => "hasRetroAgentExigible", "value" => true],
                 ],
                 // Actions « portefeuille » conditionnelles, sur le modèle des actions
@@ -125,6 +129,7 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
                     "icon"      => "portefeuille",
                     "event"     => "ui:invite.portefeuille-form-request",
                     "url"       => "/admin/invite/api/get-portefeuille-context/%id%",
+                    "droit"     => ["entite" => "Portefeuille", "niveau" => Invite::ACCESS_ECRITURE], // garde de getPortefeuilleContext
                     "condition" => ["field" => "hasPortefeuille", "value" => false],
                 ],
                 [
@@ -132,6 +137,7 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
                     "icon"      => "action:edit",
                     "event"     => "ui:invite.portefeuille-form-request",
                     "url"       => "/admin/invite/api/get-portefeuille-context/%id%",
+                    "droit"     => ["entite" => "Portefeuille", "niveau" => Invite::ACCESS_MODIFICATION],
                     "condition" => ["field" => "hasPortefeuille", "value" => true],
                 ],
                 [

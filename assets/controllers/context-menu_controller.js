@@ -96,14 +96,9 @@ export default class extends Controller {
         }
         // REFACTORING : On récupère maintenant le formCanvas depuis le niveau supérieur de l'événement,
         // car c'est un contexte partagé, et non plus spécifique à un élément sélectionné.
-        const { selection: selectos, contextMenuPosition, formCanvas, tabId, champParent } = event.detail;
+        const { selection: selectos, contextMenuPosition, formCanvas } = event.detail;
         this.entities = selectos;
         this.entityFormCanvas = formCanvas; // On utilise le formCanvas global
-        // Comme la barre d'outils : un contexte sans onglet garde l'onglet connu.
-        if (tabId) {
-            this.ongletInterne = tabId;
-            this.champParent = champParent ?? null;
-        }
 
         // Si le payload contient la position du menu, on l'affiche — entrées triées AVANT la
         // mesure : la taille du menu est celle de la sélection courante.
@@ -136,12 +131,11 @@ export default class extends Controller {
         const hasSelection = selectos.length > 0;
         const isSingleSelection = selectos.length === 1;
 
-        // « Ajouter » : la même décision que la barre d'outils (ajout-regles.js) — absent d'une
-        // rubrique fermée à la création, et de la liste PRINCIPALE d'une entité qui ne naît que
-        // rattachée à son parent (Serge, 2026-10-30 : absent, pas grisé). Sa lettre « A » ne joue
+        // « Ajouter » : la même décision que la barre d'outils, celle du SERVEUR
+        // (DecisionDeCreation, `parametres.ajout`) — absent, pas grisé (Serge, 2026-10-30). Sa lettre « A » ne joue
         // pas non plus : handleKeyboardShortcuts ignore une entrée masquée.
         if (this.hasBtAjouterTarget) {
-            this.btAjouterTarget.style.display = ajoutOffert(this.entityFormCanvas?.parametres, this.ongletInterne || 'principal', this.champParent) ? '' : 'none';
+            this.btAjouterTarget.style.display = ajoutOffert(this.entityFormCanvas?.parametres) ? '' : 'none';
         }
 
         console.log(this.nomControleur + " - organizeButtons - Code: 8888 - Selection:", selectos, "Length:", selectos.length, "Single:", isSingleSelection, "Has:", hasSelection);

@@ -188,9 +188,6 @@ export default class extends Controller {
                         selection: storedState.selectionState,
                         numericAttributesAndValues: storedState.numericAttributesAndValues,
                         formCanvas: storedState.activeTabFormCanvas,
-                        // Le champ qui rattache l'onglet contextuel à son parent : « Ajouter » d'une entité
-                        // dépendante n'y est offert que s'il est CELUI du registre (ajout-regles.js).
-                        champParent: storedState?.parentLien?.champ ?? null,
                         isTabSwitch: true,
                         searchCriteria: storedState.searchCriteria || {},
                         searchCanvas: storedState.searchCanvas || null,
@@ -624,9 +621,6 @@ export default class extends Controller {
                         selection: activeTabState.selectionState,
                         numericAttributesAndValues: activeTabState.numericAttributesAndValues,
                         formCanvas: activeTabState.activeTabFormCanvas,
-                        // Le champ qui rattache l'onglet contextuel à son parent : « Ajouter » d'une entité
-                        // dépendante n'y est offert que s'il est CELUI du registre (ajout-regles.js).
-                        champParent: activeTabState?.parentLien?.champ ?? null,
                         isTabSwitch: true, // On signale que c'est un changement d'onglet
                         searchCriteria: activeTabState.searchCriteria,
                         searchCanvas: activeTabState.searchCanvas || null,
@@ -1021,9 +1015,6 @@ export default class extends Controller {
             searchCanvas: activeTabState.searchCanvas || null,
             entiteNom: activeTabState.entiteNom || null,
             formCanvas: activeTabState.activeTabFormCanvas,
-            // Le champ qui rattache l'onglet contextuel à son parent : « Ajouter » d'une entité
-            // dépendante n'y est offert que s'il est CELUI du registre (ajout-regles.js).
-            champParent: activeTabState?.parentLien?.champ ?? null,
             workspaceTabId: this.currentWorkspaceTabId,
         });
 
@@ -1306,9 +1297,6 @@ export default class extends Controller {
                     selection: tabState.selectionState,
                     numericAttributesAndValues: tabState.numericAttributesAndValues,
                     formCanvas: tabState.activeTabFormCanvas,
-                    // Le champ qui rattache l'onglet contextuel à son parent : « Ajouter » d'une entité
-                    // dépendante n'y est offert que s'il est CELUI du registre (ajout-regles.js).
-                    champParent: tabState?.parentLien?.champ ?? null,
                     searchCriteria: tabState.searchCriteria,
                     // Combien par page (null = le défaut) : le gestionnaire d'espace le range sur
                     // l'onglet, avec ses filtres, pour le F5.

@@ -128,6 +128,7 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
                     "groupe"    => "Mouvements de la police",
                     "event"     => "ui:avenant.piste-derivee-form-request",
                     "url"       => "/admin/avenant/api/get-piste-derivee-context/%id%",
+                    "droit"     => ["entite" => "Piste", "niveau" => Invite::ACCESS_ECRITURE], // garde de getPisteDeriveeContext
                     "condition" => ["field" => "hasPisteDerivee", "value" => false],
                 ],
                 [
@@ -137,6 +138,7 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
                     "groupe_icone" => "piste",
                     "event"        => "ui:avenant.piste-derivee-form-request",
                     "url"          => "/admin/avenant/api/get-piste-derivee-context/%id%",
+                    "droit"        => ["entite" => "Piste", "niveau" => Invite::ACCESS_MODIFICATION],
                     "condition"    => ["field" => "hasPisteDerivee", "value" => true],
                 ],
                 [

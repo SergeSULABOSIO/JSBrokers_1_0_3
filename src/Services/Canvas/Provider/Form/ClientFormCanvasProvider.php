@@ -163,7 +163,10 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                     "groupe_icone" => "action:add",
                     "event"  => "ui:client.creer-piste",
                     "url"    => "/admin/client/api/%id%/piste-context",
-                    "droit" => ["entite" => "Client", "niveau" => Invite::ACCESS_MODIFICATION], // garde de l'endpoint
+                    // La garde de l'endpoint (contexteDeCreationPourLeClient) : ÉCRIRE l'enfant.
+                    // On déclarait le droit de modifier le CLIENT — l'action paraissait chez qui ne
+                    // pouvait pas créer de piste, et se refusait au clic.
+                    "droit" => ["entite" => "Piste", "niveau" => Invite::ACCESS_ECRITURE],
                 ],
                 [
                     "label"  => "Créer un sinistre",
@@ -171,7 +174,7 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                     "groupe" => "Créer…",
                     "event"  => "ui:client.creer-sinistre",
                     "url"    => "/admin/client/api/%id%/sinistre-context",
-                    "droit" => ["entite" => "Client", "niveau" => Invite::ACCESS_MODIFICATION], // garde de l'endpoint
+                    "droit" => ["entite" => "NotificationSinistre", "niveau" => Invite::ACCESS_ECRITURE], // garde de l'endpoint
                 ],
             ],
             // Entête contextuel du volet de saisie (pastille + description).

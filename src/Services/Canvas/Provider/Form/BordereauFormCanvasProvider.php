@@ -3,6 +3,7 @@
 namespace App\Services\Canvas\Provider\Form;
 
 use App\Entity\Bordereau;
+use App\Entity\Invite;
 use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -49,6 +50,8 @@ class BordereauFormCanvasProvider implements FormCanvasProviderInterface
                     "icon"  => "action:analyser",
                     "event" => "ui:bordereau.analysis-request",
                     "url"   => "/admin/bordereau/api/get-analysis-url/%id%",
+                    // garde des routes de l'analyse (submit-analysis, save-analysis-state, validate)
+                    "droit" => ["entite" => "Bordereau", "niveau" => Invite::ACCESS_MODIFICATION],
                 ],
                 // Les quatre actions suivantes n'apparaissent que lorsque le bordereau
                 // est à l'étape STEP_NOTE_EMISE (= 20), c'est-à-dire qu'une note lui est liée.

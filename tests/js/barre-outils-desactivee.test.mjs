@@ -45,9 +45,10 @@ test('`.is-disabled` ne coupe plus les gestes du pointeur (sinon pas d’infobul
 test('« Ajouter » est ABSENT là où la création n’a pas de sens, pas grisé (Serge, 2026-10-30)', () => {
     // Une seule décision pour la barre et le menu : ajout-regles.js (rubrique fermée à la
     // création, ou liste principale d'une entité qui ne naît que rattachée à son parent).
-    // Et le champ qui rattache l'onglet contextuel : seul l'onglet de SON parent l'offre.
-    assert.match(barre, /const canAdd = ajoutOffert\(canvasParams, this\.ongletInterne, this\.champParent\);/);
-    assert.match(menu, /btAjouterTarget\.style\.display = ajoutOffert\(this\.entityFormCanvas\?\.parametres, this\.ongletInterne \|\| 'principal', this\.champParent\)/);
+    // La décision vient du SERVEUR (`parametres.ajout`) : ni la barre ni le menu ne la refont.
+    assert.match(barre, /const canAdd = ajoutOffert\(canvasParams\);/);
+    assert.match(menu, /btAjouterTarget\.style\.display = ajoutOffert\(this\.entityFormCanvas\?\.parametres\)/);
+    assert.doesNotMatch(barre + menu, /creation_interdite|creation_depuis_le_parent|endpoint_submit_url[^;]*canAdd/);
     assert.doesNotMatch(barre, /setButtonDisabled\(this\.btajouterTarget/);
     assert.doesNotMatch(barre + menu, /creation_interdite_message/);
 });

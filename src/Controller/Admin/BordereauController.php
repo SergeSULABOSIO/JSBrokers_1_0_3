@@ -628,6 +628,10 @@ class BordereauController extends AbstractController
     public function submitAnalysisApi(Bordereau $bordereau, Request $request, ParameterBagInterface $params): JsonResponse
     {
         $this->appartenance()->exigerLeCabinetOuvert($bordereau, 'Ce bordereau');
+        // L'analyse MODIFIE le bordereau (étape, état, validation) : lire ne suffit pas.
+        if (!$this->mayAccessEntity(Bordereau::class, Invite::ACCESS_MODIFICATION)) {
+            return $this->accessDeniedJson();
+        }
         $mode = $request->query->get('mode', 'init');
 
         return match ($mode) {
@@ -1011,6 +1015,10 @@ class BordereauController extends AbstractController
     public function saveAnalysisState(Bordereau $bordereau, Request $request): JsonResponse
     {
         $this->appartenance()->exigerLeCabinetOuvert($bordereau, 'Ce bordereau');
+        // L'analyse MODIFIE le bordereau (étape, état, validation) : lire ne suffit pas.
+        if (!$this->mayAccessEntity(Bordereau::class, Invite::ACCESS_MODIFICATION)) {
+            return $this->accessDeniedJson();
+        }
         $payload = json_decode($request->getContent(), true);
         dump('saveAnalysisState: Payload reçu du frontend:', $payload);
 
@@ -1341,6 +1349,10 @@ class BordereauController extends AbstractController
             return $this->json(['success' => false, 'message' => 'Bordereau introuvable.'], 404);
         }
         $this->appartenance()->exigerLeCabinetOuvert($bordereau, 'Ce bordereau');
+        // L'analyse MODIFIE le bordereau (étape, état, validation) : lire ne suffit pas.
+        if (!$this->mayAccessEntity(Bordereau::class, Invite::ACCESS_MODIFICATION)) {
+            return $this->accessDeniedJson();
+        }
 
         // Changer le statut vers VALIDE
         $bordereau->setCurrentAnalysisStep(Bordereau::STATUT_ANALYSE_TERMINEE);

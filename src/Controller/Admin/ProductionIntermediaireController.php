@@ -292,7 +292,8 @@ class ProductionIntermediaireController extends AbstractController
             'serverRootName' => 'productionintermediaire',
             'listeCanvas' => $this->canvasBuilder->getListeCanvas(ProductionScope::ENTITE),
             'entityCanvas' => $this->canvasBuilder->getEntityCanvas(ProductionScope::ENTITE),
-            'entityFormCanvas' => $this->canevasDeFormulaire(),
+            // Ses actions déclarent leur droit (« Signaler reversement ») : filtrées comme partout.
+            'entityFormCanvas' => $this->filtrerActionsParDroit($this->canevasDeFormulaire()),
             'searchCanvas' => $this->canvasBuilder->getSearchCanvas(ProductionScope::ENTITE),
             'numericAttributesAndValues' => $this->canvasBuilder->composerBarreDesTotaux($this->valeursNumeriques($contexte['data'])),
             'idInvite' => $request->attributes->get('idInvite'),
@@ -497,8 +498,8 @@ class ProductionIntermediaireController extends AbstractController
      * LE CANEVAS DE FORMULAIRE D'UNE RUBRIQUE QUI NE SE SAISIT PAS.
      *
      * On ne produit pas une affaire depuis cet écran : elle naît d'une piste et d'une
-     * proposition. La création est donc interdite, et la barre d'outils comme le menu
-     * contextuel s'alignent sur ce seul drapeau — trois portes, une règle.
+     * proposition. La création est donc refusée : la décision (`ajout`) que lisent la barre
+     * d'outils, le menu contextuel et l'état vide le dit — trois portes, une règle.
      *
      * @return array<string, mixed>
      */
@@ -508,7 +509,9 @@ class ProductionIntermediaireController extends AbstractController
             'parametres' => [
                 'description' => 'Production des intermédiaires',
                 'icone' => 'production-intermediaire',
-                'creation_interdite' => true,
+                // Rubrique VIRTUELLE (aucune classe Doctrine) : sa décision est déclarée ici, dans
+                // la forme que pose DecisionDeCreation pour les autres.
+                'ajout' => ['offert' => false, 'motif' => "Une affaire naît d'une piste et de sa proposition, pas de ce rapport."],
                 // LES DEUX COMMANDES DE L'ANCIEN ENTÊTE. Le rapport les portait en haut à
                 // droite : verser au bénéficiaire affiché, et relire ce qu'on lui a déjà
                 // versé. Elles deviennent des actions de la rubrique — barre d'outils ET
@@ -529,6 +532,9 @@ class ProductionIntermediaireController extends AbstractController
                         'label' => 'Signaler reversement',
                         'icon' => 'depense',
                         'multi' => true,
+                        // Pas de `droit` déclaré : la garde dépend du BÉNÉFICIAIRE du filtre (gestion
+                        // des invités pour un agent, écriture des rétros pour un partenaire), que le
+                        // canevas ne connaît pas — le picker la juge à l'ouverture.
                         'event' => 'ui:production.reversement-request',
                         'url' => '',
                     ],

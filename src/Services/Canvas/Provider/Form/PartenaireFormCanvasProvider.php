@@ -2,6 +2,7 @@
 
 namespace App\Services\Canvas\Provider\Form;
 
+use App\Entity\Invite;
 use App\Entity\Partenaire;
 use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
@@ -86,6 +87,7 @@ class PartenaireFormCanvasProvider implements FormCanvasProviderInterface
                     "icon"  => "depense",
                     "event" => "ui:retroagent.reversement-request",
                     "url"   => "/admin/retro-agent/partenaire/%id%/reversement-picker",
+                    "droit" => ["entite" => "ReversementRetroAgent", "niveau" => Invite::ACCESS_ECRITURE], // garde de l'enregistrement
                 ],
             ],
         ];

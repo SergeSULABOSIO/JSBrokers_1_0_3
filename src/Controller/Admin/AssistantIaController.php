@@ -2485,7 +2485,7 @@ class AssistantIaController extends AbstractController
      * re-valide tout (fail-closed) car c'est une requête HTTP distincte.
      */
     #[Route('/api/dialog-context/{idEntreprise}', name: 'api.dialog_context', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
-    public function dialogContext(int $idEntreprise, Request $request): JsonResponse
+    public function dialogContext(int $idEntreprise, Request $request, \App\Service\Workspace\DecisionDeCreation $decisionDeCreation): JsonResponse
     {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
         if (!$this->moduleAutorise($invite)) {
@@ -2507,6 +2507,14 @@ class AssistantIaController extends AbstractController
         $level = $mode === 'edition' ? Invite::ACCESS_MODIFICATION : Invite::ACCESS_ECRITURE;
         if (!$this->accessResolver->can($invite, $shortName, $level)) {
             return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        // La décision de création de l'écran (DecisionDeCreation) : la directive de Ket n'en est
+        // pas une autorisation — ce formulaire serait refusé à l'enregistrement.
+        if ($mode === 'creation') {
+            $decision = $decisionDeCreation->pour($fqcn, $entreprise, null, verifierLeDroit: false);
+            if (!$decision['offert']) {
+                return $this->json(['message' => $decision['motif']], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
         }
 
         $entity = null;

@@ -104,10 +104,10 @@ class ReversementRubriqueTest extends KernelTestCase
 
         $parametres = $provider->getCanvas(new ReversementRetroAgent(), null)['parametres'];
 
-        // « Ajouter » est ABSENT de la rubrique (ajout-regles.js, Serge 2026-10-30) : il n'y a
-        // plus de bouton grisé, donc plus de motif à afficher. Le dialogue dit, lui, où naît
-        // un reversement.
-        self::assertTrue($parametres['creation_interdite']);
+        // ÉCRIVAIN DÉDIÉ (DecisionDeCreation) : « Ajouter » absent de la rubrique, création refusée
+        // par le formulaire générique. Le dialogue dit, lui, où naît un reversement.
+        self::assertArrayHasKey(ReversementRetroAgent::class, \App\Service\Workspace\DecisionDeCreation::ECRIVAIN_DEDIE);
+        self::assertStringContainsString('rapport de production', \App\Service\Workspace\DecisionDeCreation::ECRIVAIN_DEDIE[ReversementRetroAgent::class]);
         self::assertStringContainsString('rapport de production', implode(' ', $parametres['description_creation']));
     }
 

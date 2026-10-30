@@ -164,7 +164,10 @@ class CotationController extends AbstractController
 
         $response = $this->handleCollectionApiRequest($id, 'tranches', Cotation::class, $usage);
 
-        if ($defaultCreated && $response->getStatusCode() === 200) {
+        // Seule la réponse d'un DIALOGUE est du JSON : l'onglet contextuel reçoit du HTML, que
+        // cet enveloppement remplaçait par `{"defaultCreated":true,…}` — une liste illisible au
+        // premier passage (trouvé par CreationPariteTest, 2026-10-30).
+        if ($defaultCreated && $usage === 'dialog' && $response->getStatusCode() === 200) {
             $data = json_decode($response->getContent(), true);
             $data['defaultCreated'] = true;
             $data['defaultItemId'] = $tranche->getId();

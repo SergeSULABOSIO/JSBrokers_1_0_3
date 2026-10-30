@@ -398,19 +398,25 @@ trait ControllerUtilsTrait
      *
      * @return array{ajout: bool, modification: bool, suppression: bool}
      */
-    private function droitsSurLaCollection(?string $classeEnfant, array $options = [], ?object $parent = null): array
+    private function droitsSurLaCollection(?string $classeEnfant, array $options = [], ?object $parent = null, ?string $champParent = null): array
     {
+        // L'AJOUT LIT LA DÉCISION UNIQUE (DecisionDeCreation) : droit, mode de création, et le
+        // champ qui rattache la collection à son parent — l'onglet « Cotations » d'un assureur
+        // (lien `assureur`) n'offre pas une proposition, qui naît de sa piste.
+        $champParent ??= $options['parentFieldName'] ?? null;
+        $creation = fn (bool $verifierLeDroit): bool => $classeEnfant === null || !class_exists($classeEnfant)
+            || $this->decisionDeCreation()->pour($classeEnfant, $this->getEntreprise(), $champParent, $verifierLeDroit)['offert'];
         if (!empty($options['gardeSurLeParent']) && $parent !== null) {
             $peut = $this->mayAccessEntity($parent, Invite::ACCESS_MODIFICATION);
 
-            return ['ajout' => $peut, 'modification' => $peut, 'suppression' => $peut];
+            return ['ajout' => $peut && $creation(false), 'modification' => $peut, 'suppression' => $peut];
         }
         if ($classeEnfant === null || !class_exists($classeEnfant)) {
             return ['ajout' => true, 'modification' => true, 'suppression' => true];
         }
 
         return [
-            'ajout'        => $this->mayAccessEntity($classeEnfant, Invite::ACCESS_ECRITURE),
+            'ajout'        => $creation(true),
             'modification' => $this->mayAccessEntity($classeEnfant, Invite::ACCESS_MODIFICATION),
             'suppression'  => $this->mayAccessEntity($classeEnfant, Invite::ACCESS_SUPPRESSION),
         ];
@@ -628,6 +634,12 @@ trait ControllerUtilsTrait
         return $this->container->get(\App\Service\Workspace\ValeursDeNaissance::class);
     }
 
+    /** « Peut-on créer cette fiche d'ici ? » — la décision unique, prise au conteneur comme le gardien. */
+    private function decisionDeCreation(): \App\Service\Workspace\DecisionDeCreation
+    {
+        return $this->container->get(\App\Service\Workspace\DecisionDeCreation::class);
+    }
+
     /**
      * @return array<string, string>
      */
@@ -638,6 +650,7 @@ trait ControllerUtilsTrait
             AppartenanceAuCabinet::class => AppartenanceAuCabinet::class,
             \App\Services\Canvas\CalculationProvider::class => \App\Services\Canvas\CalculationProvider::class,
             \App\Service\Workspace\ValeursDeNaissance::class => \App\Service\Workspace\ValeursDeNaissance::class,
+            \App\Service\Workspace\DecisionDeCreation::class => \App\Service\Workspace\DecisionDeCreation::class,
         ]);
     }
 
@@ -943,6 +956,22 @@ trait ControllerUtilsTrait
         // CORRECTION : Le list-manager de la collection a besoin du formCanvas de l'entité qu'il gère (l'enfant),
         // et non celui du parent, pour que la barre des totaux et la barre d'outils fonctionnent correctement.
         $entityFormCanvas = $this->canvasBuilder->getEntityFormCanvas(new $entityClass(), $this->getEntreprise()->getId());
+        // L'ONGLET CONTEXTUEL : sa barre d'outils et son menu lisent CE canevas. Il recevait celui
+        // de l'enfant sans filtre de droits — « Ajouter », « Modifier » et les actions rapides
+        // paraissaient sans droit d'écriture. Filtré comme la liste principale, et la décision
+        // de création recalculée avec le lien de l'onglet vers son parent.
+        if ($usage !== 'dialog') {
+            $entityFormCanvas = $this->applyPermissionToFormCanvas($entityFormCanvas, $entityClass);
+            $entityFormCanvas['parametres']['ajout'] = $this->decisionDeCreation()->pourUnOnglet(
+                $entityClass,
+                $this->getEntreprise(),
+                $lienParent,
+                $listActionOptions['ajoutImpossible'] ?? null,
+            );
+            // UNE décision pour l'onglet : son état vide la lit aussi (il suivait les droits de
+            // la collection, et divergeait de la barre d'outils sur un lien multiple).
+            $listActionOptions['canAdd'] = $entityFormCanvas['parametres']['ajout']['offert'];
+        }
         // LES GESTES DE LIGNE que l'ENFANT déclare (ex. « Souscrire » d'une cotation) : dans
         // une collection de dialogue, et seulement ceux dont le droit est acquis — chaque
         // bouton suit le droit de SON point d'entrée, pas celui de la liste.
@@ -1158,19 +1187,13 @@ trait ControllerUtilsTrait
                 $parametres['reinitialiser'] = true;
             }
         }
-        // « Ajouter » : avec les mêmes droits que la barre d'outils (création permise). JAMAIS dans
-        // un onglet contextuel : ses droits d'ajout se jugent sur la collection
-        // (droitsSurLaCollection) — l'état vide ne doit pas rouvrir une porte fermée. Ni pour
-        // une entité qui ne naît que rattachée à son parent (ParentObligatoire) : la liste
-        // principale ne sait pas à quoi la rattacher.
-        $formulaire = $parentContext === null
-            ? $this->applyPermissionToFormCanvas($this->canvasBuilder->getEntityFormCanvas(new $entityClass(), (int) $entreprise->getId()), $entityClass)
-            : ['parametres' => ['creation_interdite' => true]];
-        // Mêmes conditions que la barre d'outils (ajout-regles.js#ajoutOffert), droit d'écriture
-        // compris : sans lui, `applyPermissionToFormCanvas` a retiré l'URL de soumission.
-        if (!empty($formulaire['parametres']['endpoint_submit_url'])
-            && ($formulaire['parametres']['creation_interdite'] ?? false) !== true
-            && !isset($formulaire['parametres']['creation_depuis_le_parent'])) {
+        // « Ajouter » : LA DÉCISION UNIQUE (DecisionDeCreation), comme la barre d'outils — avec le
+        // lien de l'onglet contextuel vers son parent quand il y en a un — la décision de l'ONGLET,
+        // celle que sa barre d'outils a reçue à son rendu (pourUnOnglet).
+        $ajout = $parentContext === null
+            ? $this->decisionDeCreation()->pour($entityClass, $entreprise)
+            : $this->decisionDeCreation()->pourUnOnglet($entityClass, $entreprise, $parentContext);
+        if ($ajout['offert']) {
             $parametres += ['button_text' => 'Ajouter', 'button_action' => 'click->list-manager#requestAddItem', 'button_icon' => 'lucide:plus-circle'];
         }
 
@@ -1945,6 +1968,19 @@ trait ControllerUtilsTrait
         }
 
         if ($isCreationMode) {
+            // LA DÉCISION DE CRÉATION, LA MÊME QUE CELLE QUI AFFICHE « AJOUTER » (DecisionDeCreation) :
+            // le contexte se lit dans la requête — le parent du registre y est-il nommé ? Une
+            // saisie différée (`dry_run`) n'a pas encore de parent : il lui est promis, il sera
+            // posé au rejeu. Avant toute validation : un bouton absent, et la porte fermée de même.
+            // Le droit vient d'être jugé ci-dessus (403) ; restent les modes de création.
+            $champDuParent = \App\Service\Workspace\ParentObligatoire::champ($entityClass);
+            $champNomme = $champDuParent !== null && ($request->request->getBoolean('dry_run') || !empty($data[$champDuParent]))
+                ? $champDuParent : null;
+            $decision = $this->decisionDeCreation()->pour($entityClass, $currentEntreprise, $champNomme, verifierLeDroit: false);
+            if (!$decision['offert']) {
+                return $this->json(['message' => $decision['motif'], 'errors' => ['' => [$decision['motif']]]], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
             // Renseigne automatiquement l'entreprise et l'invité pour les nouvelles entités
             // si elles utilisent AuditableTrait et que ces champs ne sont pas déjà définis.
             if (method_exists($entity, 'setEntreprise') && (method_exists($entity, 'getEntreprise') && $entity->getEntreprise() === null)) {
@@ -2145,7 +2181,9 @@ trait ControllerUtilsTrait
             // un avenant, un rôle… s'écrivent rattachés à leur parent, ou pas du tout. APRÈS la
             // validation seule : une saisie différée n'a pas encore de parent, elle le reçoit au
             // rejeu.
-            if ($isCreationMode && ($refusOrphelin = \App\Service\Workspace\ParentObligatoire::refus($entity, $data)) !== null) {
+            // Et les autres modes de création (DecisionDeCreation) : un second jeu de paramètres
+            // de congé, un reversement par le formulaire générique (écrivain dédié).
+            if ($isCreationMode && ($refusOrphelin = $this->decisionDeCreation()->refusALEcriture($entity, $currentEntreprise, $data, true)) !== null) {
                 return $this->json(['message' => $refusOrphelin, 'errors' => ['' => [$refusOrphelin]]], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
 
@@ -2532,8 +2570,16 @@ trait ControllerUtilsTrait
         // Les boutons de ligne suivent les droits sur l'ENFANT — la même fonction que le
         // widget rendu avec le dialogue, pour que la liste et son bouton « Ajouter » ne se
         // contredisent jamais.
+        // Le champ qui rattache CETTE collection à son parent (Doctrine) : la décision de création
+        // en dépend — un onglet tiré du canevas d'ENTITÉ n'a pas de `parentFieldName` déclaré.
+        $lienDeLaCollection = $this->resoudreLienParent($parentEntityClass, $collectionName);
         $optionsDeDroits = $this->optionsDeDroits(
-            $this->droitsSurLaCollection($collectionMap[$collectionName], $collectionOptions, $parentEntity),
+            $this->droitsSurLaCollection(
+                $collectionMap[$collectionName],
+                $collectionOptions,
+                $parentEntity,
+                ($lienDeLaCollection['nature'] ?? null) === 'to_one' ? ($lienDeLaCollection['champ'] ?? null) : null,
+            ),
             $collectionOptions,
         );
         $listActionOptions = [
@@ -2543,6 +2589,9 @@ trait ControllerUtilsTrait
             'consultationSeule' => $optionsDeDroits['consultationSeule'],
             'hideDeleteAction'  => $optionsDeDroits['hideDeleteAction'],
             'canAdd'            => !$optionsDeDroits['lectureSeule'],
+            // La raison propre au PARENT (un invité qui a déjà son rôle Finance) : l'onglet
+            // contextuel la fait entrer dans sa décision de création.
+            'ajoutImpossible'   => $collectionOptions['ajoutImpossible'] ?? null,
         ];
 
         // --- NOUVELLE LOGIQUE DE RÉPONSE JSON ---

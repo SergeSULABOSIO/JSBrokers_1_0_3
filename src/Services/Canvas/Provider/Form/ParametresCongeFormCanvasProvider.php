@@ -42,9 +42,8 @@ class ParametresCongeFormCanvasProvider implements FormCanvasProviderInterface
                 "Tant qu'ils ne sont pas enregistrés, les contrôles s'appuient sur des valeurs implicites que personne dans le cabinet n'a décidées.",
                 "Ces réglages engagent le cabinet bien au-delà d'un dossier : ils gouvernent l'acceptation ou le refus de chaque demande.",
             ],
-            "creation_interdite" => true,
-            // Un cabinet n'a qu'un seul jeu de réglages, déjà créé : on l'ouvre pour le modifier.
-            // « Ajouter » est donc ABSENT (ajout-regles.js, Serge 2026-10-30), pas grisé.
+            // UN SEUL JEU DE RÉGLAGES PAR CABINET : DecisionDeCreation::UNIQUE_PAR_CABINET offre
+            // « Ajouter » tant qu'il manque, puis le retire ; le serveur refuse un second jeu.
             "form_intro" => [
                 "titre" => "Ce que le cabinet exige d'une demande",
                 "description" => "Ces réglages gouvernent les contrôles de la soumission. Chacun se désactive franchement — un préavis à zéro, un plafond vide — parce qu'une règle qu'on ne veut pas finit toujours par être contournée. Un valideur, lui, peut passer outre le préavis, le plafond et les périodes de blocage : le contournement est alors consigné sur la demande et signalé dans l'e-mail.",

@@ -120,7 +120,7 @@ class RolesCreationTest extends WebTestCase
         $s = $this->semer();
         $parametres = static::getContainer()->get(FormCanvasProvider::class)->getCanvas(new RolesEnFinance(), $s['entreprise'])['parametres'] ?? [];
 
-        self::assertArrayNotHasKey('creation_depuis_le_parent', $parametres, 'Le formulaire choisit le collaborateur : la liste principale peut créer.');
+        self::assertTrue($parametres['ajout']['offert'] ?? null, 'Le formulaire choisit le collaborateur : la liste principale peut créer.');
     }
 
     public function testSansCollaborateurLeServeurRefuseAuLieuDeLeChoisirPourVous(): void

@@ -44,7 +44,7 @@ class ParentObligatoireTest extends WebTestCase
         'paiement' => "Rattachable à une note, une offre d'indemnisation ou un compte bancaire (hors du périmètre décidé le 2026-10-30).",
         'contact' => "Son formulaire le rattache à un client ; la notification de sinistre n'en est qu'un second parent.",
         'risque' => "Les risques ciblés d'une condition de partage sont CHOISIS (ManyToMany), jamais créés depuis elle.",
-        'conditionpartage' => "Rubrique fermée à la création (`creation_interdite`) : elle naît de la fiche d'un partenaire, d'un invité ou d'une piste.",
+        'conditionpartage' => "Son formulaire fait choisir le bénéficiaire (partenaire ou agent), exigé par le serveur ; la piste n'en est qu'un parent de plus.",
     ];
 
     private KernelBrowser $client;
@@ -232,10 +232,11 @@ class ParentObligatoireTest extends WebTestCase
         $s = $this->semer();
         $canevas = static::getContainer()->get(FormCanvasProvider::class);
 
-        self::assertSame('cotation', $canevas->getCanvas(new Tranche(), $s['entreprise'])['parametres']['creation_depuis_le_parent'] ?? null);
+        $tranche = $canevas->getCanvas(new Tranche(), $s['entreprise'])['parametres']['ajout'] ?? null;
+        self::assertSame(['offert' => false, 'motif' => ParentObligatoire::PARENTS[Tranche::class]['refus']], $tranche, 'Liste principale : pas d’« Ajouter », et le motif dit où créer.');
         // Le formulaire d'un rôle CHOISIT le collaborateur (PARENT_CHOISI) : la liste garde « Ajouter ».
-        self::assertArrayNotHasKey('creation_depuis_le_parent', $canevas->getCanvas(new RolesEnFinance(), $s['entreprise'])['parametres'] ?? []);
-        self::assertArrayNotHasKey('creation_depuis_le_parent', $canevas->getCanvas(new Client(), $s['entreprise'])['parametres'] ?? []);
+        self::assertTrue($canevas->getCanvas(new RolesEnFinance(), $s['entreprise'])['parametres']['ajout']['offert'] ?? null);
+        self::assertTrue($canevas->getCanvas(new Client(), $s['entreprise'])['parametres']['ajout']['offert'] ?? null);
     }
 
     private function posterUneTranche(array $plus = []): void

@@ -44,21 +44,11 @@ class ConditionPartageFormCanvasProvider implements FormCanvasProviderInterface
                 "Une condition peut viser certains risques seulement, ou valoir pour tout ce que l'intermédiaire amène. C'est aussi l'écran où auditer les taux réellement en vigueur.",
                 "La rétrocommission suit ensuite l'encaissement au prorata : elle n'est exigible que sur ce qui a été effectivement payé.",
             ],
-            // AUCUNE CRÉATION DEPUIS LA RUBRIQUE. Une condition de partage n'existe que
-            // rattachée à quelque chose : un partenaire, un agent, ou une piste. La créer
-            // depuis la liste produirait une règle orpheline — sans bénéficiaire, donc
-            // invalide, ou avec un bénéficiaire mais rattachée à aucune affaire, donc sans
-            // effet et sans rien pour le signaler.
-            //
-            // On crée donc EXCLUSIVEMENT depuis la fiche Partenaire, la fiche Invité ou la
-            // Piste, où le rattachement est posé par construction. La rubrique reste la
-            // vue d'ensemble : consulter, éditer, supprimer, auditer les taux en vigueur.
-            //
-            // Le drapeau masque « Ajouter » dans la barre d'outils, le menu contextuel et
-            // l'état vide. La sécurité, elle, ne dépend pas de l'écran : le POST reste
-            // gouverné par le droit « Intermédiaires » comme toute autre écriture.
-            // « Ajouter » y est ABSENT, pas grisé (ajout-regles.js, Serge 2026-10-30).
-            "creation_interdite" => true,
+            // CRÉATION DEPUIS LA RUBRIQUE PERMISE (Serge, 2026-10-30). Le formulaire fait choisir le
+            // bénéficiaire — partenaire OU agent — et le serveur l'exige (incoherencesMetier,
+            // ConditionPartage::estValide) : règle « parent imposé par le formulaire ». Une
+            // condition d'AGENT reste sans effet tant qu'on ne l'a pas rattachée à des affaires ;
+            // `form_intro` le dit à qui la saisit.
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Condition de partage",

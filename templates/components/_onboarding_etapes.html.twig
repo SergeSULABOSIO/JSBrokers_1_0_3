@@ -111,10 +111,11 @@
                                 {% endif %}
                             {% endif %}
 
-                            {# Un réglage unique n'a pas de bouton « Ajouter » : sa ligne
-                               ci-dessus est la seule chose à ouvrir. Quand elle n'existe
-                               pas encore en base, le bouton la crée. #}
-                            {% if not etape.singleton or etape.apercu|default([])|length == 0 %}
+                            {# « Ajouter » (ou « Régler ») : LA DÉCISION UNIQUE du serveur
+                               (DecisionDeCreation), posée dans le canevas de l'étape — un réglage
+                               unique (paramètres des congés) n'est offert que tant qu'il manque ;
+                               ensuite, sa ligne ci-dessus est la seule chose à ouvrir. #}
+                            {% if (_canvas.parametres|default({})).ajout.offert|default(false) %}
                                 <button type="button"
                                     class="jsb-onboarding-ajouter{{ etape.fait ? ' est-secondaire' : '' }}"
                                     {% if not _ouvrable %}disabled{% endif %}

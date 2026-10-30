@@ -47,11 +47,10 @@ class ReversementRetroAgentFormCanvasProvider implements FormCanvasProviderInter
                 "Il ne se saisit pas ligne à ligne : un virement règle souvent plusieurs échéances d'un coup, et sa pièce justificative vaut pour tout le lot.",
                 "Il s'enregistre donc depuis le rapport de production ou par l'assistant, avec son justificatif du même geste. Cet écran sert à le consulter et à l'auditer.",
             ],
-            "creation_interdite" => true,
-            // Un reversement s'enregistre depuis « Voir le rapport de production » du bénéficiaire
-            // — agent interne ou partenaire externe —, ou en le demandant à l'assistant : le
-            // justificatif du virement est exigé du même geste. « Ajouter » est donc ABSENT de la
-            // rubrique (ajout-regles.js, Serge 2026-10-30), pas grisé.
+            // ÉCRIVAIN DÉDIÉ (DecisionDeCreation::ECRIVAIN_DEDIE) : un reversement s'enregistre depuis
+            // « Voir le rapport de production » du bénéficiaire, ou par l'assistant — le
+            // justificatif du virement est exigé du même geste. « Ajouter » est absent de la
+            // rubrique, et le formulaire générique refuse la création.
             "form_intro" => [
                 "titre" => "Rétro intermédiaire",
                 "description" => "La part d'une commission déjà encaissée par le cabinet, reversée à l'intermédiaire "
