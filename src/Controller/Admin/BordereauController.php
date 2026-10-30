@@ -1072,6 +1072,9 @@ class BordereauController extends AbstractController
 
         $raw  = json_decode($request->getContent(), true);
         $data = $raw['payload'] ?? $raw;
+        if (($refus = $this->refusDuTraitement([$data['action_type'] ?? null])) !== null) {
+            return $refus;
+        }
 
         try {
             $result = $this->doProcessAnalysisAction($bordereau, $data);
@@ -1118,6 +1121,10 @@ class BordereauController extends AbstractController
         $items = $body['items'] ?? ($raw['items'] ?? []);
 
         if (empty($items)) return $this->json(['success' => false, 'message' => 'Aucun élément à traiter.'], 400);
+        // Tout le lot ou rien : un refus de droit ne se découvre pas à la dixième ligne.
+        if (($refus = $this->refusDuTraitement(array_column($items, 'action_type'))) !== null) {
+            return $refus;
+        }
 
         $results = [];
         foreach ($items as $item) {
@@ -1153,6 +1160,55 @@ class BordereauController extends AbstractController
             'results' => $results,
             'message' => sprintf('%d élément(s) traité(s) avec succès%s.', $successCount, $failCount > 0 ? ", $failCount en échec" : ''),
         ]);
+    }
+
+    /**
+     * CE QU'ÉCRIT LE TRAITEMENT D'UNE LIGNE D'ANALYSE, ET DONC LES DROITS QU'IL EXIGE.
+     *
+     * Ces routes ne regardaient que le cabinet : il suffisait de LIRE les bordereaux pour créer
+     * clients, pistes, propositions, tranches et avenants (recensement des points de création,
+     * 2026-10-30). Une ligne « nouvelle » PEUT créer chacun d'eux (AvenantActionService::
+     * createFromBordereauLine — client et risque seulement s'ils n'existent pas, mais on ne le
+     * sait qu'en cours de route) ; une ligne « écart » modifie l'avenant et peut lui ajouter
+     * tranches et revenus. Fermé par défaut : un type d'action inconnu n'ouvre rien ici, il est
+     * refusé plus loin.
+     */
+    private const DROITS_DU_TRAITEMENT = [
+        'new' => [
+            'Client' => Invite::ACCESS_ECRITURE, 'Risque' => Invite::ACCESS_ECRITURE, 'Piste' => Invite::ACCESS_ECRITURE,
+            'Cotation' => Invite::ACCESS_ECRITURE, 'Tranche' => Invite::ACCESS_ECRITURE,
+            'RevenuPourCourtier' => Invite::ACCESS_ECRITURE, 'Avenant' => Invite::ACCESS_ECRITURE,
+        ],
+        'discrepancy' => [
+            'Avenant' => Invite::ACCESS_MODIFICATION, 'Tranche' => Invite::ACCESS_ECRITURE,
+            'RevenuPourCourtier' => Invite::ACCESS_ECRITURE,
+        ],
+    ];
+
+    /** @param list<mixed> $typesDAction */
+    private function refusDuTraitement(array $typesDAction): ?JsonResponse
+    {
+        $libelles = $this->workspaceAccessResolver->libellesEntites();
+        $manquants = [];
+        foreach (array_unique(array_filter($typesDAction, 'is_string')) as $type) {
+            foreach (self::DROITS_DU_TRAITEMENT[$type] ?? [] as $entite => $niveau) {
+                if (!$this->workspaceAccessResolver->can($this->getInvite(), $entite, $niveau)) {
+                    $manquants[$entite] = $libelles[$entite] ?? $entite;
+                }
+            }
+        }
+        if ($manquants === []) {
+            return null;
+        }
+
+        return $this->json([
+            'success' => false,
+            'message' => sprintf(
+                "Traiter cette ligne écrit dans des rubriques hors de votre périmètre : %s. Contactez le propriétaire de l'espace de travail pour ajuster vos droits.",
+                implode(', ', $manquants),
+            ),
+            'blocked' => true,
+        ], Response::HTTP_FORBIDDEN);
     }
 
     /**

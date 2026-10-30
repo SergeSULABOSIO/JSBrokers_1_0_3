@@ -4,6 +4,7 @@ namespace App\Controller\Admin;
 
 use App\Constantes\Constante;
 use App\Entity\Cotation;
+use App\Entity\Invite;
 use App\Entity\Tranche;
 use App\Form\CotationType;
 use App\Repository\CotationRepository;
@@ -133,7 +134,9 @@ class CotationController extends AbstractController
             if ($cotation !== null) {
                 $this->appartenance()->exigerLeCabinetOuvert($cotation, 'Cette cotation');
             }
-            if ($cotation && $cotation->getTranches()->isEmpty()) {
+            // Et la tranche par défaut est une ÉCRITURE : qui ne fait que lire les tranches reçoit
+            // la liste telle qu'elle est (recensement des points de création, 2026-10-30).
+            if ($cotation && $cotation->getTranches()->isEmpty() && $this->mayAccessEntity(Tranche::class, Invite::ACCESS_ECRITURE)) {
                 $dateEffet = new \DateTimeImmutable('today');
                 if (!$cotation->getAvenants()->isEmpty()) {
                     $firstAvenant = $cotation->getAvenants()->first();
