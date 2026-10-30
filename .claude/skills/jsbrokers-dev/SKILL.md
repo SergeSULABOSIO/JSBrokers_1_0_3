@@ -323,6 +323,23 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
 
 ## 6. Livraison
 
+- **NOTE DE VERSION (règle durable, Serge 2026-10-30)** : toute évolution annoncée aux
+  utilisateurs l'est par une note écrite POUR LES PRATICIENS DU COURTAGE (gestionnaires de
+  comptes, chargés de production, comptables, directeurs de cabinet) — vocabulaire du métier
+  (`courtage-assurance`), aucun jargon technique (commit, code, CSS, JavaScript, worker, cache,
+  API, migration, serveur, base de données, test, noms de fichiers ou de composants), ce que
+  l'utilisateur voit et fait, une page au plus, ce qui ne change pas, chaque surprise annoncée
+  avec sa raison métier, captures avant/après annotées, et l'invitation au retour (Feedbacks,
+  Support). Modèle et contrôle : `jsb-construire-rubrique/references/notes-de-version.md`.
+  **Montrée à Serge avant toute publication ; le canal (dans Joseara, e-mail, les deux) est à
+  confirmer par lui.**
+- **AUCUN MESSAGE DE COMMIT N'EST JAMAIS PUBLIÉ HORS DE L'ÉQUIPE** (Serge, 2026-10-30, après une
+  fuite) : un message de commit décrit la correction — faille comprise (cloisonnement, XSS,
+  écriture sans droit…). Ni page, ni infobulle, ni e-mail, ni flux, ni réponse de Ket ne les
+  montre à un utilisateur ; les utilisateurs ne voient que des NOTES DE VERSION. Le journal
+  `/nouveautes` est réservé à l'équipe (ROLE_ADMIN, 404 sinon, `noindex`) ; seul le NUMÉRO de
+  version s'affiche ailleurs. Garde-fou `tests/Nouveautes/NouveautesPageTest.php`. ⚠ Le dépôt
+  GitHub lui-même doit rester PRIVÉ (il était public au 2026-10-30).
 - **Un commit par sujet, chacun vert avant le suivant** : suite complète (ou node + Frontend +
   Workspace pour du JS seul), revue de sécurité et de code par un sous-agent, corrections.
 - `git fetch` puis commit ; une modification non commitée qui n'est pas la vôtre se MONTRE à

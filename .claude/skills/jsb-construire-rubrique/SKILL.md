@@ -69,7 +69,8 @@ couverte ; textes relus (`references/redaction-interface.md`) ; aucun contenu dy
 `PrechargementPisteTest::testLeCoutDUnePageNeDependPlusDuNombreDePistes`), node pour le JS.
 
 **6. Recette et livraison.** Procédure de `jsbrokers-dev` §5-§6 ; commits séparés et verts ;
-captures aux largeurs de référence, la mascotte y est visible.
+captures aux largeurs de référence, la mascotte y est visible ; si l'évolution s'annonce aux
+utilisateurs, sa note de version suit `references/notes-de-version.md` et est montrée à Serge.
 
 **7. Mise à jour des skills.** Si le chantier change une règle, une pièce ou un composant cité
 ici ou dans une skill sœur, la skill est corrigée **dans le même chantier**.
@@ -165,6 +166,7 @@ contrôleur ne le contourne pas, il passe ses ajouts par `beforePersist` :
 | 3 | une liste, des chips, une barre, un dialogue, un toast, une infobulle | `references/composants.md` |
 | 3 | un chargement, un vide, une erreur, un filtre, un F5 | `references/etats-interface.md` |
 | 3 | un libellé, un message, un format de nombre ou de date | `references/redaction-interface.md` |
+| 6-7 | une note de version pour les utilisateurs | `references/notes-de-version.md` (pour les praticiens du courtage, montrée à Serge avant publication) |
 | 3 | une couleur, un jeton | `charte-couleurs` ; `systeme-design.md` (lot 2) |
 | 3 | le clavier, le focus, ARIA, la taille d'une cible | `ergonomie-web` ; `accessibilite.md` (lot 2) |
 | 3 | un écran étroit, le tactile | `responsive-tactile.md` (lot 2) |
