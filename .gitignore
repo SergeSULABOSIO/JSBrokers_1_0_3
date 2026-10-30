@@ -9,6 +9,15 @@
 # fichier à committer. Un secret ne devient pas inoffensif parce qu'on l'a
 # renommé.
 /.env.local.*
+# Clés et certificats, sauvegardes de base : jamais dans le dépôt (Serge, 2026-10-30). Un
+# secret commité reste dans l'historique : il se RÉGÉNÈRE, il ne se retire pas.
+*.pem
+*.key
+*.p12
+*.pfx
+*.sql
+*.sql.gz
+*.dump
 /config/secrets/prod/prod.decrypt.private.php
 /public/bundles/
 /var/

@@ -343,8 +343,17 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   écriture sans droit…). Ni page, ni infobulle, ni e-mail, ni flux, ni réponse de Ket ne les
   montre à un utilisateur ; les utilisateurs ne voient que des NOTES DE VERSION. Le journal
   `/nouveautes` est réservé à l'équipe (ROLE_ADMIN, 404 sinon, `noindex`) ; seul le NUMÉRO de
-  version s'affiche ailleurs. Garde-fou `tests/Nouveautes/NouveautesPageTest.php`. ⚠ Le dépôt
-  GitHub lui-même doit rester PRIVÉ (il était public au 2026-10-30).
+  version s'affiche ailleurs. Garde-fou `tests/Nouveautes/NouveautesPageTest.php`.
+- **LE DÉPÔT EST PRIVÉ ; AUCUN SECRET N'EST JAMAIS COMMITÉ ; TOUT SECRET EXPOSÉ EST RÉGÉNÉRÉ, PAS
+  SEULEMENT RETIRÉ** (Serge, 2026-10-30). L'historique git garde tout ce qui y est entré : retirer
+  une valeur d'un fichier ne la reprend à personne. Les secrets vivent sur le serveur seulement
+  (`~/joseara/.env.local`, `chmod 600`, compilé en `.env.local.php` par `deploy.sh`) ; `.gitignore`
+  exclut `.env.local`, `.env.*.local`, `.env.local.*`, les clés (`*.pem`, `*.key`, `*.p12`,
+  `*.pfx`) et les dumps (`*.sql`, `*.sql.gz`, `*.dump`). Audit de tout l'historique le
+  2026-10-30 : aucun secret actif (l'ancien `APP_SECRET` public, retiré le 2026-09-13, n'est plus
+  en production). Le dépôt GitHub était PUBLIC au 2026-10-30 : Serge le passe en privé en fin de
+  plan, après la mise en place d'une clé de déploiement en lecture seule (le serveur fait
+  `git fetch origin`).
 - **Un commit par sujet, chacun vert avant le suivant** : suite complète (ou node + Frontend +
   Workspace pour du JS seul), revue de sécurité et de code par un sous-agent, corrections.
 - `git fetch` puis commit ; une modification non commitée qui n'est pas la vôtre se MONTRE à
