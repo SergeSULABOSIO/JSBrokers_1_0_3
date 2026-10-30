@@ -2780,6 +2780,46 @@ thead.sticky-header {
     letter-spacing: 0.5px;
     color: #6c757d;
 }
+/* LE TITRE D'UNE COLONNE : DEUX LIGNES AU PLUS (Serge, 2026-10-29 : « les en-têtes des tableaux
+   consomment trop d'espace »). Au-delà, « … » ; le titre complet reste dans `title`. Il
+   remplace la marge Bootstrap `m-2` (8 px tout autour, en plus du remplissage de la cellule). */
+.jsb-entete-colonne {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    margin: 0.5rem;
+    overflow-wrap: break-word;
+}
+/* LES LISTES DU WORKSPACE, PLUS COMPACTES : l'entête passe d'environ 65 à 40 px pour deux
+   lignes. Les collections en dialogue gardent leur disposition (chantier 22). */
+.jsb-list-manager .table-enhanced thead th {
+    padding: 6px 8px;
+    font-size: 0.7rem;
+    line-height: 1.2;
+    letter-spacing: 0.3px;
+    vertical-align: bottom;
+}
+.jsb-entete-case { margin: 0.5rem; }
+.jsb-list-manager .table-enhanced thead .jsb-entete-colonne,
+.jsb-list-manager .table-enhanced thead .jsb-entete-case { margin: 0; }
+/* La case « tout sélectionner » et « Id. », alignées sur le bas comme les autres titres. La
+   case de Bootstrap est taillée en `em` : sans cette taille fixe, elle rapetissait avec la
+   police de l'entête (une cible de 11 px). */
+.jsb-list-manager .table-enhanced thead .jsb-entete-case {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 0;
+    padding-left: 0;
+}
+.jsb-list-manager .table-enhanced thead .jsb-entete-case .form-check-input {
+    float: none;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    flex-shrink: 0;
+}
 .table-enhanced tbody td {
     color: #495057;
 }

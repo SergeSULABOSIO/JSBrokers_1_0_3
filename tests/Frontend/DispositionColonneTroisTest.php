@@ -396,6 +396,25 @@ class DispositionColonneTroisTest extends TestCase
         self::assertSame(2, substr_count((string) file_get_contents(__DIR__ . '/../../assets/controllers/workspace-manager_controller.js'), 'rubriqueLibelle:'));
     }
 
+    /**
+     * L'ENTÊTE D'UN TABLEAU : DEUX LIGNES AU PLUS, ET COMPACT (Serge, 2026-10-29 : « les
+     * en-têtes des tableaux consomment trop d'espace »). Mesuré : 65 → 36 px sur les Tranches.
+     * Un titre trop long se termine par « … » et garde son texte complet dans `title`.
+     */
+    public function testLEnteteDUnTableauTientEnDeuxLignesAuPlus(): void
+    {
+        $liste = (string) preg_replace('/\{#.*?#\}/s', '', (string) file_get_contents(__DIR__ . '/../../templates/components/_list_manager.html.twig'));
+        preg_match('/<thead.*?<\/thead>/s', $liste, $thead);
+        self::assertNotEmpty($thead);
+        self::assertStringNotContainsString('m-2', $thead[0], 'La marge Bootstrap des titres a cédé la place à .jsb-entete-colonne.');
+        self::assertSame(3, substr_count($thead[0], "class='text-secondary jsb-entete-colonne' title=\""), 'Chaque titre de colonne garde son texte complet.');
+
+        $titre = self::regle('.jsb-entete-colonne');
+        self::assertMatchesRegularExpression('/-webkit-line-clamp:\s*2;/', $titre);
+        self::assertMatchesRegularExpression('/overflow:\s*hidden;/', $titre);
+        self::assertMatchesRegularExpression('/padding:\s*6px 8px;/', self::regle('.jsb-list-manager .table-enhanced thead th'));
+    }
+
     /** Un panneau sans liste (squelette, échec) se décale du rail au lieu d'être masqué. */
     public function testUnPanneauSansListeNEstPasMasqueParLeRail(): void
     {
