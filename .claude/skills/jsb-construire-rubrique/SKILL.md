@@ -45,8 +45,9 @@ local et proposée (§6) ; questions métier posées à Serge **avant** de coder
 **1. Modèle et règles.** Entités, migration (jouée aussi en DEV : des tests verts ne prouvent
 rien sur la base dev), règles en source unique, tout identifiant venu de la requête par
 `AppartenanceAuCabinet` (`exigerLeCabinetOuvert`, :88). **Une entité qui n'a de sens que
-rattachée à un parent** (tranche, avenant, rôle…) se déclare dans `ParentObligatoire` : elle ne
-se crée que depuis son parent (Serge, 2026-10-30). Sortie : schéma validé, migration
+rattachée à un parent** (tranche, avenant, pièce…) et dont le formulaire ne laisse pas choisir ce
+parent se déclare dans `ParentObligatoire` : elle ne se crée que depuis son parent (Serge,
+2026-10-30) ; si le formulaire impose le parent, `PARENT_CHOISI` (le serveur l'exige). Sortie : schéma validé, migration
 jouée en test ET en dev, règle écrite une seule fois, entité dépendante déclarée.
 
 **2. Serveur.** Canevas d'entité, de liste, de formulaire ; stratégie d'indicateurs ;

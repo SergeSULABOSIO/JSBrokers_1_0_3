@@ -24,7 +24,7 @@ use Doctrine\Persistence\Proxy;
 /**
  * LES ENTITÉS QUI NE NAISSENT QUE RATTACHÉES À LEUR PARENT — entité => champ du parent.
  *
- * Une tranche sans proposition, un avenant sans proposition, un rôle sans invité… ne
+ * Une tranche sans proposition, un avenant sans proposition, une pièce sans sinistre… ne
  * veulent rien dire : persistés seuls, ce sont des orphelins que rien ne retrouve ni ne
  * compte (Serge, 2026-10-30). Ils se créent donc DEPUIS LEUR PARENT — l'onglet de sa
  * fiche, ou l'onglet contextuel de sa rubrique —, où le rattachement est posé par
@@ -40,6 +40,10 @@ use Doctrine\Persistence\Proxy;
  * ⚠ UNE ENTITÉ DÉPENDANTE NOUVELLE SE DÉCLARE ICI. ParentObligatoireTest compare ce registre
  * aux collections des canevas : un enfant dont le formulaire ne laisse pas choisir le
  * parent doit y figurer, ou être exempté avec son motif.
+ *
+ * QUAND LE FORMULAIRE IMPOSE LE PARENT (obligatoire ET contrôlé par le serveur), la création
+ * depuis la liste principale reste permise (Serge, 2026-10-30) : l'entité va dans
+ * PARENT_CHOISI — le serveur exige le parent, l'écran n'en masque rien.
  */
 final class ParentObligatoire
 {
@@ -57,14 +61,24 @@ final class ParentObligatoire
         OffreIndemnisationSinistre::class => ['champ' => 'notificationSinistre', 'refus' => "Une offre d'indemnisation se crée depuis sa notification de sinistre, dans l'onglet « Offres d'indemnisation »."],
         Feedback::class => ['champ' => 'tache', 'refus' => "Un feedback se crée depuis sa tâche, dans l'onglet « Feedbacks »."],
         PeriodeBlocage::class => ['champ' => 'parametres', 'refus' => "Une période de blocage se crée depuis les paramètres des congés, dans l'onglet « Périodes de blocage »."],
-        RolesEnFinance::class => ['champ' => 'invite', 'refus' => "Un rôle se crée depuis la fiche de l'invité, dans l'onglet « Finance »."],
-        RolesEnMarketing::class => ['champ' => 'invite', 'refus' => "Un rôle se crée depuis la fiche de l'invité, dans l'onglet « Marketing »."],
-        RolesEnProduction::class => ['champ' => 'invite', 'refus' => "Un rôle se crée depuis la fiche de l'invité, dans l'onglet « Production »."],
-        RolesEnSinistre::class => ['champ' => 'invite', 'refus' => "Un rôle se crée depuis la fiche de l'invité, dans l'onglet « Sinistre »."],
-        RolesEnAdministration::class => ['champ' => 'invite', 'refus' => "Un rôle se crée depuis la fiche de l'invité, dans l'onglet « Administration »."],
     ];
 
-    /** Le champ du parent, si l'entité ne naît que rattachée. */
+    /**
+     * Le parent est CHOISI DANS LE FORMULAIRE, et le serveur l'exige — la liste principale garde
+     * son « Ajouter ». Un rôle sans collaborateur nommé recevait d'office l'invité connecté
+     * (champ `invite` d'AuditableTrait, le même que son parent) : un rôle muet pour soi-même.
+     *
+     * @var array<class-string, array{champ: string, refus: string}>
+     */
+    public const PARENT_CHOISI = [
+        RolesEnFinance::class => ['champ' => 'invite', 'refus' => "Choisissez le collaborateur à qui ce rôle donne des droits."],
+        RolesEnMarketing::class => ['champ' => 'invite', 'refus' => "Choisissez le collaborateur à qui ce rôle donne des droits."],
+        RolesEnProduction::class => ['champ' => 'invite', 'refus' => "Choisissez le collaborateur à qui ce rôle donne des droits."],
+        RolesEnSinistre::class => ['champ' => 'invite', 'refus' => "Choisissez le collaborateur à qui ce rôle donne des droits."],
+        RolesEnAdministration::class => ['champ' => 'invite', 'refus' => "Choisissez le collaborateur à qui ce rôle donne des droits."],
+    ];
+
+    /** Le champ du parent, si l'entité ne naît que rattachée (liste principale sans « Ajouter »). */
     public static function champ(string|object $entite): ?string
     {
         return self::PARENTS[self::classe($entite)]['champ'] ?? null;
@@ -72,6 +86,8 @@ final class ParentObligatoire
 
     /**
      * Le refus d'une CRÉATION sans parent, juste avant de l'écrire ; null si elle peut l'être.
+     *
+     * Vaut pour les deux tables : PARENTS et PARENT_CHOISI.
      *
      * `$soumis` : les données de la requête de l'écran. Le parent doit y être NOMMÉ — un
      * rôle reçoit d'office l'invité connecté comme auteur (champ `invite` d'AuditableTrait,
@@ -82,7 +98,7 @@ final class ParentObligatoire
      */
     public static function refus(object $entite, ?array $soumis = null): ?string
     {
-        $regle = self::PARENTS[self::classe($entite)] ?? null;
+        $regle = self::regle($entite);
         if ($regle === null) {
             return null;
         }
@@ -102,9 +118,17 @@ final class ParentObligatoire
      */
     public static function refusSiNonNomme(string|object $entite, array $soumis): ?string
     {
-        $regle = self::PARENTS[self::classe($entite)] ?? null;
+        $regle = self::regle($entite);
 
         return $regle !== null && empty($soumis[$regle['champ']]) ? $regle['refus'] : null;
+    }
+
+    /** @return array{champ: string, refus: string}|null */
+    private static function regle(string|object $entite): ?array
+    {
+        $classe = self::classe($entite);
+
+        return self::PARENTS[$classe] ?? self::PARENT_CHOISI[$classe] ?? null;
     }
 
     private static function classe(string|object $entite): string

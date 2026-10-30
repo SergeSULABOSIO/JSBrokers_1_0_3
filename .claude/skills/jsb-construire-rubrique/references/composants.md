@@ -125,7 +125,11 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
 - **« Ajouter » n'est offert que là où la création a un sens** (Serge, 2026-10-30) : ABSENT —
   pas grisé — d'une rubrique fermée à la création (`creation_interdite`) et de la liste
   PRINCIPALE d'une entité dépendante (`creation_depuis_le_parent`, registre
-  `ParentObligatoire`) ; présent dans l'onglet contextuel de SON parent seulement — le Cerveau
+  `ParentObligatoire`). Une entité entre au registre quand son formulaire ne permet pas de
+  choisir son parent ; si le formulaire impose le parent (obligatoire ET contrôlé par le
+  serveur : `PARENT_CHOISI`, ex. les rôles), la liste principale garde « Ajouter ». Le « + »
+  d'une collection dont l'ajout serait refusé cède la place à sa raison (`ajoutImpossible`, ex.
+  un invité qui a déjà son rôle Finance) ; présent dans l'onglet contextuel de SON parent seulement — le Cerveau
   diffuse `champParent` (`parentLien.champ`) : la fiche Assureur, onglet « Cotations » (lien
   `assureur`), n'offre pas « Ajouter », puisqu'une proposition naît de sa piste.
   Une seule décision, `ajout-regles.js` (`ajoutOffert`), lue par la barre d'outils et le menu

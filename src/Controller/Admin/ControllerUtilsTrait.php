@@ -2103,6 +2103,13 @@ trait ControllerUtilsTrait
                 return $this->json(['message' => $refusIntangible], Response::HTTP_CONFLICT);
             }
 
+            // UN SEUL RÔLE PAR FAMILLE ET PAR INVITÉ — en création comme en modification (changer
+            // le collaborateur d'un rôle peut aussi le doubler). Avant la validation seule : la
+            // saisie différée doit l'apprendre tout de suite.
+            if (($refusDoublon = \App\Service\Workspace\RoleUniqueParFamille::refus($this->em, $entity)) !== null) {
+                return $this->json(['message' => $refusDoublon, 'errors' => ['' => [$refusDoublon]]], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
             // VALIDATION SEULE — le dialogue veut savoir si la saisie TIENDRAIT.
             //
             // Une collection dont le parent n'existe pas encore garde ses éléments en

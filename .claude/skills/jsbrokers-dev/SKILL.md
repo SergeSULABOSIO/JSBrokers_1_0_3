@@ -106,11 +106,18 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
   `PisteTransformationScope`, `getCotationMontantCommissionTtc`) ; l'écran, Ket, la reprise et
   les mouvements l'appellent — jamais une copie.
 - **UN ENFANT NE NAÎT PAS ORPHELIN** (Serge, 2026-10-30) : une entité qui n'a de sens que rattachée
-  (tranche, avenant, revenu, proposition, rôle… — 17 au registre) se déclare dans
+  (tranche, avenant, revenu, proposition, pièce… — 12 au registre) se déclare dans
   `App\Service\Workspace\ParentObligatoire` ; l'écran, le serveur (`handleFormSubmission`, 422
   qui dit où créer) et Ket (`WorkspaceMutationService` : parent à demander dès l'analyse, blocage à l'écriture) lisent ce seul
   registre. Garde-fou `ParentObligatoireTest` : un enfant dont le formulaire ne laisse pas
   choisir le parent est déclaré, ou exempté avec son motif.
+  **Une entité entre au registre des entités dépendantes quand son formulaire ne permet pas de
+  choisir son parent ; si le formulaire impose le parent (obligatoire ET contrôlé par le
+  serveur), la création depuis la liste principale reste permise** — elle va alors dans
+  `ParentObligatoire::PARENT_CHOISI` (le serveur exige le parent, l'écran ne masque rien). Cas
+  des rôles RolesEn* : sans collaborateur nommé, AuditableTrait posait l'invité connecté (rôle
+  muet pour soi-même) ; un second rôle de la même famille est refusé
+  (`RoleUniqueParFamille` : droits = union des rôles, un doublon rendait un retrait sans effet).
 - **Le serveur garantit la règle** ; l'écran l'annonce (bouton masqué ou expliqué) mais ne la remplace pas.
 - Tests de parité opposables : `PariteEcranKetTest` (manifeste `CouvertureDesEcrans`),
   `CoherenceChipsAssistantTest`, `ReversementPariteEcranKetTest`, `ResponsableDePistePariteTest`.

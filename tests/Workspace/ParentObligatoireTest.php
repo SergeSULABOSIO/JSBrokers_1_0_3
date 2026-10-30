@@ -233,7 +233,8 @@ class ParentObligatoireTest extends WebTestCase
         $canevas = static::getContainer()->get(FormCanvasProvider::class);
 
         self::assertSame('cotation', $canevas->getCanvas(new Tranche(), $s['entreprise'])['parametres']['creation_depuis_le_parent'] ?? null);
-        self::assertSame('invite', $canevas->getCanvas(new RolesEnFinance(), $s['entreprise'])['parametres']['creation_depuis_le_parent'] ?? null);
+        // Le formulaire d'un rôle CHOISIT le collaborateur (PARENT_CHOISI) : la liste garde « Ajouter ».
+        self::assertArrayNotHasKey('creation_depuis_le_parent', $canevas->getCanvas(new RolesEnFinance(), $s['entreprise'])['parametres'] ?? []);
         self::assertArrayNotHasKey('creation_depuis_le_parent', $canevas->getCanvas(new Client(), $s['entreprise'])['parametres'] ?? []);
     }
 

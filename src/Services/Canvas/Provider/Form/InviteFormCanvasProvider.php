@@ -4,6 +4,7 @@ namespace App\Services\Canvas\Provider\Form;
 
 use App\Entity\Invite;
 use App\Entity\Utilisateur;
+use App\Service\Workspace\RoleUniqueParFamille;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
@@ -214,6 +215,11 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
                 'formTitle' => 'Rôle en Administration', 'ongletTitre' => 'Administration', 'parentFieldName' => 'invite'
             ],
         ];
+        // UN SEUL RÔLE PAR FAMILLE : l'onglet d'une famille déjà pourvue n'offre pas un second
+        // rôle que le serveur refuserait — le « + » cède la place à la même phrase.
+        foreach ($collectionsConfig as $i => $config) {
+            $collectionsConfig[$i]['ajoutImpossible'] = RoleUniqueParFamille::motifSiDejaPose($object, $config['fieldName']);
+        }
 
         // Rémunération de l'agent sur les affaires qu'il apporte. `parentFieldName` =
         // `agent` : le ManyToOne par lequel la condition désigne son bénéficiaire, donc
