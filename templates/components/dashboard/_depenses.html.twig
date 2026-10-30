@@ -68,6 +68,8 @@
 <nav id="dbDepCtxMenu" class="context-menu" aria-label="Menu contextuel dépense" style="display:none;"
      data-action="mousedown->geste#arreter">
     <ul role="menu" class="list-unstyled mb-0">
+        {# Création : la décision unique du serveur (DecisionDeCreation) — absente si elle serait refusée. #}
+        {% if creation_offerte('DepenseCourtier') %}
         <li role="menuitem" tabindex="-1" id="dbDepCtxAddItem"
             class="d-flex align-items-center gap-2 px-3 py-2" style="cursor:pointer;"
             data-entreprise-id="{{ entreprise.id }}" data-invite-id="{{ currentInviteId }}">
@@ -77,6 +79,7 @@
             <span class="flex-grow-1">Ajouter une dépense</span>
         </li>
         <li role="separator" class="separator"></li>
+        {% endif %}
         <li role="menuitem" tabindex="-1" id="dbDepCtxEditItem"
             class="d-flex align-items-center gap-2 px-3 py-2" style="cursor:pointer;">
             <span class="context-menu-icon" aria-hidden="true">

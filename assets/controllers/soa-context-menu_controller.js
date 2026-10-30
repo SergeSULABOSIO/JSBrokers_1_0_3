@@ -97,6 +97,8 @@ export default class extends Controller {
         clientId: Number,
         clientNom: String,
         apercuUrl: String,
+        // { section: bool } — la décision de création du serveur ; une section absente n'offre rien.
+        creationsOffertes: Object,
     };
 
     connect() {
@@ -221,7 +223,8 @@ export default class extends Controller {
         // les actions de création exigent d'être dans le tableau de la section.
         const visible = config.items.filter((key) => {
             if (key === 'edit' || key === 'delete' || key === 'documents') return hasRow;
-            if (key === 'create') return config.pisteCreate ? hasRow : inTable;
+            // Créer : seulement si le serveur l'offre pour cette section (DecisionDeCreation).
+            if (key === 'create') return this.creationsOffertesValue[section] === true && (config.pisteCreate ? hasRow : inTable);
             return true;
         });
 

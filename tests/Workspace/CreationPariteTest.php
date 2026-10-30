@@ -358,6 +358,107 @@ class CreationPariteTest extends WebTestCase
         self::assertResponseIsSuccessful();
     }
 
+    /**
+     * LE TABLEAU DE BORD SUIT LA MÊME RÈGLE (commit 3) : chacun de ses boutons de création est
+     * rendu si, et seulement si, le serveur accepte la création qu'il enverrait — verdict obtenu
+     * en la postant sous le même lecteur.
+     */
+    public function testLeTableauDeBordNOffreQueCeQueLeServeurAccepte(): void
+    {
+        $s = $this->semer();
+        // [bloc, marqueur dans le rendu, entité, champ du parent posté, identifiant du parent]
+        $boutons = [
+            ['workspace', 'dbPisteNew', 'Piste', null, null],
+            ['workspace', 'dbBordNew', 'Bordereau', null, null],
+            ['workspace', 'dbNoteNew', 'Note', null, null],
+            ['workspace', 'dbSinistreNew', 'NotificationSinistre', null, null],
+            ['block/tasks', 'dbTaskNew', 'Tache', null, null],
+            ['block/tasks', 'dbTaskCtxFeedback', 'Feedback', 'tache', $s['tache']],
+            ['block/users', '["invite",', 'Invite', null, null],
+            ['block/top-lists', '["assureur",', 'Assureur', null, null],
+            ['block/top-lists', '["client",', 'Client', null, null],
+            ['block/top-lists', '["risque",', 'Risque', null, null],
+            ['block/top-lists', '["partenaire",', 'Partenaire', null, null],
+            ['block/depenses', 'id="dbDepCtxAddItem"', 'DepenseCourtier', null, null],
+            ['block/notes', 'id="dbNoteCtxAddPaiementItem"', 'Paiement', null, null],
+            ['block/renewals', 'data-peut-creer-piste="1"', 'Piste', null, null],
+        ];
+        $ecarts = [];
+        foreach (['propriétaire' => $s['owner'], 'collaborateur' => $s['guest']] as $qui => $utilisateur) {
+            $this->connecter($utilisateur);
+            $rendus = [];
+            foreach ($boutons as [$bloc, $marqueur, $entite, $champ, $parent]) {
+                if (!isset($rendus[$bloc])) {
+                    $this->client->request('GET', "/admin/entreprise_dashbord/$bloc/{$s['entreprise']}");
+                    self::assertResponseIsSuccessful("$qui · $bloc");
+                    $rendus[$bloc] = (string) $this->client->getResponse()->getContent();
+                }
+                $affiche = str_contains($rendus[$bloc], $marqueur);
+                $fermee = $this->porteFermee(strtolower($entite), $champ !== null ? [$champ => (string) $parent] : []);
+                if ($affiche === $fermee) {
+                    $ecarts[] = sprintf('%s · %s (%s) : bouton %s, serveur %s', $qui, $bloc, $entite, $affiche ? 'affiché' : 'absent', $fermee ? 'refuse' : 'accepte');
+                }
+            }
+            // Le collaborateur écrit les pistes (et les clients), pas les notes : la preuve joue dans les deux sens.
+            if ($qui === 'collaborateur') {
+                self::assertStringContainsString('dbPisteNew', $rendus['workspace']);
+                self::assertStringNotContainsString('dbNoteNew', $rendus['workspace']);
+            }
+        }
+
+        self::assertSame([], $ecarts);
+    }
+
+    /**
+     * Le menu du relevé de compte et le bouton « Facturer » de l'analyse d'un bordereau suivent la
+     * même règle : ce qu'ils offrent, le serveur l'accepte (et rien d'autre).
+     */
+    public function testLeReleveDeCompteEtLAnalyseNOffrentQueCeQueLeServeurAccepte(): void
+    {
+        $s = $this->semer();
+        $em = $this->em();
+        $client = (int) $em->getConnection()->fetchOne('SELECT id FROM client WHERE entreprise_id = ?', [$s['entreprise']]);
+        $bordereau = (new \App\Entity\Bordereau())->setNom('Bordereau parité')->setReference('BDX-PARITE-1')
+            ->setReceivedAt(new \DateTimeImmutable('today'))->setPeriodeDebut(new \DateTimeImmutable('-30 days'))
+            ->setPeriodeFin(new \DateTimeImmutable('today'))->setAssureur($em->find(Assureur::class, $s['assureur']));
+        $bordereau->setEntreprise($em->find(Entreprise::class, $s['entreprise']))->setInvite($em->find(Invite::class, $s['proprio']));
+        $em->persist($bordereau);
+        $em->flush();
+        $idBordereau = (int) $bordereau->getId();
+        $em->clear();
+
+        $ecarts = [];
+        foreach (['propriétaire' => $s['owner'], 'collaborateur' => $s['guest']] as $qui => $utilisateur) {
+            $this->connecter($utilisateur);
+
+            $this->client->request('GET', "/admin/soa/client/$client/workspace");
+            self::assertResponseIsSuccessful("$qui · relevé de compte");
+            $reponse = (string) $this->client->getResponse()->getContent();
+            $html = json_decode($reponse, true)['html'] ?? $reponse;
+            self::assertMatchesRegularExpression('/data-soa-context-menu-creations-offertes-value="([^"]*)"/', $html);
+            preg_match('/data-soa-context-menu-creations-offertes-value="([^"]*)"/', $html, $m);
+            $offertes = json_decode(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5), true);
+            foreach (['contacts' => ['contact', ['client' => (string) $client]], 'cross-nouveaux' => ['piste', []]] as $section => [$route, $corps]) {
+                $fermee = $this->porteFermee($route, $corps);
+                if (($offertes[$section] ?? null) === $fermee) {
+                    $ecarts[] = sprintf('%s · relevé de compte, %s : %s, serveur %s', $qui, $section, $offertes[$section] ? 'offert' : 'absent', $fermee ? 'refuse' : 'accepte');
+                }
+            }
+
+            $this->client->request('GET', "/admin/bordereau/analyse/$idBordereau");
+            self::assertResponseIsSuccessful("$qui · analyse du bordereau");
+            $reponse = (string) $this->client->getResponse()->getContent();
+            $html = json_decode($reponse, true)['html'] ?? $reponse;
+            $facturer = str_contains($html, 'bordereau-analysis#createFacture');
+            $fermee = $this->porteFermee('note', []);
+            if ($facturer === $fermee) {
+                $ecarts[] = sprintf('%s · analyse du bordereau, « Facturer » : %s, serveur %s', $qui, $facturer ? 'offert' : 'absent', $fermee ? 'refuse' : 'accepte');
+            }
+        }
+
+        self::assertSame([], $ecarts);
+    }
+
     public function testUnReversementNeNaitPasDuFormulaireGenerique(): void
     {
         $s = $this->semer();

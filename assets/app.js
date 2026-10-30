@@ -272,6 +272,19 @@ function fermerMenuDuTableauDeBord(menu) {
         if (pisteLabel) {
             pisteLabel.textContent = _pid ? 'Modifier la piste de renouvellement' : 'Créer une piste de renouvellement';
         }
+        // L'entrée CRÉE ou MODIFIE selon la ligne : le serveur a dit ce qui est permis
+        // (décision unique de création, droit de modification) ; une entrée qui mènerait à
+        // un refus n'est pas offerte.
+        var pisteItem = document.getElementById('dbRenewCtxPisteItem');
+        if (pisteItem) {
+            var permise = _pid ? pisteItem.dataset.peutModifierPiste === '1' : pisteItem.dataset.peutCreerPiste === '1';
+            pisteItem.style.display = permise ? '' : 'none';
+            // Son séparateur part avec elle : un menu ne commence pas par un trait.
+            var separateur = pisteItem.nextElementSibling;
+            if (separateur && separateur.getAttribute('role') === 'separator') {
+                separateur.style.display = permise ? '' : 'none';
+            }
+        }
 
         var nrLabel = document.getElementById('dbRenewCtxNoRenewalLabel');
         if (nrLabel) {

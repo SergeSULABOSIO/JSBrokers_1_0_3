@@ -401,8 +401,10 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
     instants » (`ketDisponible` du point d'état) et la console (Tableau de bord → Supervision)
     « Worker de Ket : ABSENT » — en dev comme en prod. Tests : `WorkerDeKetTest`,
     `assistant-etapes.test.mjs`.
-- Vérifications faites en production (chantier 1) : requêtes REGEXP de détection des charges
-  dans les champs texte (lecture seule, phpMyAdmin) — aucune trace, contre-épreuve valide ;
+- Vérifications faites en production : détection des textes piégés dans TOUTES les colonnes de
+  texte (291 colonnes, 85 tables ; requête générée depuis le schéma, lecture seule, phpMyAdmin),
+  passée par Serge le **2026-10-30** — contre-épreuve 1/1/0, aucune ligne (la mention antérieure
+  « chantier 1 » n'avait pas de trace) ; file `async` vide, `ASSISTANT_ASYNC=0`, `IMPORT_ASYNC=0` ;
   journal du limiteur du formulaire de contact `var/log/contact-AAAA-MM-JJ.log` (IP retenue =
   `REMOTE_ADDR`, pas de proxy, `TRUSTED_PROXIES` vide).
 

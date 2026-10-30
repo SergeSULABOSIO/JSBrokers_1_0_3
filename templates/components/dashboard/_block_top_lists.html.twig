@@ -10,6 +10,8 @@
     <summary class="d-flex align-items-center gap-2 px-3 py-2">
         <twig:UX:Icon name="wpf:security-checked" style="width:14px;height:14px;color:#0047AB;" />
         <span class="small fw-semibold" style="color:#0047AB;">Top assureurs</span>
+        {# Création : la décision unique du serveur (DecisionDeCreation) — absente si elle serait refusée. #}
+        {% if creation_offerte('Assureur') %}
         <button class="db-block-add-btn ms-auto me-1"
                 data-entreprise-id="{{ entreprise.id }}"
                 data-invite-id="{{ currentInviteId }}"
@@ -17,6 +19,8 @@
                 title="Nouvel assureur" aria-label="Nouvel assureur">
             <twig:UX:Icon name="gridicons:add" style="width:13px;height:13px;color:#0047AB;" />
         </button>
+        {% else %}<span class="ms-auto" aria-hidden="true"></span>
+        {% endif %}
         <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron"
                       style="width:15px;height:15px;color:#6c757d;" />
     </summary>
@@ -138,6 +142,8 @@
     <summary class="d-flex align-items-center gap-2 px-3 py-2">
         <twig:UX:Icon name="hugeicons:user-group" style="width:14px;height:14px;color:#198754;" />
         <span class="small fw-semibold" style="color:#198754;">Top assurés</span>
+        {# Création : la décision unique du serveur (DecisionDeCreation) — absente si elle serait refusée. #}
+        {% if creation_offerte('Client') %}
         <button class="db-block-add-btn ms-auto me-1"
                 data-entreprise-id="{{ entreprise.id }}"
                 data-invite-id="{{ currentInviteId }}"
@@ -145,6 +151,8 @@
                 title="Nouveau client" aria-label="Nouveau client">
             <twig:UX:Icon name="gridicons:add" style="width:13px;height:13px;color:#0047AB;" />
         </button>
+        {% else %}<span class="ms-auto" aria-hidden="true"></span>
+        {% endif %}
         <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron"
                       style="width:15px;height:15px;color:#6c757d;" />
     </summary>
@@ -267,6 +275,8 @@
     <summary class="d-flex align-items-center gap-2 px-3 py-2">
         <twig:UX:Icon name="ant-design:product-filled" style="width:14px;height:14px;color:#e69500;" />
         <span class="small fw-semibold" style="color:#e69500;">Top Risques</span>
+        {# Création : la décision unique du serveur (DecisionDeCreation) — absente si elle serait refusée. #}
+        {% if creation_offerte('Risque') %}
         <button class="db-block-add-btn ms-auto me-1"
                 data-entreprise-id="{{ entreprise.id }}"
                 data-invite-id="{{ currentInviteId }}"
@@ -274,6 +284,8 @@
                 title="Nouveau risque" aria-label="Nouveau risque">
             <twig:UX:Icon name="gridicons:add" style="width:13px;height:13px;color:#0047AB;" />
         </button>
+        {% else %}<span class="ms-auto" aria-hidden="true"></span>
+        {% endif %}
         <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron"
                       style="width:15px;height:15px;color:#6c757d;" />
     </summary>
@@ -396,6 +408,8 @@
     <summary class="d-flex align-items-center gap-2 px-3 py-2">
         <twig:UX:Icon name="carbon:partnership" style="width:14px;height:14px;color:#495057;" />
         <span class="small fw-semibold" style="color:#495057;">Top Intermédiaires</span>
+        {# Création : la décision unique du serveur (DecisionDeCreation) — absente si elle serait refusée. #}
+        {% if creation_offerte('Partenaire') %}
         <button class="db-block-add-btn ms-auto me-1"
                 data-entreprise-id="{{ entreprise.id }}"
                 data-invite-id="{{ currentInviteId }}"
@@ -403,6 +417,8 @@
                 title="Nouvel intermédiaire" aria-label="Nouvel intermédiaire">
             <twig:UX:Icon name="gridicons:add" style="width:13px;height:13px;color:#0047AB;" />
         </button>
+        {% else %}<span class="ms-auto" aria-hidden="true"></span>
+        {% endif %}
         <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron"
                       style="width:15px;height:15px;color:#6c757d;" />
     </summary>

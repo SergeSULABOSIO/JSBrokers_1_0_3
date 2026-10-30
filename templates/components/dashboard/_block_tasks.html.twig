@@ -44,6 +44,8 @@
         <div class="d-flex align-items-center gap-2 mb-1">
             <twig:UX:Icon name="hugeicons:task-02" style="width:14px;height:14px;color:#0047AB;" />
             <span class="small fw-semibold" style="color:#0047AB;">Tâches</span>
+            {# Création : la décision unique du serveur (DecisionDeCreation) — absente si elle serait refusée. #}
+            {% if creation_offerte('Tache') %}
             <button class="db-task-new-btn ms-auto"
                     data-infobulle="{{ "Créer une nouvelle tâche"|json_encode|e('html_attr') }}" data-infobulle-placement="bouton"
                     data-entreprise-id="{{ entreprise.id }}"
@@ -52,6 +54,8 @@
                     aria-label="Nouvelle tâche">
                 <twig:UX:Icon name="gridicons:add" style="width:15px;height:15px;color:#0047AB;" />
             </button>
+            {% else %}<span class="ms-auto" aria-hidden="true"></span>
+            {% endif %}
             <button class="db-task-new-btn"
                     data-infobulle="{{ "Voir toutes les tâches"|json_encode|e('html_attr') }}" data-infobulle-placement="bouton"
                     data-action="click->geste#naviguer:stop" data-geste-component-param="_view_manager_marketing.html.twig" data-geste-group-param="Marketing" data-geste-entity-param="Tache"
@@ -209,6 +213,8 @@
             <span class="flex-grow-1">Modifier la tâche</span>
         </li>
         <li role="separator" class="separator"></li>
+        {# Création : la décision unique du serveur (DecisionDeCreation) — absente si elle serait refusée. #}
+        {% if creation_offerte('Feedback', 'tache') %}
         <li role="menuitem" tabindex="-1"
             data-action="click->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbTaskCtxFeedback"
             class="d-flex align-items-center gap-2 px-3 py-2" style="cursor:pointer;">
@@ -218,6 +224,7 @@
             <span class="flex-grow-1">Donner un feedback</span>
         </li>
         <li role="separator" class="separator"></li>
+        {% endif %}
         <li role="menuitem" tabindex="-1"
             data-action="click->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbTaskCtxClose"
             class="d-flex align-items-center gap-2 px-3 py-2 is-danger" style="cursor:pointer;">

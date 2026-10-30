@@ -149,6 +149,9 @@
                         <span>Valider</span>
                     </button>
 
+                    {# « Facturer » crée une note : la décision unique de création (DecisionDeCreation).
+                       Absent si elle serait refusée — le contrôleur tolère son absence. #}
+                    {% if creation_offerte('Note', 'bordereau') %}
                     <button type="button"
                             class="btn btn-primary d-inline-flex align-items-center gap-2 d-none"
                             data-bordereau-analysis-target="factureButton"
@@ -157,6 +160,7 @@
                         <twig:UX:Icon name="{{ resolve_icon_name('note') }}" width="18px" height="18px" />
                         <span>Facturer</span>
                     </button>
+                    {% endif %}
 
 
                     <button type="button"

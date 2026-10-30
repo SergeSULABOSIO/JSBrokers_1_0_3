@@ -4,6 +4,8 @@ namespace App\Twig\Extension;
 
 use App\Entity\Invite;
 use App\Entity\Utilisateur;
+use App\Service\Workspace\CabinetActif;
+use App\Service\Workspace\DecisionDeCreation;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use Symfony\Bundle\SecurityBundle\Security;
 use Twig\Extension\AbstractExtension;
@@ -23,6 +25,9 @@ class WorkspaceAccessExtension extends AbstractExtension
     public function __construct(
         private readonly Security $security,
         private readonly WorkspaceAccessResolver $resolver,
+        private readonly DecisionDeCreation $decisionDeCreation,
+        // Le cabinet OUVERT, celui que juge le serveur (mémorisé le temps de la requête).
+        private readonly CabinetActif $cabinetActif,
     ) {
     }
 
@@ -33,6 +38,7 @@ class WorkspaceAccessExtension extends AbstractExtension
             new TwigFunction('workspace_can_read', [$this, 'canRead']),
             new TwigFunction('workspace_can_manage_invites', [$this, 'canManageInvites']),
             new TwigFunction('workspace_est_administrateur', [$this, 'estAdministrateur']),
+            new TwigFunction('creation_offerte', [$this, 'creationOfferte']),
         ];
     }
 
@@ -65,6 +71,23 @@ class WorkspaceAccessExtension extends AbstractExtension
         $invite = $this->currentInvite();
 
         return $invite !== null && $this->resolver->estAdministrateurDuCabinet($invite);
+    }
+
+    /**
+     * « Peut-on créer cette fiche d'ici ? » — LA décision unique (DecisionDeCreation), pour les
+     * boutons de création rendus hors d'une liste : tableau de bord, relevé de compte, analyse
+     * d'un bordereau. Un bouton qui mènerait à un refus du serveur n'est pas rendu.
+     *
+     * @param string      $entite      nom court de l'entité (« Piste », « Feedback »)
+     * @param string|null $champParent le champ par lequel le bouton rattache la fiche à son
+     *                                 parent (« tache » pour un feedback), null sinon
+     */
+    public function creationOfferte(string $entite, ?string $champParent = null): bool
+    {
+        $entreprise = $this->cabinetActif->entreprise();
+
+        return $entreprise !== null
+            && $this->decisionDeCreation->pour('App\\Entity\\' . $entite, $entreprise, $champParent)['offert'];
     }
 
     private function currentInvite(): ?Invite

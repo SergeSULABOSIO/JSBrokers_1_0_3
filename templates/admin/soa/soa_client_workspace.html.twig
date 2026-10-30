@@ -154,7 +154,11 @@
      data-soa-context-menu-id-invite-value="{{ idInvite }}"
      data-soa-context-menu-client-id-value="{{ client.id }}"
      data-soa-context-menu-client-nom-value="{{ client.nom }}"
-     data-soa-context-menu-apercu-url-value="{{ apercuUrl }}">
+     data-soa-context-menu-apercu-url-value="{{ apercuUrl }}"
+     {# Les créations que le menu peut offrir, section par section : la décision unique du
+        serveur (DecisionDeCreation) — un contact naît rattaché au client, une piste de vente
+        croisée aussi. #}
+     data-soa-context-menu-creations-offertes-value="{{ {'contacts': creation_offerte('Contact', 'client'), 'cross-nouveaux': creation_offerte('Piste')}|json_encode|e('html_attr') }}">
 
     <nav class="soa-actions-bar" aria-label="Actions du relevé de compte">
         <button type="button"

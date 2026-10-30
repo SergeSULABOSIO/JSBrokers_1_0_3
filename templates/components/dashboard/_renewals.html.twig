@@ -62,6 +62,8 @@
      data-action="mousedown->geste#arreter">
     <ul role="menu" class="list-unstyled mb-0">
         <li role="menuitem" tabindex="-1" id="dbRenewCtxPisteItem"
+            data-peut-creer-piste="{{ creation_offerte('Piste') ? 1 : 0 }}"
+            data-peut-modifier-piste="{{ workspace_can('Piste', constant('App\\Entity\\Invite::ACCESS_MODIFICATION')) ? 1 : 0 }}"
             data-action="click->tableau-de-bord#appeler" data-tableau-de-bord-fonction-param="dbRenewCtxPiste"
             class="d-flex align-items-center gap-2 px-3 py-2" style="cursor:pointer;">
             <span class="context-menu-icon" aria-hidden="true">

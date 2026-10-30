@@ -135,6 +135,14 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
     pas une proposition, qui naît de sa piste). La barre d'outils et le menu contextuel la lisent
     (`ajout-regles.js#ajoutOffert`, fermé par défaut) ; l'état vide, les collections des dialogues
     (`droitsSurLaCollection`), Ket (`ouvrir_dialogue`, `dialog-context`) aussi.
+  - **Hors d'une liste** (tableau de bord, relevé de compte, analyse d'un bordereau…) : la fonction
+    Twig `creation_offerte('Entite', 'champDuParent'|null)` (`WorkspaceAccessExtension`) — un
+    bouton de création n'est rendu que si elle répond oui. Un « + » à `ms-auto` retiré laisse une
+    cale (`<span class="ms-auto">`) pour ne pas déplacer ses voisins ; une entrée de menu qui crée
+    OU modifie selon la ligne reçoit `data-peut-creer-…`/`data-peut-modifier-…` et le JS choisit à
+    l'ouverture. Un menu configuré en JS reçoit du serveur la liste des créations offertes
+    (`creationsOffertes` du menu du relevé de compte). Garde-fou : `CreationPariteTest`
+    (tableau de bord, relevé de compte, analyse : bouton rendu ⇔ serveur accepte).
   - Le serveur refuse par la MÊME fonction, dès l'entrée de `handleFormSubmission` (contexte lu
     dans le POST : le parent du registre y est-il nommé ? une saisie différée l'a « promis »).
   - « Ajouter » est ABSENT là où la décision le refuse, pas grisé. Le « + » d'une collection dont

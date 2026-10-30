@@ -88,6 +88,8 @@
             <span class="flex-grow-1">Télécharger PDF</span>
         </li>
         <li role="separator" class="separator"></li>
+        {# Création : la décision unique du serveur (DecisionDeCreation) — absente si elle serait refusée. #}
+        {% if creation_offerte('Paiement', 'note') %}
         <li role="menuitem" tabindex="-1" id="dbNoteCtxAddPaiementItem"
             class="d-flex align-items-center gap-2 px-3 py-2" style="cursor:pointer;">
             <span class="context-menu-icon" aria-hidden="true">
@@ -96,6 +98,7 @@
             <span class="flex-grow-1">Ajouter un paiement</span>
         </li>
         <li role="separator" class="separator"></li>
+        {% endif %}
         <li role="menuitem" tabindex="-1" id="dbNoteCtxDeleteItem"
             class="d-flex align-items-center gap-2 px-3 py-2 is-danger" style="cursor:pointer;">
             <span class="context-menu-icon" aria-hidden="true">

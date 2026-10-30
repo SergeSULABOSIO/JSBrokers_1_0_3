@@ -17,6 +17,8 @@
               aria-label="{{ entreprise.invites|length }} membres">
             {{ entreprise.invites|length }}
         </span>
+        {# Création : la décision unique du serveur (DecisionDeCreation) — absente si elle serait refusée. #}
+        {% if creation_offerte('Invite') %}
         <button class="db-block-add-btn"
                 data-infobulle="{{ "Inviter un nouveau collaborateur"|json_encode|e('html_attr') }}" data-infobulle-placement="bouton"
                 data-entreprise-id="{{ entreprise.id }}"
@@ -25,6 +27,7 @@
                 aria-label="Ajouter un invité">
             <twig:UX:Icon name="gridicons:add" aria-hidden="true" style="width:15px;height:15px;color:#0047AB;" />
         </button>
+        {% endif %}
         <button class="db-block-add-btn"
                 data-infobulle="{{ "Voir tous les membres de l'équipe"|json_encode|e('html_attr') }}" data-infobulle-placement="bouton"
                 data-action="click->geste#naviguer:stop" data-geste-component-param="_view_manager_administration.html.twig" data-geste-group-param="Administration" data-geste-entity-param="Invite"
