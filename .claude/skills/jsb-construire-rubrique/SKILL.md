@@ -44,8 +44,10 @@ local et proposée (§6) ; questions métier posées à Serge **avant** de coder
 
 **1. Modèle et règles.** Entités, migration (jouée aussi en DEV : des tests verts ne prouvent
 rien sur la base dev), règles en source unique, tout identifiant venu de la requête par
-`AppartenanceAuCabinet` (`exigerLeCabinetOuvert`, :88). Sortie : schéma validé, migration
-jouée en test ET en dev, règle écrite une seule fois.
+`AppartenanceAuCabinet` (`exigerLeCabinetOuvert`, :88). **Une entité qui n'a de sens que
+rattachée à un parent** (tranche, avenant, rôle…) se déclare dans `ParentObligatoire` : elle ne
+se crée que depuis son parent (Serge, 2026-10-30). Sortie : schéma validé, migration
+jouée en test ET en dev, règle écrite une seule fois, entité dépendante déclarée.
 
 **2. Serveur.** Canevas d'entité, de liste, de formulaire ; stratégie d'indicateurs ;
 contrôleur sur `ControllerUtilsTrait` ; gardes serveur ; valeurs de naissance et services
@@ -90,6 +92,7 @@ ici ou dans une skill sœur, la skill est corrigée **dans le même chantier**.
 | « Mon portefeuille » | Confort de lecture, pas une frontière | `PortefeuilleScope.php:121`, `ResponsableDePiste.php:19` | `ResponsableDePistePariteTest`, `PortefeuilleDescendantsDePisteTest` |
 | Source unique du métier | Étapes du pipe | `PisteTransformationScope.php` : seuil :55, `ETAPES` :85, `etapeDe` :122 | `JSBDynamicSearchServicePisteEtapesTest`, `AgregatPistesParEtapeTest` |
 | Outils Ket | Même règle, autre surface | `SaisirPropositionTool`, `SouscrireCotationTool`, `PreparerOperationsTool` ; manifeste `CouvertureDesEcrans.php:111-117` | `PariteEcranKetTest`, `KetPeripherePariteTest` |
+| Création depuis le parent | Une entité dépendante ne naît pas orpheline : « Ajouter » ABSENT de sa liste principale (présent dans l'onglet contextuel de SON parent, `champParent`), création sans parent refusée par le serveur (écran, après le `dry_run`) et par Ket (champ manquant à l'analyse, blocage à l'écriture) | registre `App\Service\Workspace\ParentObligatoire` → `parametres.creation_depuis_le_parent` (`FormCanvasProvider`) ; décision `ajout-regles.js` (`ajoutOffert`) | `ParentObligatoireTest` (registre ↔ collections des canevas, exhaustivité), `tests/js/ajout-regles.test.mjs` |
 | Cloisonnement | Tout id venu de la requête | `AppartenanceAuCabinet.php:64`, :88, :132 | `CloisonnementDesIdentifiantsTest` + `SemisDeDeuxCabinetsTrait` |
 | Visibilité propre (exception à la frontière du cabinet) | Seulement Congés et Tâches ; posée par le serveur à CHAQUE porte (moteur, fiche en 404, collection, pastille, tableau de bord, Ket), jamais par un critère d'écran | `CongeVisibiliteScope`, `TacheVisibiliteScope` + bloc du moteur `JSBDynamicSearchService` (après le cloisonnement par cabinet), `ControllerUtilsTrait::exigerUneFicheVisible` | `TacheVisibiliteScopeTest`, `TacheVisibiliteFrontiereTest` |
 | Gestes sans code dans le HTML | Politique de sécurité du navigateur : aucun `on…=`, aucun `<script>` sans nonce | `geste_controller.js` (imprimer, fermer, arreter, soumettre, confirmer, naviguer, rechargerOnglet) ; `tableau-de-bord_controller.js` (liste fermée) ; `assets/gestes-autonomes.js` (pages sans Stimulus) | `GestesSansCodeTest`, `PolitiqueCspTest` |

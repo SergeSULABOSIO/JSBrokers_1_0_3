@@ -129,12 +129,16 @@
             data-server-root-name="{{ serverRootName }}"
             data-can-add="true"
         >
-            {# Bouton « Ajouter » de l'état vide : même drapeau que la barre d'outils et le
-               menu contextuel (`creation_interdite`), pour qu'une rubrique fermée à la
-               création ne l'offre pas par une troisième porte. Le repli sur {} est
-               nécessaire : `entityFormCanvas` peut arriver vide, et l'accès en chaîne
-               lèverait avant que `default` n'ait son mot à dire. #}
-            {% set peutAjouter = (entityFormCanvas.parametres|default({})).creation_interdite|default(false) != true %}
+            {# Bouton « Ajouter » de l'état vide : mêmes drapeaux que la barre d'outils et le
+               menu contextuel (ajout-regles.js), pour qu'une rubrique fermée à la création
+               (`creation_interdite`) — ou la liste principale d'une entité qui ne naît que
+               rattachée à son parent (`creation_depuis_le_parent`) — ne l'offre pas par une
+               troisième porte. Le repli sur {} est nécessaire : `entityFormCanvas` peut
+               arriver vide, et l'accès en chaîne lèverait avant que `default` n'ait son mot. #}
+            {% set parametresDuFormulaire = entityFormCanvas.parametres|default({}) %}
+            {% set peutAjouter = parametresDuFormulaire.endpoint_submit_url|default(null) is not empty
+                and parametresDuFormulaire.creation_interdite|default(false) != true
+                and parametresDuFormulaire.creation_depuis_le_parent is not defined %}
             {# On utilise notre nouveau composant générique pour la liste principale #}
             {{ include('components/_list_manager.html.twig', {
                 'listId': 'principal',

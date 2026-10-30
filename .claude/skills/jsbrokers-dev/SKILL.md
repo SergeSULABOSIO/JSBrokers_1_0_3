@@ -105,6 +105,12 @@ type »…). Un plan qui ne cite aucun invariant sur ces sujets n'est pas prêt.
 - Une règle métier vit à UN endroit (ex. `DefautsDeSouscription`, `ResponsableDePiste`,
   `PisteTransformationScope`, `getCotationMontantCommissionTtc`) ; l'écran, Ket, la reprise et
   les mouvements l'appellent — jamais une copie.
+- **UN ENFANT NE NAÎT PAS ORPHELIN** (Serge, 2026-10-30) : une entité qui n'a de sens que rattachée
+  (tranche, avenant, revenu, proposition, rôle… — 17 au registre) se déclare dans
+  `App\Service\Workspace\ParentObligatoire` ; l'écran, le serveur (`handleFormSubmission`, 422
+  qui dit où créer) et Ket (`WorkspaceMutationService` : parent à demander dès l'analyse, blocage à l'écriture) lisent ce seul
+  registre. Garde-fou `ParentObligatoireTest` : un enfant dont le formulaire ne laisse pas
+  choisir le parent est déclaré, ou exempté avec son motif.
 - **Le serveur garantit la règle** ; l'écran l'annonce (bouton masqué ou expliqué) mais ne la remplace pas.
 - Tests de parité opposables : `PariteEcranKetTest` (manifeste `CouvertureDesEcrans`),
   `CoherenceChipsAssistantTest`, `ReversementPariteEcranKetTest`, `ResponsableDePistePariteTest`.
@@ -622,6 +628,8 @@ Inscrits le 2026-10-22 (décisions de Serge) :
     ajoutée (« Ajouter — … »), geste refusé par `toolbar#notify` et `context-menu#notify`, bouton
     survolable. Règle : **jamais `disabled` sur un bouton qui doit expliquer son refus.** Garde-fou
     `tests/js/barre-outils-desactivee.test.mjs` ; E2E souris + clavier (Conditions de partage).
+    ⚠ **« Ajouter » fait exception depuis le 2026-10-30** : là où la création n'a pas de sens, il
+    est ABSENT, pas grisé (`ajout-regles.js`, §3 « un enfant ne naît pas orphelin »).
 21. ✅ **FAIT (2026-10-26) — Plus de redirection ouverte.** `/translate/{locale}/{currentURL}`
     redirigeait vers toute adresse reçue (trois variantes prouvées : absolue, `//` sans schéma,
     encodée), après avoir écrit la langue de l'utilisateur connecté. La route ne servait plus

@@ -42,9 +42,14 @@ test('`.is-disabled` ne coupe plus les gestes du pointeur (sinon pas d’infobul
     assert.doesNotMatch(regle[1], /pointer-events:\s*none/);
 });
 
-test('le menu des listes dit le motif DE LA RUBRIQUE (creation_interdite_message), pas un texte figé', () => {
-    assert.match(menu, /creation_interdite_message/);
-    assert.doesNotMatch(menu, /Une condition de partage se crée depuis/);
+test('« Ajouter » est ABSENT là où la création n’a pas de sens, pas grisé (Serge, 2026-10-30)', () => {
+    // Une seule décision pour la barre et le menu : ajout-regles.js (rubrique fermée à la
+    // création, ou liste principale d'une entité qui ne naît que rattachée à son parent).
+    // Et le champ qui rattache l'onglet contextuel : seul l'onglet de SON parent l'offre.
+    assert.match(barre, /const canAdd = ajoutOffert\(canvasParams, this\.ongletInterne, this\.champParent\);/);
+    assert.match(menu, /btAjouterTarget\.style\.display = ajoutOffert\(this\.entityFormCanvas\?\.parametres, this\.ongletInterne \|\| 'principal', this\.champParent\)/);
+    assert.doesNotMatch(barre, /setButtonDisabled\(this\.btajouterTarget/);
+    assert.doesNotMatch(barre + menu, /creation_interdite_message/);
 });
 
 test('survolé, un bouton inactif ne prend pas l’air actif ; il ne fait pas d’onde au clic', () => {

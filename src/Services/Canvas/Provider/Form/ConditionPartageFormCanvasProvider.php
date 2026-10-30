@@ -57,10 +57,8 @@ class ConditionPartageFormCanvasProvider implements FormCanvasProviderInterface
             // Le drapeau masque « Ajouter » dans la barre d'outils, le menu contextuel et
             // l'état vide. La sécurité, elle, ne dépend pas de l'écran : le POST reste
             // gouverné par le droit « Intermédiaires » comme toute autre écriture.
+            // « Ajouter » y est ABSENT, pas grisé (ajout-regles.js, Serge 2026-10-30).
             "creation_interdite" => true,
-            // Le motif accompagne le drapeau : l'infobulle du bouton grisé doit dire OÙ
-            // l'on crée, sans quoi il ne dit que « non ».
-            "creation_interdite_message" => "Une condition de partage se crée depuis la fiche d'un partenaire, d'un invité ou d'une piste.",
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Condition de partage",

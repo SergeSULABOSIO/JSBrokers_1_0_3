@@ -91,29 +91,24 @@ class ReversementRubriqueTest extends KernelTestCase
     }
 
     /**
-     * LA CRÉATION EST FERMÉE, ET LE MOTIF EST LE SIEN.
+     * LA CRÉATION EST FERMÉE DEPUIS LA RUBRIQUE.
      *
      * Un reversement ne s'enregistre pas sans justificatif, or les pièces d'une fiche
-     * s'attachent après sa création : exiger la preuve ici serait contradictoire. Le motif
-     * doit venir du canevas — il était écrit en dur dans la barre d'outils, au nom des
-     * conditions de partage, et cette rubrique aurait renvoyé l'utilisateur « à la fiche
-     * d'un partenaire ».
+     * s'attachent après sa création : exiger la preuve ici serait contradictoire. Il naît
+     * du rapport de production ou de l'assistant.
      */
-    public function testLaCreationEstRefuseeAvecSonMotif(): void
+    public function testLaCreationEstFermeeDepuisLaRubrique(): void
     {
         self::bootKernel();
         $provider = static::getContainer()->get(ReversementRetroAgentFormCanvasProvider::class);
 
         $parametres = $provider->getCanvas(new ReversementRetroAgent(), null)['parametres'];
 
+        // « Ajouter » est ABSENT de la rubrique (ajout-regles.js, Serge 2026-10-30) : il n'y a
+        // plus de bouton grisé, donc plus de motif à afficher. Le dialogue dit, lui, où naît
+        // un reversement.
         self::assertTrue($parametres['creation_interdite']);
-        self::assertNotEmpty($parametres['creation_interdite_message']);
-        self::assertStringContainsString('rapport de production', $parametres['creation_interdite_message']);
-        self::assertStringNotContainsString(
-            'condition de partage',
-            $parametres['creation_interdite_message'],
-            'Le motif doit parler DE CETTE rubrique.',
-        );
+        self::assertStringContainsString('rapport de production', implode(' ', $parametres['description_creation']));
     }
 
     /** La fiche porte bien sa collection de justificatifs — c'est elle qui ouvre les actions. */

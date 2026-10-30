@@ -1160,11 +1160,17 @@ trait ControllerUtilsTrait
         }
         // « Ajouter » : avec les mêmes droits que la barre d'outils (création permise). JAMAIS dans
         // un onglet contextuel : ses droits d'ajout se jugent sur la collection
-        // (droitsSurLaCollection) — l'état vide ne doit pas rouvrir une porte fermée.
+        // (droitsSurLaCollection) — l'état vide ne doit pas rouvrir une porte fermée. Ni pour
+        // une entité qui ne naît que rattachée à son parent (ParentObligatoire) : la liste
+        // principale ne sait pas à quoi la rattacher.
         $formulaire = $parentContext === null
             ? $this->applyPermissionToFormCanvas($this->canvasBuilder->getEntityFormCanvas(new $entityClass(), (int) $entreprise->getId()), $entityClass)
             : ['parametres' => ['creation_interdite' => true]];
-        if (($formulaire['parametres']['creation_interdite'] ?? false) !== true) {
+        // Mêmes conditions que la barre d'outils (ajout-regles.js#ajoutOffert), droit d'écriture
+        // compris : sans lui, `applyPermissionToFormCanvas` a retiré l'URL de soumission.
+        if (!empty($formulaire['parametres']['endpoint_submit_url'])
+            && ($formulaire['parametres']['creation_interdite'] ?? false) !== true
+            && !isset($formulaire['parametres']['creation_depuis_le_parent'])) {
             $parametres += ['button_text' => 'Ajouter', 'button_action' => 'click->list-manager#requestAddItem', 'button_icon' => 'lucide:plus-circle'];
         }
 
@@ -2126,6 +2132,14 @@ trait ControllerUtilsTrait
                     // reviendra pour le pied de total, que la fiche parente n'existe pas
                     // encore n'y changeant rien.
                 ] + $this->rendreLigneEnAttente($entity, $entityClass, $data));
+            }
+
+            // UN ENFANT NE NAÎT PAS ORPHELIN (ParentObligatoire, Serge 2026-10-30) : une tranche,
+            // un avenant, un rôle… s'écrivent rattachés à leur parent, ou pas du tout. APRÈS la
+            // validation seule : une saisie différée n'a pas encore de parent, elle le reçoit au
+            // rejeu.
+            if ($isCreationMode && ($refusOrphelin = \App\Service\Workspace\ParentObligatoire::refus($entity, $data)) !== null) {
+                return $this->json(['message' => $refusOrphelin, 'errors' => ['' => [$refusOrphelin]]], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
 
             // MÉTRAGE TOKENS (écriture) + PERSISTANCE : bloquant, via le point de

@@ -309,6 +309,19 @@ class WorkspaceMutationService
             $manquants = ['validated' => [$motif]];
         }
 
+        // UN ENFANT NE NAÎT PAS ORPHELIN (ParentObligatoire) : une tranche demandée « à plat »
+        // sans sa proposition est refusée dès l'analyse — en CHAMP MANQUANT, pour que Ket
+        // demande « quelle proposition ? » au lieu de buter sur un blocage. Un parent PROMIS par
+        // le plan (`@cotation`) suffit ; un identifiant nommé mais introuvable dans le cabinet
+        // (le formulaire l'a laissé vide) est refusé de même. Créée DANS la collection de son
+        // parent, elle n'arrive pas ici (analyserCollections).
+        if ($manquants === [] && $op->isCreate() && ($champParent = ParentObligatoire::champ($copie)) !== null
+            && !in_array($champParent, $resolution['parReference'], true)
+            && ($refusOrphelin = ParentObligatoire::refusSiNonNomme($copie, $resolution['champs'])
+                ?? ParentObligatoire::refus($copie)) !== null) {
+            $manquants = [$champParent => [$refusOrphelin]];
+        }
+
         // La création est « promise » aux opérations suivantes du plan.
         if ($op->isCreate()) {
             $refs->declarer($op->ref);
@@ -600,6 +613,9 @@ class WorkspaceMutationService
                 throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelle), $this->erreurs($form));
             }
             $this->refuserLesIncoherences($entity, $op->entityShortName, $libelle, $origine);
+            if (($refusOrphelin = ParentObligatoire::refus($entity)) !== null) {
+                throw MutationException::bloque($refusOrphelin);
+            }
             if ($op->premierAvenant) {
                 $this->exigerLePremierAvenant($entity);
             }

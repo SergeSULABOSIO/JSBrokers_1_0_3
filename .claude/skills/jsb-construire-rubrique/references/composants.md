@@ -122,6 +122,16 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
   dit sa raison À L'APPUI (`expliquerUnRefus`, infobulle unique à droite) — au doigt il n'y a
   pas de survol. Un nouveau bouton de rail sans `data-libelle` fait échouer
   `DispositionColonneTroisTest`.
+- **« Ajouter » n'est offert que là où la création a un sens** (Serge, 2026-10-30) : ABSENT —
+  pas grisé — d'une rubrique fermée à la création (`creation_interdite`) et de la liste
+  PRINCIPALE d'une entité dépendante (`creation_depuis_le_parent`, registre
+  `ParentObligatoire`) ; présent dans l'onglet contextuel de SON parent seulement — le Cerveau
+  diffuse `champParent` (`parentLien.champ`) : la fiche Assureur, onglet « Cotations » (lien
+  `assureur`), n'offre pas « Ajouter », puisqu'une proposition naît de sa piste.
+  Une seule décision, `ajout-regles.js` (`ajoutOffert`), lue par la barre d'outils et le menu
+  contextuel ; l'état vide (trait + `_view_manager`) lit les mêmes clés, droit d'écriture compris
+  (`endpoint_submit_url`). Jamais de motif
+  « se crée depuis… » affiché sur un bouton grisé.
 - Toute action d'écran a son entrée au manifeste `CouvertureDesEcrans` (`PariteEcranKetTest`).
 
 ### Onglets — partagé

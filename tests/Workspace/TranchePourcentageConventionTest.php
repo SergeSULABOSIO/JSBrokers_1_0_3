@@ -3,9 +3,11 @@
 namespace App\Tests\Workspace;
 
 use App\Constantes\Constante;
+use App\Entity\Client;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Entity\Piste;
 use App\Entity\Tranche;
 use App\Entity\Utilisateur;
 use App\Form\TrancheType;
@@ -48,6 +50,8 @@ class TranchePourcentageConventionTest extends WebTestCase
         $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email = :e', ['e' => self::OWNER]);
         $conn->executeStatement('DELETE t FROM tranche t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE c FROM cotation c JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
+        $conn->executeStatement('DELETE p FROM piste p JOIN entreprise e ON p.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
+        $conn->executeStatement('DELETE c FROM client c JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE t FROM invite t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE FROM entreprise WHERE nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE FROM utilisateur WHERE email = :e', ['e' => self::OWNER]);
@@ -55,6 +59,8 @@ class TranchePourcentageConventionTest extends WebTestCase
     }
 
     /** Un utilisateur connecté à une entreprise : requis par les champs autocomplete de TrancheType. */
+    private int $piste = 0;
+
     private function login(): array
     {
         $owner = (new Utilisateur())->setEmail(self::OWNER)->setNom('P')->setVerified(true);
@@ -67,8 +73,17 @@ class TranchePourcentageConventionTest extends WebTestCase
         $inv = (new Invite())->setNom('O')->setUtilisateur($owner)->setEntreprise($ent)->setProprietaire(true);
         $this->em->persist($inv);
         $owner->setConnectedTo($ent);
+        // Une proposition ne naît que sous sa piste (ParentObligatoire).
+        $client = (new Client())->setNom('Client convention points')->setExonere(false);
+        $client->setEntreprise($ent);
+        $this->em->persist($client);
+        $piste = (new Piste())->setNom('Piste convention points')->setTypeAvenant(Piste::AVENANT_SOUSCRIPTION)
+            ->setDescriptionDuRisque('R')->setExercice(2026)->setClient($client);
+        $piste->setEntreprise($ent)->setInvite($inv);
+        $this->em->persist($piste);
         $this->em->flush();
         $this->client->loginUser($owner);
+        $this->piste = (int) $piste->getId();
 
         return [$ent, $inv];
     }
@@ -91,6 +106,7 @@ class TranchePourcentageConventionTest extends WebTestCase
             'idInvite'     => $inv->getId(),
             'nom'          => 'Cotation convention points',
             'duree'        => 12,
+            'piste'        => $this->piste,
         ]);
         $this->assertResponseIsSuccessful();
 
@@ -121,6 +137,7 @@ class TranchePourcentageConventionTest extends WebTestCase
             'idInvite'     => $inv->getId(),
             'nom'          => 'Cotation avec tranche saisie',
             'duree'        => 12,
+            'piste'        => $this->piste,
             '_en_attente'  => ['tranches' => '1'],
         ]);
         $this->assertResponseIsSuccessful();
@@ -158,6 +175,7 @@ class TranchePourcentageConventionTest extends WebTestCase
             'idInvite'     => $inv->getId(),
             'nom'          => 'Cotation avec chargements en attente',
             'duree'        => 12,
+            'piste'        => $this->piste,
             '_en_attente'  => ['chargements' => '2'],
         ]);
         $this->assertResponseIsSuccessful();

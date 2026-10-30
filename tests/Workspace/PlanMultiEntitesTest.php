@@ -105,6 +105,17 @@ class PlanMultiEntitesTest extends WebTestCase
         return $ch;
     }
 
+    /** Une proposition ne naît que sous sa piste (ParentObligatoire) : la piste existante du plan. */
+    private function seedPiste(Entreprise $ent, Invite $inv): int
+    {
+        $piste = (new Piste())->setNom('Piste du plan')->setTypeAvenant(Piste::AVENANT_SOUSCRIPTION)->setDescriptionDuRisque('R')->setExercice(2026);
+        $piste->setEntreprise($ent)->setInvite($inv);
+        $this->em->persist($piste);
+        $this->em->flush();
+
+        return (int) $piste->getId();
+    }
+
     // ───────────────────────── Chaînage par référence ─────────────────────────
 
     /**
@@ -374,6 +385,7 @@ class PlanMultiEntitesTest extends WebTestCase
         $type = $this->seedChargementType($ent, $inv, 'Prime nette');
         $this->em->flush();
         $typeId = $type->getId();
+        $piste = $this->seedPiste($ent, $inv);
         $this->client->loginUser($owner);
 
         $result = $this->preparer->execute(['operations' => [
@@ -383,7 +395,7 @@ class PlanMultiEntitesTest extends WebTestCase
             ],
             [
                 'op' => 'create', 'entite' => 'Cotation', 'etape' => 'La proposition',
-                'champs' => ['nom' => 'Offre budget', 'duree' => 12],
+                'champs' => ['nom' => 'Offre budget', 'duree' => 12, 'piste' => $piste],
                 'collections' => [[
                     'collection' => 'chargements',
                     'elements' => [
@@ -427,10 +439,11 @@ class PlanMultiEntitesTest extends WebTestCase
     {
         [$ent, $inv, $owner] = $this->seedWorkspace();
         $this->em->flush();
+        $piste = $this->seedPiste($ent, $inv);
         $this->client->loginUser($owner);
 
         $result = $this->preparer->execute(['operations' => [
-            ['op' => 'create', 'entite' => 'Cotation', 'champs' => ['nom' => 'Offre nue', 'duree' => 12]],
+            ['op' => 'create', 'entite' => 'Cotation', 'champs' => ['nom' => 'Offre nue', 'duree' => 12, 'piste' => $piste]],
         ]], new AiScope($ent, $inv));
 
         $this->assertTrue($result->data['pret']);
@@ -467,11 +480,12 @@ class PlanMultiEntitesTest extends WebTestCase
         $type = $this->seedChargementType($ent, $inv, 'Prime nette');
         $this->em->flush();
         $typeId = $type->getId();
+        $piste = $this->seedPiste($ent, $inv);
         $this->client->loginUser($owner);
 
         $result = $this->preparer->execute(['operations' => [[
             'op' => 'create', 'entite' => 'Cotation', 'etape' => 'La proposition',
-            'champs' => ['nom' => 'Offre SUNU', 'duree' => 12],
+            'champs' => ['nom' => 'Offre SUNU', 'duree' => 12, 'piste' => $piste],
             'collections' => [[
                 'collection' => 'chargements',
                 'elements' => [

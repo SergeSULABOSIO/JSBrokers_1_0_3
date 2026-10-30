@@ -2,6 +2,7 @@ import { Controller } from '@hotwired/stimulus';
 import { actionsVisibles, grouperActions, urlAction } from './actions-groupees.js';
 import { CircuitIcones } from './circuit-icones.js';
 import { MenuContextuel } from './menu-contextuel.js';
+import { ajoutOffert } from './ajout-regles.js';
 
 /**
  * @class ContextMenuController
@@ -95,9 +96,14 @@ export default class extends Controller {
         }
         // REFACTORING : On récupère maintenant le formCanvas depuis le niveau supérieur de l'événement,
         // car c'est un contexte partagé, et non plus spécifique à un élément sélectionné.
-        const { selection: selectos, contextMenuPosition, formCanvas } = event.detail;
+        const { selection: selectos, contextMenuPosition, formCanvas, tabId, champParent } = event.detail;
         this.entities = selectos;
         this.entityFormCanvas = formCanvas; // On utilise le formCanvas global
+        // Comme la barre d'outils : un contexte sans onglet garde l'onglet connu.
+        if (tabId) {
+            this.ongletInterne = tabId;
+            this.champParent = champParent ?? null;
+        }
 
         // Si le payload contient la position du menu, on l'affiche — entrées triées AVANT la
         // mesure : la taille du menu est celle de la sélection courante.
@@ -130,23 +136,12 @@ export default class extends Controller {
         const hasSelection = selectos.length > 0;
         const isSingleSelection = selectos.length === 1;
 
-        // « Ajouter » reste VISIBLE mais INACTIF pour les entités qui n'existent que
-        // rattachées à une autre (cf. `creation_interdite`, même drapeau que la barre
-        // d'outils). Le masquer laisserait croire à un droit manquant ; grisé avec son
-        // infobulle, il dit où créer — LE MOTIF DE LA RUBRIQUE (`creation_interdite_message`,
-        // comme la barre d'outils). Le clic et le raccourci « A » sont refusés par `notify` et
-        // `handleKeyboardShortcuts` (aria-disabled), chantier 20.
+        // « Ajouter » : la même décision que la barre d'outils (ajout-regles.js) — absent d'une
+        // rubrique fermée à la création, et de la liste PRINCIPALE d'une entité qui ne naît que
+        // rattachée à son parent (Serge, 2026-10-30 : absent, pas grisé). Sa lettre « A » ne joue
+        // pas non plus : handleKeyboardShortcuts ignore une entrée masquée.
         if (this.hasBtAjouterTarget) {
-            const parametres = this.entityFormCanvas?.parametres || {};
-            const creationInterdite = parametres.creation_interdite === true;
-            this.btAjouterTarget.classList.toggle('is-disabled', creationInterdite);
-            this.btAjouterTarget.setAttribute('aria-disabled', creationInterdite ? 'true' : 'false');
-            if (creationInterdite) {
-                this.btAjouterTarget.setAttribute('title', parametres.creation_interdite_message
-                    || "Cet enregistrement se crée depuis la fiche à laquelle il est rattaché.");
-            } else {
-                this.btAjouterTarget.removeAttribute('title');
-            }
+            this.btAjouterTarget.style.display = ajoutOffert(this.entityFormCanvas?.parametres, this.ongletInterne || 'principal', this.champParent) ? '' : 'none';
         }
 
         console.log(this.nomControleur + " - organizeButtons - Code: 8888 - Selection:", selectos, "Length:", selectos.length, "Single:", isSingleSelection, "Has:", hasSelection);

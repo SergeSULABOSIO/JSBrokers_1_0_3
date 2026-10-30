@@ -48,9 +48,10 @@ class ReversementRetroAgentFormCanvasProvider implements FormCanvasProviderInter
                 "Il s'enregistre donc depuis le rapport de production ou par l'assistant, avec son justificatif du même geste. Cet écran sert à le consulter et à l'auditer.",
             ],
             "creation_interdite" => true,
-            "creation_interdite_message" => "Un reversement s'enregistre depuis « Voir le rapport de production » "
-                . "du bénéficiaire — agent interne ou partenaire externe —, ou en le demandant à l'assistant : "
-                . "le justificatif du virement est exigé du même geste.",
+            // Un reversement s'enregistre depuis « Voir le rapport de production » du bénéficiaire
+            // — agent interne ou partenaire externe —, ou en le demandant à l'assistant : le
+            // justificatif du virement est exigé du même geste. « Ajouter » est donc ABSENT de la
+            // rubrique (ajout-regles.js, Serge 2026-10-30), pas grisé.
             "form_intro" => [
                 "titre" => "Rétro intermédiaire",
                 "description" => "La part d'une commission déjà encaissée par le cabinet, reversée à l'intermédiaire "

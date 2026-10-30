@@ -29,7 +29,7 @@ ci-dessous est remplie dans le plan (fiche de rubrique, case « États »), écr
 |---|---|---|
 | Chargement initial | Squelette ou zone `aria-busy` | `.workspace-skeleton` (`app.css:2461`) ; `app:loading.start` (`cerveau_controller.js:227`) |
 | Rafraîchissement | Zone grisée `aria-busy`, contenu conservé | `vue-cartes_controller.js:250` (pose), :47 et :170 (retrait) ; `app:loading.stop` (`cerveau_controller.js:325`) |
-| Vide — aucune donnée | Message + « Ajouter » si le droit le permet | `_empty_state.html.twig` ; `_list_manager.html.twig:400-430` |
+| Vide — aucune donnée | Message + « Ajouter » si le droit le permet ET si la création se fait ici — jamais pour une rubrique fermée à la création ni dans la liste principale d'une entité qui ne naît que rattachée (`ParentObligatoire`) | `_empty_state.html.twig` ; `_list_manager.html.twig:400-430` |
 | Vide — tout est filtré | « Aucune fiche ne correspond à vos filtres » + « Réinitialiser » (seulement hors des défauts) + « Tout retirer » ; la ligne des filtres nomme chaque filtre | `CauseDeListeVide` + `ControllerUtilsTrait::etatVideParametres` (chantier 6, 2026-10-21 ; deux gestes 2026-10-29) ; test `ListeVideExpliqueeTest` ; vocabulaire : `redaction-interface.md` « Gestes d'une liste » |
 | Erreur serveur ou réseau | Toast d'erreur, contenu précédent conservé | `app:error.api` → toast générique (`cerveau_controller.js:154-155`) ; 422 de validation (:351) |
 | 404 | Fiche absente ou d'un autre cabinet : 404, jamais un refus nommé | `AppartenanceAuCabinet::exigerLeCabinetOuvert` (:88-91) ; rechargement d'une fiche disparue, `dialog-instance_controller.js:236-238` |

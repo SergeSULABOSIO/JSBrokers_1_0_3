@@ -9,6 +9,7 @@ use App\Entity\ChargementPourPrime;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Entity\Piste;
 use App\Entity\Utilisateur;
 use App\Ai\Tool\LireFicheTool;
 use App\Ai\Tool\ModifierCompositionPrimeTool;
@@ -56,6 +57,7 @@ class CollectionMutationTest extends WebTestCase
         $conn->executeStatement('DELETE cpp FROM chargement_pour_prime cpp JOIN entreprise e ON cpp.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE rpc FROM revenu_pour_courtier rpc JOIN entreprise e ON rpc.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE co FROM cotation co JOIN entreprise e ON co.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
+        $conn->executeStatement('DELETE p FROM piste p JOIN entreprise e ON p.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE ch FROM chargement ch JOIN entreprise e ON ch.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE i FROM invite i JOIN entreprise e ON i.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE FROM entreprise WHERE nom = :n', ['n' => self::ENT]);
@@ -228,6 +230,10 @@ class CollectionMutationTest extends WebTestCase
         // côtés (estimateWriteCost ⇔ meterWrite), source unique facturablesArbre.
         [$ent, $inv, $owner] = $this->seedWorkspace();
         $type = $this->seedChargementType($ent, $inv, 'Prime nette');
+        // Une proposition ne naît que sous sa piste (ParentObligatoire).
+        $piste = (new Piste())->setNom('Piste conso')->setTypeAvenant(Piste::AVENANT_SOUSCRIPTION)->setDescriptionDuRisque('R')->setExercice(2026);
+        $piste->setEntreprise($ent)->setInvite($inv);
+        $this->em->persist($piste);
         $this->em->flush();
         $typeId = $type->getId();
         $this->client->loginUser($owner);
@@ -236,7 +242,7 @@ class CollectionMutationTest extends WebTestCase
         $tokens->credit($owner, 100000); // solvabilité garantie, débit pris sur le prépayé.
         $scope = new AiScope($ent, $inv);
 
-        $op = new MutationOperation('create', 'Cotation', null, ['nom' => 'Offre conso', 'duree' => 12], [
+        $op = new MutationOperation('create', 'Cotation', null, ['nom' => 'Offre conso', 'duree' => 12, 'piste' => $piste->getId()], [
             'chargements' => [
                 new MutationOperation('create', '', null, ['nom' => 'Prime nette', 'montantFlatExceptionel' => 9000, 'type' => $typeId]),
                 new MutationOperation('create', '', null, ['nom' => 'TVA', 'montantFlatExceptionel' => 1600, 'type' => $typeId]),

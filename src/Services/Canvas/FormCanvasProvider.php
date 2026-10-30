@@ -5,6 +5,7 @@ use App\Entity\Utilisateur;
 use App\Repository\EntrepriseRepository;
 use App\Entity\Invite;
 use App\Service\Document\DocumentFichier;
+use App\Service\Workspace\ParentObligatoire;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\Canvas\Provider\Form\FormCanvasProviderInterface;
 use App\Token\TokenAccountService;
@@ -48,6 +49,11 @@ class FormCanvasProvider
                 $this->injecterActionAssistant($canvas, $entityClassName, $idEntreprise);
                 $this->injecterActionsDocuments($canvas, $entityClassName, $idEntreprise);
                 $this->injecterActionTelechargerDocuments($canvas, $entityClassName, $idEntreprise);
+                // UN ENFANT NE NAÎT QUE RATTACHÉ (ParentObligatoire) : la liste principale
+                // n'offre pas « Ajouter » (ajout-regles.js), l'onglet contextuel si.
+                if (($champParent = ParentObligatoire::champ($entityClassName)) !== null) {
+                    $canvas['parametres']['creation_depuis_le_parent'] = $champParent;
+                }
 
                 return $canvas;
             }

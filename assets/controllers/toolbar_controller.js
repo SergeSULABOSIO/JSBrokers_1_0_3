@@ -5,6 +5,7 @@ import { MenuContextuel } from './menu-contextuel.js';
 import { DefilementRail } from './rail-defilement.js';
 import { outilsAuRail } from './rail-outils.js';
 import { expliquerUnRefus, fermerInfobulle } from './infobulle-moteur.js';
+import { ajoutOffert } from './ajout-regles.js';
 
 /**
  * @class ToolbarController - REFACTORED (V3)
@@ -77,6 +78,9 @@ export default class extends Controller {
 
         this.selectos = [];
         this.activeFormCanvas = this.entityFormCanvasValue;
+        // L'onglet interne actif (`principal`, ou une collection contextuelle) : « Ajouter » en dépend.
+        this.ongletInterne = 'principal';
+        this.champParent = null;
         
         // UNE SEULE fonction liée : initialize() passe deux fois (Stimulus, puis connect()).
         // Deux bind() distincts posaient deux écouteurs, dont disconnect() n'ôtait que le
@@ -140,9 +144,13 @@ export default class extends Controller {
      */
     handleContextUpdate(event) {
         if (this.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
-        const { selection, formCanvas } = event.detail;
+        const { selection, formCanvas, tabId, champParent } = event.detail;
         this.selectos = selection || [];
         this.activeFormCanvas = formCanvas || {};
+        if (tabId) {
+            this.ongletInterne = tabId;
+            this.champParent = champParent ?? null;
+        }
         this.organizeButtons();
     }
 
@@ -287,30 +295,15 @@ export default class extends Controller {
         const selectionCount = this.selectos?.length || 0;
         const canvasParams = this.activeFormCanvas?.parametres || {};
 
-        // Conditions de visibilité basées sur la sélection ET les permissions du canvas.
-        const canAdd = !!canvasParams.endpoint_submit_url;
-        // `creation_interdite` : certaines entités n'existent que RATTACHÉES à une autre
-        // (une condition de partage sans bénéficiaire ni affaire n'est qu'une règle
-        // orpheline). Leur rubrique reste consultable et éditable, mais la création se
-        // fait depuis la fiche parente.
-        //
-        // Le bouton est GRISÉ, PAS MASQUÉ : un bouton qui disparaît laisse croire à un
-        // droit manquant ou à un bug ; désactivé avec son infobulle, il dit où aller.
-        const creationInterdite = canvasParams.creation_interdite === true;
-        // LE MOTIF VIENT DU CANEVAS. Il était écrit ici, au nom des conditions de
-        // partage — la seule rubrique qui posait alors le drapeau. La deuxième (les
-        // reversements de rétrocommission) aurait donc annoncé à l'utilisateur d'aller
-        // créer sa pièce « depuis la fiche d'un partenaire ». Chaque rubrique dit
-        // désormais où l'on crée la sienne.
-        const motifCreation = canvasParams.creation_interdite_message
-            || 'Cet enregistrement se crée depuis la fiche à laquelle il se rattache.';
+        // « Ajouter » : absent là où la création n'a pas de sens — rubrique fermée à la
+        // création, ou liste PRINCIPALE d'une entité qui ne naît que rattachée à son parent
+        // (Serge, 2026-10-30 : absent, pas grisé). Décision pure : ajout-regles.js.
+        const canAdd = ajoutOffert(canvasParams, this.ongletInterne, this.champParent);
         const canEdit = selectionCount === 1 && !!canvasParams.endpoint_submit_url;
         const canDelete = selectionCount > 0 && !!canvasParams.endpoint_delete_url;
         const canOpen = selectionCount > 0; // L'ouverture est généralement toujours possible si sélection.
 
-        // Règle : "Ajouter" est visible si le canvas le permet.
         this.toggleButton(this.btajouterTarget, canAdd);
-        this.setButtonDisabled(this.btajouterTarget, creationInterdite, motifCreation);
 
         // Règle : "Modifier" est visible uniquement pour une sélection unique.
         this.toggleButton(this.btmodifierTarget, canEdit);
