@@ -53,6 +53,25 @@ Statut : **partagé** (≥ 2 rubriques ou surfaces) ou **local** (une seule).
   un bouton par groupe (`groupe.icone`, alias `filtre:*`, `RailDesChipsDiscernableTest`), la
   rangée devient son panneau (`rail-chips_controller.js`, règles `rail-chips-regles.js`). Aucun
   geste du pointeur n'épingle : sortie du pointeur ou du focus = fermé. Jamais en dialogue.
+- ⚠ **DIVERGENCE ASSUMÉE** : les collections EN DIALOGUE et l'Échange gardent l'ancienne
+  disposition (chips en rangée, pas de rail, pas de ligne des filtres, pas de barre du bas).
+  Chantier de convergence : `jsbrokers-dev` §8, chantier 22.
+
+### Ligne des filtres actifs — partagé (toutes les listes du workspace)
+- Une ligne SOUS la recherche dit, en texte, tout ce qui masque des données : chips hors
+  « Toutes », recherche, critères avancés, « Mon portefeuille », critères posés d'office — un
+  défaut du serveur porte « par défaut ». Absente quand rien n'est filtré (refonte de la
+  colonne 3, C2).
+- Gabarit serveur : `.jsb-filtres-actifs` (`role="region"`, `aria-label="Filtres actifs"`) dans
+  `_search_bar.html.twig`, avec un `<template>` par filtre ; le JS CLONE et pose par
+  `textContent`. Décision pure : `filtresActifs` / `clesARetirer` (`search-bar-filtres.js`).
+- Défauts : source unique `CriteresParDefautDeListe` ; jumelle PHP `LigneDesFiltres` (lue par
+  Ket, `ouvrir_rubrique`), même fichier de cas `tests/js/fixtures/ligne-des-filtres.json` —
+  parité `LigneDesFiltresPariteTest` / `ligne-des-filtres-parite.test.mjs`.
+- Critères IMPOSÉS (`data-criteres-imposes`) : affichés, sans ×. « Tout retirer » suit le
+  chantier 6 (« Mon portefeuille » retiré seulement pour un administrateur) ; « Réinitialiser »
+  recharge les défauts (`initialCriteria`). Tests `LigneDesFiltresActifsTest`,
+  `search-bar-filtres.test.mjs`.
 
 ### Barre du bas d'une liste — partagé (toutes les listes du workspace)
 - `.jsb-list-controls-bar` (`_list_manager.html.twig`) : état + **taille de page** (une seule

@@ -19,9 +19,11 @@ ci-dessous est remplie dans le plan (fiche de rubrique, case « États »), écr
 7. **Un refus nomme sa cause et offre un geste réellement possible** (voir
    `redaction-interface.md`).
 8. **Échap ferme un dialogue ; s'il y a une saisie non enregistrée, une confirmation est
-   demandée au lieu de fermer** (arbitrage de Serge, 2026-10-16). **CIBLE** : aujourd'hui le
-   dialogue porte `data-bs-keyboard="false"` (`dialog-manager_controller.js:30`) et Échap ne le
-   ferme jamais — chantier 2 de `jsbrokers-dev`.
+   demandée au lieu de fermer** (arbitrage de Serge, 2026-10-16). **Acquis** (chantier 2 de
+   `jsbrokers-dev`) : un seul gestionnaire d'Échap, en phase de capture, d'après la pile des
+   modales (`echap-dialogue.js`, `dialog-manager`), et la question « Abandonner ? » quand
+   l'empreinte du formulaire a changé (`dialog-instance#close`). Un nouveau dialogue garde
+   `data-bs-keyboard="false"` : c'est ce gestionnaire, pas Bootstrap, qui ferme.
 
 ## 2. Où regarder dans le code — la matrice
 
@@ -40,6 +42,7 @@ ci-dessous est remplie dans le plan (fiche de rubrique, case « États »), écr
 | Plafonné | Le chiffre dit qu'il est plafonné (« + de USD 900 000 ») | `plafond_transformees` (`PisteListCanvasProvider.php:100`) ; infobulle `_tableau.html.twig:28-29` ; commit `93f949d6` |
 | Élément masqué par un filtre | Après enregistrement : avertissement qui nomme le filtre + « Retirer ce filtre » | `verifierLaFicheEnregistree` (`ControllerUtilsTrait.php:1043`) ; `fiche-hors-filtre.js:45` ; `cerveau_controller.js:1256` ; test `fiche-hors-filtre.test.mjs` |
 | Après enregistrement | Toast de succès ; aucun commentaire si rien n'a été enregistré | `messageDEtape` (`vue-cartes-regles.js:85-96`) : fiche fermée sans enregistrement → aucun message |
+| Filtres d'office | Un critère posé par défaut (ou imposé) qui masque des données se LIT : la ligne des filtres le nomme, « par défaut » (ou sans × s'il est imposé) | `CriteresParDefautDeListe`, ligne des filtres (`composants.md`) ; tests `LigneDesFiltresActifsTest`, `LigneDesFiltresPariteTest` |
 | Après F5 | Onglet, vue, chips, critères, sélection et taille de page restaurés (la taille de page : F5 seulement, « Réinitialiser » la ramène à 20 — `composants.md`, barre du bas) | cookie de vue `preparerLaVueCartes` (`ControllerUtilsTrait.php:1267`) ; `criteres-persistes.js` ; `choix-persiste.js` ; `echange-perimetre-persiste.js` ; tests `selection-persistee.test.mjs`, `criteres-persistes.test.mjs`, `premier-rendu.test.mjs` |
 
 Un état sans mécanisme existant s'écrit « aucun mécanisme : à concevoir » dans le plan, avec

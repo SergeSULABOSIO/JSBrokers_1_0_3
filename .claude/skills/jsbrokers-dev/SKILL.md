@@ -677,3 +677,10 @@ Inscrits le 2026-10-22 (décisions de Serge) :
     avec ce gabarit. Garde-fou : `tests/Security/RedirectionOuverteTest.php` (aucune réponse vers
     un autre hôte, langue intacte). Revue : aucune autre redirection ouverte — toute redirection
     se fait vers une route nommée, une URL du serveur, ou un chemin filtré (`/console/supervision`).
+22. **À DÉCIDER — Convergence de la disposition des listes (dialogues et Échange).** La refonte
+    de la colonne 3 (2026-10-27 → 10-31 : rail d'outils, rail des chips, ligne des filtres
+    actifs, barre du bas pleine largeur, titre et onglets sur une rangée) ne vaut que pour les
+    listes du WORKSPACE. État actuel, écart assumé : les collections EN DIALOGUE gardent leur
+    barre horizontale, leurs chips en rangée et leur total au pied (place étroite,
+    `CollectionRangeeDialogueTest`) ; l'Échange garde ses propres chips et barres
+    (`echange_controller.js`). Rien à coder avant une décision de Serge sur ce qui doit converger.
