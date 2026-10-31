@@ -18,7 +18,7 @@ import { SelectionDeFichiers } from './attach-selection.js';
 export default class extends PickerBase {
     static pickerName = 'REVERSEMENT-RETRO-PICKER';
 
-    static targets = ['ligne', 'coche', 'montant', 'date', 'reference', 'compte', 'apercu', 'executer', 'zonePiece'];
+    static targets = ['ligne', 'coche', 'montant', 'date', 'reference', 'compte', 'description', 'apercu', 'executer', 'zonePiece'];
 
     static values = {
         submitUrl: String,
@@ -30,11 +30,20 @@ export default class extends PickerBase {
         // qu'on n'aurait pas redéposé le même bordereau, et corriger une date serait
         // devenu impossible.
         pieceDeja: Boolean,
+        // UN VIREMENT ENREGISTRÉ EST UNE PIÈCE COMPTABLE : ses lignes, montants, date et
+        // compte sont en lecture, renvoyés tels quels (le serveur vérifie qu'ils n'ont pas
+        // bougé). Seuls la référence, la description et les pièces se corrigent.
+        edition: Boolean,
+        // Une contre-passation n'est pas une sortie de fonds : aucune pièce n'est exigée.
+        sansPreuve: Boolean,
     };
 
     connect() {
         super.connect();
         this.enCours = false;
+        // La description affichée est le TEXTE d'un champ riche : renvoyée telle quelle, elle
+        // effacerait sa mise en forme. Elle ne part donc que si l'utilisateur l'a changée.
+        this.descriptionInitiale = this.hasDescriptionTarget ? this.descriptionTarget.value : null;
 
         // La zone de dépôt est le socle partagé avec la boîte « Attacher des pièces » :
         // mêmes refus, mêmes icônes, même liste. Chaque changement rearme le bouton,
@@ -65,6 +74,7 @@ export default class extends PickerBase {
      * était précisément en train de régler.
      */
     basculerLigne(event) {
+        if (this.editionValue) return;
         if (event.target.closest('input, select, textarea, label, button, a')) return;
 
         const ligne = event.currentTarget;
@@ -150,7 +160,18 @@ export default class extends PickerBase {
         // PAS DE VERSEMENT SANS PREUVE : la même règle que le serveur, appliquée ici
         // pour ne pas laisser cliquer sur un bouton qui refusera. Un virement rouvert,
         // lui, l'a déjà — le serveur fait la même lecture.
-        const sansPiece = this._preuveRestante() ? false : (this.selection ? this.selection.estVide() : false);
+        const sansPiece = (this.sansPreuveValue || this._preuveRestante())
+            ? false
+            : (this.selection ? this.selection.estVide() : false);
+
+        if (this.editionValue) {
+            if (this.hasExecuterTarget) this.executerTarget.disabled = this.enCours || sansPiece;
+            if (this.hasApercuTarget) {
+                this.apercuTarget.textContent = 'La référence, la description et les pièces du virement. '
+                    + 'Ses montants, sa date et son compte restent ceux de l’écriture comptable.';
+            }
+            return;
+        }
 
         if (this.hasExecuterTarget) {
             this.executerTarget.disabled = this.enCours || lignes.length === 0 || total <= 0 || sansPiece;
@@ -182,7 +203,7 @@ export default class extends PickerBase {
             this._showError('Cochez au moins une affaire à régler.');
             return;
         }
-        if (!this._preuveRestante() && this.selection?.estVide()) {
+        if (!this.sansPreuveValue && !this._preuveRestante() && this.selection?.estVide()) {
             this._showError(
                 'Un reversement ne s\'enregistre pas sans justificatif : déposez le bordereau '
                 + 'de virement (ou le reçu signé) avant de valider.',
@@ -212,6 +233,10 @@ export default class extends PickerBase {
                     // vérifier qu'il en reste une : retirer la dernière sans en déposer
                     // une autre doit être refusé, pas passé sous silence.
                     piecesRetirees: this._piecesRetirees(),
+                    // En édition seulement, et seulement si elle a changé : la description du virement.
+                    ...(this.hasDescriptionTarget && this.descriptionTarget.value !== this.descriptionInitiale
+                        ? { description: this.descriptionTarget.value }
+                        : {}),
                 }),
             });
             const result = await response.json();
@@ -299,7 +324,9 @@ export default class extends PickerBase {
             if (!coche || !coche.checked) return;
 
             const montant = parseFloat((this.montantTargets[index]?.value || '0').replace(',', '.'));
-            if (!Number.isFinite(montant) || montant <= 0) return;
+            // En édition, les montants sont ceux de l'écriture — négatifs pour une
+            // contre-passation —, renvoyés tels quels.
+            if (!Number.isFinite(montant) || (montant <= 0 && !this.editionValue)) return;
 
             lignes.push({
                 // L'ÉCHÉANCE est la maille du règlement ; l'affaire l'accompagne pour dire

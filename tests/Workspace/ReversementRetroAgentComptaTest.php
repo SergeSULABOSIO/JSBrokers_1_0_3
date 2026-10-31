@@ -98,7 +98,7 @@ class ReversementRetroAgentComptaTest extends KernelTestCase
             $parPiece[$ecriture['piece']] = $ecriture;
         }
 
-        self::assertArrayHasKey('VIR-LOT-001', $parPiece, 'La pièce du lot est sa référence de lot.');
+        self::assertArrayHasKey('VIR-LOT-001', $parPiece, 'La pièce du lot est la référence du virement, pas sa clé de lot.');
 
         $lot = $parPiece['VIR-LOT-001'];
         $totalLot = array_sum(self::LOT);
@@ -233,7 +233,7 @@ class ReversementRetroAgentComptaTest extends KernelTestCase
     {
         $ids = $this->semer();
         // Le partenaire reçoit un versement portant la MÊME référence de lot que l'agent.
-        $this->verserAuPartenaire($ids, 60.0, 'VIR-LOT-001');
+        $this->verserAuPartenaire($ids, 60.0, 'LOT-COMPTA-001');
 
         $entreprise = $this->em()->getRepository(Entreprise::class)->find($ids['entrepriseId']);
         $service = static::getContainer()->get(CourtierEcritureComptableService::class);
@@ -345,8 +345,8 @@ class ReversementRetroAgentComptaTest extends KernelTestCase
                 ->setAvenant($avenants[$index])
                 ->setMontant($montant)
                 ->setPaidAt(new \DateTimeImmutable(self::EXERCICE . '-06-15'))
-                ->setReference('RETRO-' . $index)
-                ->setLotReference('VIR-LOT-001')
+                ->setReference('VIR-LOT-001')
+                ->setLotReference('LOT-COMPTA-001')
                 ->setCompteBancaire($banque);
             $reversement->setEntreprise($entreprise);
             $em->persist($reversement);

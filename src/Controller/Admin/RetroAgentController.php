@@ -17,6 +17,7 @@ use App\Service\Retro\BeneficiaireRetro;
 use App\Service\Retro\DefautsDuVersement;
 use App\Service\Retro\JustificatifExige;
 use App\Service\Retro\LotDeVersement;
+use App\Service\Retro\ReversementIntangible;
 use App\Service\Retro\BeneficiaireRetroFactory;
 use App\Service\RetroAgent\RapportProductionAgentBuilder;
 use App\Service\Soa\SoaPoliceDocumentsCollector;
@@ -119,8 +120,9 @@ class RetroAgentController extends AbstractController
      * virement se lit, depuis que la rubrique le replie.
      *
      * La fenêtre est LA MÊME qu'à la création — même gabarit, même contrôleur, mêmes
-     * gardes. Seules changent les lignes proposées (cf. `echeancesDuVirement`) et l'URL
-     * d'envoi.
+     * gardes —, mais sa partie comptable est en LECTURE (ReversementIntangible) : seules
+     * les échéances du virement, leurs montants versés, la date et le compte, tels
+     * qu'enregistrés. Restent corrigeables la référence, la description et les pièces.
      */
     #[Route('/reversement/{id}/editer', name: 'reversement_editer', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
     public function editerVirement(ReversementRetroAgent $reversement): Response
@@ -140,7 +142,12 @@ class RetroAgentController extends AbstractController
             $entreprise,
             $this->generateUrl('admin.retro_agent.reversement_editer', ['id' => $reversement->getId()]),
             [
-                'lignes' => $virement['lignes'],
+                // LES SEULES ÉCHÉANCES DU VIREMENT : il ne s'en ajoute plus (pièce comptable,
+                // ReversementIntangible), proposer les autres exigibles n'aurait rien offert.
+                'lignes' => array_values(array_filter(
+                    $virement['lignes'],
+                    static fn (array $ligne) => array_key_exists('montantVerse', $ligne),
+                )),
                 'cochees' => $virement['cochees'],
                 'edition' => [
                     'porteurId' => $porteur?->getId(),
@@ -148,6 +155,8 @@ class RetroAgentController extends AbstractController
                     'paidAt' => $reversement->getPaidAt(),
                     'compteId' => $reversement->getCompteBancaire()?->getId(),
                     'description' => $reversement->getDescription(),
+                    // Une contre-passation n'est pas une sortie de fonds : aucune pièce exigée.
+                    'sansPreuve' => $reversement->estUneContrePassation(),
                     // LES PIÈCES DÉJÀ DÉPOSÉES, NOMMÉES ET RETIRABLES.
                     //
                     // Annoncer « 1 pièce » sans la montrer laissait l'utilisateur devant un
@@ -163,19 +172,145 @@ class RetroAgentController extends AbstractController
         );
     }
 
-    /** L'écriture d'un virement rouvert : mêmes gardes, même corps, un lot en plus. */
+    /**
+     * L'ÉCRITURE D'UN VIREMENT ROUVERT : SES CHAMPS LIBRES, ET RIEN D'AUTRE.
+     *
+     * Un reversement enregistré est une pièce comptable (ReversementIntangible, Serge
+     * 2026-10-30) : ses échéances, ses montants, sa date et son compte ne changent plus — la
+     * fenêtre les montre en lecture, et le serveur refuse qu'on les lui envoie autres. Restent
+     * la référence (un numéro d'ordre mal saisi), la description et les justificatifs. Pour
+     * corriger le reste : contre-passer le virement, puis en enregistrer un nouveau.
+     */
     #[Route('/reversement/{id}/editer', name: 'reversement_editer_submit', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     public function editerVirementSubmit(ReversementRetroAgent $reversement, Request $request): JsonResponse
     {
         $cible = $this->cibleDuReversement($reversement);
         $this->assertPeutVerserA($cible);
+        $membres = $this->lotDeVersement->membresDuLot($reversement);
+        $donnees = json_decode($request->getContent(), true);
+        $donnees = is_array($donnees) ? $donnees : [];
 
-        return $this->enregistrerVersement(
-            $cible,
-            $reversement->getEntreprise(),
-            $request,
-            $this->lotDeVersement->membresDuLot($reversement),
-        );
+        if (!$this->memeContenuComptable($membres, $donnees)) {
+            return $this->json(['message' => ReversementIntangible::MOTIF], Response::HTTP_CONFLICT);
+        }
+        // Les deux champs libres : du texte, et qui tient dans sa colonne (255) — vérifié AVANT
+        // toute écriture, pour qu'un refus ne laisse rien à moitié fait.
+        foreach (['reference' => 'La référence', 'description' => 'La description'] as $champ => $libelle) {
+            if (!array_key_exists($champ, $donnees) || $donnees[$champ] === null) {
+                continue;
+            }
+            if (!is_string($donnees[$champ]) || mb_strlen($donnees[$champ]) > 255) {
+                return $this->json(['message' => $libelle . ' doit être un texte de 255 caractères au plus.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+        }
+
+        // LA PREUVE D'ABORD, COMPTÉE AVANT TOUTE SUPPRESSION : retirer la dernière pièce sans en
+        // annoncer une autre est refusé — et rien n'est retiré tant que le refus est possible.
+        $retireesIds = array_values(array_filter(array_map(
+            'intval',
+            is_array($donnees['piecesRetirees'] ?? null) ? $donnees['piecesRetirees'] : [],
+        )));
+        $documents = $this->lotDeVersement->documentsDuLot($membres);
+        $restantes = count(array_filter($documents, static fn ($d) => !in_array($d->getId(), $retireesIds, true)));
+        // Une contre-passation n'est pas une sortie de fonds : elle n'exige aucune pièce.
+        if ($restantes === 0 && !$reversement->estUneContrePassation()
+            && !$this->justificatifExige->estSatisfait(($donnees['avecPiece'] ?? false) === true)) {
+            return $this->json(['message' => $this->justificatifExige->messageEcran()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+        $this->retirerPieces($membres, $retireesIds);
+
+        $reference = trim((string) ($donnees['reference'] ?? ''));
+        foreach ($membres as $membre) {
+            if ($reference !== '') {
+                $membre->setReference($reference);
+            }
+            if (array_key_exists('description', $donnees)) {
+                $membre->setDescription($donnees['description'] !== null ? (string) $donnees['description'] : null);
+            }
+        }
+        $this->em->flush();
+
+        return $this->json([
+            'message' => 'Virement mis à jour : référence, description et justificatifs.',
+            'crees' => 0,
+            'retires' => 0,
+            'total' => round(array_sum(array_map(static fn (ReversementRetroAgent $r) => (float) $r->getMontant(), $membres)), 2),
+            // Le porteur reçoit les pièces annoncées, comme à la création.
+            'porteurId' => $this->lotDeVersement->porteurParmi($membres)?->getId(),
+        ]);
+    }
+
+    /**
+     * CONTRE-PASSER LE VIREMENT : l'annuler entier par des lignes de montant opposé — la seule
+     * correction d'une pièce comptable (ReversementIntangible). Mêmes gardes que la fenêtre du
+     * virement : le cabinet, puis le droit de verser à ce bénéficiaire.
+     */
+    #[Route('/reversement/{id}/contre-passer', name: 'reversement_contre_passer', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    public function contrePasserVirement(
+        ReversementRetroAgent $reversement,
+        \App\Service\Retro\ContrePassationDeReversement $contrePassation,
+        \App\Service\Erreur\MessageDErreur $messageDErreur,
+    ): JsonResponse
+    {
+        $cible = $this->cibleDuReversement($reversement);
+        // Le versement d'un AGENT relève de la gestion de l'espace : l'action est offerte à qui
+        // écrit sur les rétros, le refus doit donc s'EXPLIQUER (JSON lu par la confirmation).
+        if ($cible instanceof Invite && !$this->accessResolver->canManageInvites($this->getInvite())) {
+            return $this->json(['message' => ReversementIntangible::CONTRE_PASSATION_AGENT_SANS_DROIT], Response::HTTP_FORBIDDEN);
+        }
+        $this->assertPeutVerserA($cible);
+        if (($motif = $contrePassation->refus($reversement)) !== null) {
+            return $this->json(['message' => $motif], Response::HTTP_CONFLICT);
+        }
+        try {
+            $bilan = $contrePassation->contrePasser($reversement, $this->getInvite());
+        } catch (\App\Service\Retro\ReversementIntangibleException $refus) {
+            return $this->json(['message' => $messageDErreur->pourLEcran($refus, ReversementIntangible::DEJA_CONTRE_PASSE)], Response::HTTP_CONFLICT);
+        }
+
+        return $this->json([
+            'message' => sprintf(
+                'Virement contre-passé : %d ligne%s de montant opposé (%s), référence « %s ». Le montant redevient dû au bénéficiaire.',
+                $bilan['lignes'],
+                $bilan['lignes'] > 1 ? 's' : '',
+                number_format($bilan['total'], 2, ',', ' '),
+                $bilan['reference'],
+            ),
+        ] + $bilan);
+    }
+
+    /**
+     * La requête décrit-elle EXACTEMENT le virement enregistré — mêmes échéances, mêmes montants,
+     * même date, même compte ? La fenêtre les renvoie tels quels (champs en lecture) ; toute
+     * différence est une tentative de modifier une pièce comptable.
+     *
+     * @param ReversementRetroAgent[] $membres
+     */
+    private function memeContenuComptable(array $membres, array $donnees): bool
+    {
+        if ($membres === []) {
+            return false;
+        }
+        $enregistre = [];
+        foreach ($membres as $membre) {
+            // ADDITIONNÉ, comme le fait la fenêtre (echeancesDuVirement) : deux lignes d'un lot sur
+            // la même échéance s'affichent en une, leur somme revient.
+            $cle = RapportProductionAgentBuilder::cleDeLigne($membre->getTranche()?->getId(), $membre->getAvenant()?->getId());
+            $enregistre[$cle] = round(($enregistre[$cle] ?? 0.0) + (float) $membre->getMontant(), 2);
+        }
+        $poste = [];
+        foreach (is_array($donnees['lignes'] ?? null) ? $donnees['lignes'] : [] as $ligne) {
+            $tranche = (int) ($ligne['trancheId'] ?? 0);
+            $avenant = (int) ($ligne['avenantId'] ?? 0);
+            $poste[RapportProductionAgentBuilder::cleDeLigne($tranche ?: null, $avenant ?: null)] = round((float) ($ligne['montant'] ?? 0), 2);
+        }
+        ksort($enregistre);
+        ksort($poste);
+        $porteur = $membres[0];
+
+        return $enregistre === $poste
+            && $this->dateDeVersement($donnees['paidAt'] ?? null)->format('Y-m-d') === $porteur->getPaidAt()?->format('Y-m-d')
+            && (int) ($donnees['compteBancaireId'] ?? 0) === (int) ($porteur->getCompteBancaire()?->getId() ?? 0);
     }
 
     /**
@@ -211,46 +346,6 @@ class RetroAgentController extends AbstractController
         }
 
         return $restants;
-    }
-
-    /**
-     * LES DOCUMENTS D'UNE LIGNE QUI SORT DU VIREMENT SUIVENT LE VIREMENT.
-     *
-     * La pièce justificative d'un virement est écrite sur son PORTEUR — le plus petit id.
-     * Retirer cette ligne-là du virement aurait donc détruit le bordereau avec elle : le
-     * décaissement se serait retrouvé sans preuve, alors que la règle en exige une, et rien
-     * ne l'aurait dit — ni erreur, ni avertissement.
-     *
-     * On les rattache au membre qui reste, celui qui deviendra porteur. Si le virement ne
-     * garde plus aucune ligne, le cas ne se pose pas ici : c'est une suppression.
-     *
-     * @param ReversementRetroAgent[] $restants
-     */
-    private function transfererDocuments(ReversementRetroAgent $sortant, array $restants): void
-    {
-        $repreneur = $this->lotDeVersement->porteurParmi($restants);
-        if ($repreneur === null || $repreneur === $sortant) {
-            return;
-        }
-
-        // ON NE TOUCHE QUE LE CÔTÉ PROPRIÉTAIRE, et on laisse le document dans la
-        // collection du sortant : l'en retirer l'aurait fait supprimer comme ORPHELIN
-        // (`orphanRemoval: true`), c'est-à-dire exactement ce qu'on cherche à éviter.
-        // La collection est relue après le flush, avant la suppression.
-        //
-        // ON INTERROGE LE DÉPÔT, PAS LA COLLECTION. Une collection déjà chargée en
-        // mémoire ne se recharge pas : si la pièce a été rattachée par son côté
-        // propriétaire — ce que fait la route d'attachement — la collection du
-        // reversement peut l'ignorer, et le transfert n'aurait alors rien transféré.
-        // La question « quelles pièces pointent sur cette ligne ? » se pose à la base.
-        $documents = $this->em->getRepository(\App\Entity\Document::class)
-            ->findBy(['reversementRetroAgent' => $sortant]);
-
-        foreach ($documents as $document) {
-            $document->setReversementRetroAgent($repreneur);
-            $repreneur->addDocument($document);
-            $this->em->persist($document);
-        }
     }
 
     /** La garde de versement, aiguillée sur la famille — les deux règles existent déjà. */
@@ -410,7 +505,6 @@ class RetroAgentController extends AbstractController
         Invite|Partenaire $beneficiaire,
         Entreprise $entreprise,
         Request $request,
-        array $membresExistants = [],
     ): JsonResponse {
         $donnees = json_decode($request->getContent(), true);
         $lignes = is_array($donnees['lignes'] ?? null) ? $donnees['lignes'] : [];
@@ -422,20 +516,7 @@ class RetroAgentController extends AbstractController
         // Le client annonce la pièce qu'il déposera juste après (la cible n'existe pas
         // encore quand il la choisit) ; refuser plus tard laisserait un décaissement
         // enregistré sans justificatif, exactement ce que la règle interdit.
-        // LES PIÈCES QU'ON RETIRE PARTENT D'ABORD, et la garde compte ensuite ce qui reste.
-        //
-        // L'ordre n'est pas indifférent : compter avant le retrait aurait laissé passer un
-        // enregistrement qui supprime la dernière preuve du virement — un décaissement nu,
-        // accepté par la règle qui l'interdit.
-        $retireesIds = array_values(array_filter(array_map(
-            'intval',
-            is_array($donnees['piecesRetirees'] ?? null) ? $donnees['piecesRetirees'] : [],
-        )));
-        $piecesRestantes = $this->retirerPieces($membresExistants, $retireesIds);
-
-        // UN VIREMENT ROUVERT A DÉJÀ SA PREUVE. Redemander un bordereau pour corriger une
-        // date aurait fait déposer deux fois la même pièce — ou renoncé à la correction.
-        if ($piecesRestantes === 0 && !$this->justificatifExige->estSatisfait(($donnees['avecPiece'] ?? false) === true)) {
+        if (!$this->justificatifExige->estSatisfait(($donnees['avecPiece'] ?? false) === true)) {
             return $this->json(
                 ['message' => $this->justificatifExige->messageEcran()],
                 Response::HTTP_UNPROCESSABLE_ENTITY,
@@ -452,7 +533,9 @@ class RetroAgentController extends AbstractController
         }
         // Un lot n'existe qu'à partir de DEUX lignes : un reversement isolé garde
         // lotReference à null, pour ne jamais être fondu dans le lot d'un autre.
-        $lotReference = count($lignes) > 1 ? $reference : null;
+        // La CLÉ du lot est posée par le serveur, jamais la référence saisie : deux virements
+        // peuvent partager une référence (LotDeVersement::nouvelleReferenceDeLot).
+        $lotReference = count($lignes) > 1 ? $this->lotDeVersement->nouvelleReferenceDeLot() : null;
 
         $compte = null;
         if (!empty($donnees['compteBancaireId'])) {
@@ -460,18 +543,6 @@ class RetroAgentController extends AbstractController
                 'id' => (int) $donnees['compteBancaireId'],
                 'entreprise' => $entreprise,
             ]);
-        }
-
-        // LES MEMBRES DU VIREMENT ROUVERT, indexés par le couple (échéance, affaire) —
-        // c'est ce couple qu'une ligne postée désigne, et il ne peut y en avoir qu'un par
-        // virement. Ce qui restera dans ce tableau à la fin n'a pas été reposté : ce sont
-        // les lignes que l'utilisateur a retirées du virement.
-        $aRapprocher = [];
-        foreach ($membresExistants as $membre) {
-            $aRapprocher[RapportProductionAgentBuilder::cleDeLigne(
-                $membre->getTranche()?->getId(),
-                $membre->getAvenant()?->getId(),
-            )] = $membre;
         }
 
         $crees = 0;
@@ -496,12 +567,9 @@ class RetroAgentController extends AbstractController
                 continue;
             }
 
-            // ON MET À JOUR CE QUI EXISTE, ON NE LE RECRÉE PAS. Recréer aurait changé
-            // l'identifiant de la ligne — donc perdu les documents qui y sont rattachés et
-            // rompu toute référence comptable déjà émise.
-            $cle = RapportProductionAgentBuilder::cleDeLigne($tranche?->getId(), $avenant?->getId());
-            $reversement = $aRapprocher[$cle] ?? new ReversementRetroAgent();
-            unset($aRapprocher[$cle]);
+            // UN VERSEMENT NAÎT ICI ; IL NE SE RÉÉCRIT JAMAIS (ReversementIntangible) : une
+            // correction passe par la contre-passation du virement, puis un nouveau.
+            $reversement = new ReversementRetroAgent();
 
             $reversement
                 ->setAgent($beneficiaire instanceof Invite ? $beneficiaire : null)
@@ -534,67 +602,18 @@ class RetroAgentController extends AbstractController
             );
         }
 
-        // CE QUI N'A PAS ÉTÉ REPOSTÉ SORT DU VIREMENT.
-        //
-        // ⚠ LE PIÈGE DU PORTEUR. La pièce justificative est écrite sur le PORTEUR du lot —
-        // le plus petit id. Retirer cette ligne-là détruirait le bordereau avec elle, et le
-        // virement se retrouverait sans preuve sans que rien ne le dise. On transfère donc
-        // ses documents au membre qui reste, AVANT de la supprimer.
-        // EN DEUX TEMPS, ET C'EST NÉCESSAIRE. La collection `documents` est déclarée
-        // `cascade: ['remove'], orphanRemoval: true` : les deux gestes possibles échouaient
-        // dans le MÊME flush — laisser le document dans la collection le faisait supprimer
-        // en cascade, l'en retirer le faisait supprimer comme orphelin. On écrit donc
-        // d'abord le nouveau rattachement, puis on relit la ligne sortante (sa collection
-        // est alors vide) avant de la supprimer.
-        // EN DEUX TEMPS, ET C'EST NÉCESSAIRE.
-        //
-        // La collection `documents` est déclarée `cascade: ['remove'], orphanRemoval: true`.
-        // Les deux gestes possibles détruisaient donc le bordereau : le laisser dans la
-        // collection le faisait supprimer EN CASCADE avec sa ligne ; l'en retirer le faisait
-        // supprimer comme ORPHELIN. Et `refresh()` ne réinitialise pas une collection déjà
-        // chargée : la cascade retrouvait le document malgré le nouveau rattachement.
-        //
-        // On écrit donc d'abord le rattachement au membre qui reste, puis on supprime les
-        // lignes sortantes en DQL — une suppression qui ne cascade pas, ce qui est
-        // exactement ce qu'on veut une fois les pièces mises à l'abri.
-        $sortantsIds = [];
-        foreach ($aRapprocher as $membre) {
-            $this->transfererDocuments($membre, $ecrits);
-            $sortantsIds[] = $membre->getId();
-        }
-        $this->em->flush();
-
-        $retires = 0;
-        if ($sortantsIds !== []) {
-            $retires = (int) $this->em->createQuery(
-                'DELETE FROM ' . ReversementRetroAgent::class . ' r WHERE r.id IN (:ids)',
-            )->setParameter('ids', $sortantsIds)->execute();
-
-            // Les entités supprimées en base doivent sortir de la mémoire de Doctrine, sans
-            // quoi un flush ultérieur tenterait de les réécrire.
-            foreach ($aRapprocher as $membre) {
-                $this->em->detach($membre);
-            }
-        }
-
         $this->em->flush();
 
         return $this->json([
             'message' => sprintf(
-                '%d reversement%s enregistré%s pour un total de %s.%s',
+                '%d reversement%s enregistré%s pour un total de %s.',
                 $crees,
                 $crees > 1 ? 's' : '',
                 $crees > 1 ? 's' : '',
                 number_format($total, 2, ',', ' '),
-                // CE QUI A ÉTÉ RETIRÉ SE DIT. Un virement qui maigrit sans le dire laisse
-                // croire à une erreur de saisie plutôt qu'à la correction qu'on vient de
-                // demander.
-                $retires > 0
-                    ? sprintf(' %d échéance%s retirée%s du virement.', $retires, $retires > 1 ? 's' : '', $retires > 1 ? 's' : '')
-                    : '',
             ),
             'crees' => $crees,
-            'retires' => $retires,
+            'retires' => 0,
             'total' => round($total, 2),
             // LE PORTEUR DU LOT : celui des reversements qui gardera la pièce. Le client
             // y poste ses fichiers juste après, sur la route générique. Un seul fichier

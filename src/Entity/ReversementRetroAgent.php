@@ -146,6 +146,27 @@ class ReversementRetroAgent
     private ?string $description = null;
 
     /**
+     * LA CONTRE-PASSATION : un reversement est une pièce comptable intangible (Serge,
+     * 2026-10-30 ; {@see \App\Service\Retro\ReversementIntangible}). On ne le corrige pas, on
+     * l'annule par une ligne de montant OPPOSÉ, qui pointe ici vers celle qu'elle annule — les
+     * soldes s'additionnent et reviennent d'eux-mêmes. Une ligne ne se contre-passe qu'UNE fois
+     * (unicité), et une contre-passation ne se contre-passe pas.
+     *
+     * SANS CÔTÉ INVERSE : Doctrine charge le côté inverse d'un un-à-un par une requête PAR
+     * ENTITÉ, ce qui coûterait une requête par ligne de liste. « Ce virement est-il
+     * contre-passé ? » se lit par {@see \App\Service\Retro\LotDeVersement::estContrePasse},
+     * préchargé par page.
+     */
+    #[ORM\OneToOne(targetEntity: self::class)]
+    #[ORM\JoinColumn(name: 'contre_passation_de_id', nullable: true, unique: true, onDelete: 'RESTRICT')]
+    private ?ReversementRetroAgent $contrePassationDe = null;
+
+    // Condition de l'action « Contre-passer le virement » (attribute_actions) : posée par
+    // ReversementRetroAgentIndicatorStrategy, lue sur le `data-entity` de la ligne.
+    #[Groups(['list:read'])]
+    public ?bool $virementAnnulable = null;
+
+    /**
      * @var Collection<int, Document> Preuves du versement (bordereau de virement, reçu…).
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'reversementRetroAgent', cascade: ['persist', 'remove'], orphanRemoval: true)]
@@ -350,6 +371,24 @@ class ReversementRetroAgent
         $this->compteBancaire = $compteBancaire;
 
         return $this;
+    }
+
+    public function getContrePassationDe(): ?self
+    {
+        return $this->contrePassationDe;
+    }
+
+    public function setContrePassationDe(?self $original): static
+    {
+        $this->contrePassationDe = $original;
+
+        return $this;
+    }
+
+    /** Une contre-passation (montant opposé) plutôt qu'un versement. */
+    public function estUneContrePassation(): bool
+    {
+        return $this->contrePassationDe !== null;
     }
 
     public function getDescription(): ?string

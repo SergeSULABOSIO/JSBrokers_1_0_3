@@ -526,7 +526,8 @@ class CourtierEcritureComptableService
             if (!isset($lots[$cle])) {
                 $lots[$cle] = [
                     'date'        => $reversement->getPaidAt(),
-                    'piece'       => $reversement->getLotReference() ?: ($reversement->getReference() ?: 'RA-' . $reversement->getId()),
+                    // La PIÈCE est la référence du virement (n° bancaire) ; la clé de lot ne sert qu'à regrouper.
+                    'piece'       => $reversement->getReference() ?: ($reversement->getLotReference() ?: 'RA-' . $reversement->getId()),
                     'beneficiaire' => $reversement->beneficiaireNom(),
                     'estAgent'    => $estAgent,
                     'tresorerie'  => $reversement->getCompteBancaire() !== null ? PlanComptable::BANQUES : PlanComptable::CAISSE,
@@ -555,24 +556,31 @@ class CourtierEcritureComptableService
                 default => sprintf(' — %d polices', count($polices)),
             };
 
+            $compteCharge = $lot['estAgent'] ? PlanComptable::COMMISSIONS_PERSONNEL : PlanComptable::RETRO_COMMISSIONS;
+            // UNE CONTRE-PASSATION (total négatif, ReversementIntangible) S'ÉCRIT À L'ENVERS :
+            // D trésorerie / C charge, pour le montant positif — jamais un débit négatif.
+            $contrePassation = $total < 0;
+            $montant = abs($total);
             $ecritures[] = [
                 'date'    => $lot['date'],
                 'piece'   => $lot['piece'],
                 'libelle' => sprintf(
-                    'Rétrocommission %s — %s%s',
+                    '%sRétrocommission %s — %s%s',
+                    $contrePassation ? 'Contre-passation — ' : '',
                     $lot['estAgent'] ? 'agent' : 'partenaire',
                     $lot['beneficiaire'],
                     $detail,
                 ),
                 'type'    => $lot['estAgent'] ? 'retro_agent' : 'retro_partenaire',
-                'lignes'  => [
-                    $this->ligne(
-                        $lot['estAgent'] ? PlanComptable::COMMISSIONS_PERSONNEL : PlanComptable::RETRO_COMMISSIONS,
-                        $total,
-                        0.0,
-                    ),
-                    $this->ligne($lot['tresorerie'], 0.0, $total),
-                ],
+                'lignes'  => $contrePassation
+                    ? [
+                        $this->ligne($lot['tresorerie'], $montant, 0.0),
+                        $this->ligne($compteCharge, 0.0, $montant),
+                    ]
+                    : [
+                        $this->ligne($compteCharge, $montant, 0.0),
+                        $this->ligne($lot['tresorerie'], 0.0, $montant),
+                    ],
             ];
         }
 

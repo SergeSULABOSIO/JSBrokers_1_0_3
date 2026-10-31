@@ -142,6 +142,7 @@ class CalculationProvider
     {
         $this->lotDeVersement->prechargerJustificatifs($items);
         $this->lotDeVersement->prechargerVirements($items);
+        $this->lotDeVersement->prechargerContrePassations($items);
     }
 
     /**

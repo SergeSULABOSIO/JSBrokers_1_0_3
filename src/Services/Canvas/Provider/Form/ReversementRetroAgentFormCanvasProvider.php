@@ -2,6 +2,7 @@
 
 namespace App\Services\Canvas\Provider\Form;
 
+use App\Entity\Invite;
 use App\Entity\ReversementRetroAgent;
 
 /**
@@ -102,6 +103,21 @@ class ReversementRetroAgentFormCanvasProvider implements FormCanvasProviderInter
                     "event"        => "ui:production.rubrique-request",
                     "url"          => "/admin/productionintermediaire/ouvrir/reversement/%id%",
                 ],
+                // ── LA SEULE CORRECTION D'UNE PIÈCE COMPTABLE ─────────────────────────
+                //
+                // Un reversement enregistré ne se modifie plus et ne se supprime pas
+                // (ReversementIntangible) : on l'annule par des lignes de montant opposé, sur
+                // le virement ENTIER. Offerte seulement à un virement ni déjà contre-passé, ni
+                // lui-même une contre-passation (indicateur `virementAnnulable`) ; le serveur
+                // refuse en 409 qui explique si l'état a changé entre-temps.
+                [
+                    "label"     => "Contre-passer le virement",
+                    "icon"      => "action:contre-passer",
+                    "event"     => "ui:reversement.contre-passer-request",
+                    "url"       => "/admin/retro-agent/reversement/%id%/contre-passer",
+                    "droit"     => ["entite" => "ReversementRetroAgent", "niveau" => Invite::ACCESS_ECRITURE], // garde de l'endpoint
+                    "condition" => ["field" => "virementAnnulable", "value" => true],
+                ],
             ],
             // ── « ÉDITER » OUVRE LA FENÊTRE DE REVERSEMENT ────────────────────────────
             //
@@ -117,11 +133,10 @@ class ReversementRetroAgentFormCanvasProvider implements FormCanvasProviderInter
                 "event" => "ui:retroagent.reversement-request",
                 "url"   => "/admin/retro-agent/reversement/%id%/editer",
             ],
-            // UN VIREMENT SE SUPPRIME EN ENTIER, et la boîte de confirmation doit le dire
-            // AVANT : la ligne sélectionnée en représente plusieurs, et l'utilisateur ne
-            // peut pas le deviner d'un écran qui n'en montre qu'une.
-            "suppression_note" => "Un virement se supprime en entier : toutes les échéances "
-                . "qu'il règle sont retirées, et son écriture comptable défaite.",
+            // UN REVERSEMENT NE SE SUPPRIME PAS (pièce comptable) : la boîte de confirmation
+            // le dit AVANT, et le serveur refuse en 409 (ReversementIntangible::MOTIF_SUPPRESSION).
+            "suppression_note" => "Un reversement enregistré est une pièce comptable : il ne se "
+                . "supprime pas. Pour l'annuler, utilisez « Contre-passer le virement ».",
             "facts_labels" => [
                 "lotReference" => "Virement groupé (référence de lot)",
                 "tranche" => "Échéance réglée",

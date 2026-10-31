@@ -666,6 +666,12 @@ export default class extends Controller {
             case 'client:note.valider-execute': // confirmation donnée → POST effectif
                 this._handleNoteValiderExecute(payload);
                 break;
+            case 'ui:reversement.contre-passer-request': // pièce comptable : confirmation d'abord
+                this.handleReversementContrePasserRequest(payload);
+                break;
+            case 'client:reversement.contre-passer-execute': // confirmation donnée → POST effectif
+                this._handleReversementContrePasserExecute(payload);
+                break;
             case 'ui:soa.view-request':
                 this.handleSoaViewRequest(payload);
                 break;
@@ -2434,6 +2440,66 @@ export default class extends Controller {
         } catch (error) {
             console.error('[Cerveau] _handleNoteValiderExecute() failed:', error);
             this.broadcast('ui:confirmation.error', { error: error.message || 'La validation a échoué.' });
+        }
+    }
+
+    /**
+     * « Contre-passer le virement » : un reversement enregistré est une pièce comptable, il ne
+     * se modifie ni ne se supprime ; on l'annule par des lignes de montant opposé, sur le
+     * virement ENTIER. Irréversible (une contre-passation ne se contre-passe pas), d'où la
+     * confirmation. Le serveur re-vérifie tout (droit, cabinet, état) et dit pourquoi s'il refuse.
+     * @param {object} payload
+     * @param {string} payload.url - '/admin/retro-agent/reversement/{id}/contre-passer'
+     * @param {Array}  [payload.selection]
+     */
+    handleReversementContrePasserRequest(payload) {
+        if (!payload.url) {
+            console.error('[Cerveau] handleReversementContrePasserRequest() : URL manquante.', payload);
+            this._showNotification('Impossible de contre-passer le virement : contexte manquant.', 'error');
+            return;
+        }
+        const nom = payload.selection?.[0]?.name || 'le virement sélectionné';
+        this.broadcast('ui:confirmation.request', {
+            title: 'Contre-passer le virement',
+            body: "Chaque échéance réglée par ce virement reçoit une ligne de montant opposé, datée d'aujourd'hui. Le virement d'origine reste visible, et le montant redevient dû au bénéficiaire. Une contre-passation ne s'annule pas : si le versement doit être refait, enregistrez-en un nouveau.",
+            itemDescriptions: [nom],
+            showIrreversible: true,
+            onConfirm: {
+                type: 'client:reversement.contre-passer-execute',
+                payload: { url: payload.url },
+            },
+        });
+    }
+
+    /**
+     * Exécute la contre-passation après confirmation : POST, notification (le message du
+     * serveur nomme la référence et le montant), puis rafraîchissement — l'action disparaît
+     * du virement annulé (condition virementAnnulable).
+     * @private
+     */
+    async _handleReversementContrePasserExecute(payload) {
+        if (!payload.url) {
+            this.broadcast('ui:confirmation.error', { error: 'Contexte de contre-passation manquant.' });
+            return;
+        }
+        try {
+            const response = await fetch(payload.url, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.message || `Erreur serveur ${response.status}`);
+
+            this._showNotification(data.message || 'Virement contre-passé.', 'success');
+            this._annoncerFicheModifiee();
+            const etat = this._getActiveTabState();
+            this._publishSelectionStatus('Actualisation de la liste...');
+            this.broadcast('app:loading.start', { originatorId: etat.elementId, workspaceTabId: this.currentWorkspaceTabId });
+            this._requestListRefresh(this.getActiveTabId());
+            this.broadcast('ui:confirmation.close');
+        } catch (error) {
+            console.error('[Cerveau] _handleReversementContrePasserExecute() failed:', error);
+            this.broadcast('ui:confirmation.error', { error: error.message || 'La contre-passation a échoué.' });
         }
     }
 

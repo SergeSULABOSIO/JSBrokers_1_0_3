@@ -904,13 +904,14 @@ class SuppressionEnChaineTest extends WebTestCase
     }
 
     /**
-     * UN VERSEMENT DÉJÀ EFFECTUÉ SURVIT, DÉTACHÉ.
+     * UNE AFFAIRE QUI PORTE UN VERSEMENT NE SE SUPPRIME PAS (ReversementIntangible, 2026-10-30).
      *
-     * Une rétrocommission versée est un décaissement RÉEL : l'argent est sorti, la pièce
-     * est en comptabilité. Supprimer l'affaire qu'elle solde ne la rend pas fictive. Ce
-     * test garantit aussi qu'on n'a pas « réglé » le blocage en ajoutant une cascade.
+     * Une rétrocommission versée est un décaissement RÉEL et une pièce comptable : sa police
+     * et son échéance en font partie. Avant, la suppression de l'affaire DÉTACHAIT le
+     * versement (liens coupés) ; c'était modifier la pièce. Le plan est désormais refusé, avec
+     * un motif, et rien ne bouge — ni l'affaire, ni le versement.
      */
-    public function testLeVersementDejaEffectueSurvitDetache(): void
+    public function testLAffaireQuiPorteUnVersementNeSeSupprimePas(): void
     {
         $cabinet = $this->cabinet();
         $dossier = $this->dossierComplet($cabinet, 'RETRO', factureReglee: false);
@@ -930,15 +931,19 @@ class SuppressionEnChaineTest extends WebTestCase
         $this->client->loginUser($this->user(self::OWNER_EMAIL));
         $reponse = $this->supprimer('piste', $idPiste);
 
-        $this->assertSame(200, $reponse['statut'], (string) ($reponse['corps']['message'] ?? ''));
-        $this->assertFalse($this->existe(Piste::class, $idPiste), "L'affaire est partie.");
+        $this->assertSame(409, $reponse['statut'], 'La suppression est refusée.');
+        $this->assertStringContainsString(
+            \App\Service\Retro\ReversementIntangible::MOTIF_SUPPRESSION,
+            (string) ($reponse['corps']['message'] ?? ''),
+            'Et le refus dit pourquoi.',
+        );
+        $this->assertTrue($this->existe(Piste::class, $idPiste), "L'affaire est toujours là.");
 
         $this->em()->clear();
-        $survivant = $this->em()->find(ReversementRetroAgent::class, $idVersement);
-        $this->assertNotNull($survivant, 'LE VERSEMENT SURVIT : l\'argent est réellement sorti.');
-        $this->assertNull($survivant->getAvenant(), 'Son lien vers la police est coupé, pas pendant.');
-        $this->assertNull($survivant->getTranche(), "Et celui vers l'échéance aussi.");
-        $this->assertSame(250.0, $survivant->getMontant(), 'Le montant versé est intact.');
+        $intact = $this->em()->find(ReversementRetroAgent::class, $idVersement);
+        $this->assertNotNull($intact, 'Le versement est intact.');
+        $this->assertNotNull($intact->getAvenant(), 'Son lien vers la police n’a pas été coupé.');
+        $this->assertNotNull($intact->getTranche(), "Ni celui vers l'échéance.");
     }
 
     /**

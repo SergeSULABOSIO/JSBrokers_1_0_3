@@ -849,7 +849,7 @@ class AssistantIaController extends AbstractController
                 'journal'   => $journal,
                 'rolledBack' => true,
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
-        } catch (\App\Service\Note\NoteIntangibleException $e) {
+        } catch (\App\Exception\PieceIntangibleException $e) {
             // Le dernier rempart des notes émises : un refus métier, rédigé pour le courtier.
             return $this->json([
                 'success'    => false,

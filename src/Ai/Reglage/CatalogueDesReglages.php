@@ -189,6 +189,7 @@ final class CatalogueDesReglages
         'saisir_proposition'                 => ['Saisir une cotation', 'Enregistre une proposition complète en une fois.', 'cotation'],
         'saturation_portefeuille'            => ['Saturation du portefeuille', 'Le taux de couverture et les risques qui manquent encore à chaque client.', 'portefeuille'],
         'signaler_paiement_prime'            => ['Signaler un paiement de prime', 'Trace le règlement d’une prime par le client.', 'action:completed'],
+        'contre_passer_reversement'          => ['Contre-passer un reversement', 'Annule un virement de rétrocommission enregistré par des lignes de montant opposé.', 'action:contre-passer'],
         'signaler_reversement_retro_agent'   => ['Signaler un reversement', 'Enregistre le versement d’une rétrocommission à un agent.', 'action:transfer'],
         'simuler_conge'                      => ['Simuler un congé', 'Calcule les jours ouvrables d’une période d’absence.', 'regime-travail'],
         'solde_tokens'                       => ['Solde de jetons', 'Le solde de jetons du cabinet.', 'monnaie'],

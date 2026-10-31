@@ -4,6 +4,7 @@ namespace App\Services\Canvas\Indicator;
 
 use App\Entity\ReversementRetroAgent;
 use App\Service\Retro\LotDeVersement;
+use App\Service\Retro\ReversementIntangible;
 
 /**
  * CE QU'UNE LIGNE DE LA LISTE DES REVERSEMENTS DOIT MONTRER.
@@ -67,7 +68,7 @@ class ReversementRetroAgentIndicatorStrategy implements IndicatorCalculationStra
             // Un virement groupé se dit : sans cela, trois lignes d'un même décaissement se
             // liraient comme trois virements distincts.
             'virementGroupe' => $entity->getLotReference() !== null && trim($entity->getLotReference()) !== ''
-                ? 'Virement groupé ' . $entity->getLotReference()
+                ? trim('Virement groupé ' . (string) $entity->getReference())
                 : null,
             // ── CE QUE CETTE LIGNE REPRÉSENTE, EN ARGENT ─────────────────────────────
             //
@@ -85,6 +86,21 @@ class ReversementRetroAgentIndicatorStrategy implements IndicatorCalculationStra
                     ? $n . ' échéances réglées'
                     : '1 échéance réglée')
                 : null,
+            // ── LA PIÈCE COMPTABLE ET SON ANNULATION (ReversementIntangible) ─────────
+            //
+            // Le virement d'origine reste lisible à côté de sa contre-passation : la ligne
+            // dit lequel des deux elle est. Le drapeau commande « Contre-passer le
+            // virement » — offert seulement quand le serveur l'acceptera. Préchargé par
+            // page (LotDeVersement::prechargerContrePassations).
+            'etatComptable' => match (true) {
+                $entity->estUneContrePassation() => 'Contre-passation',
+                $this->lots->estContrePasse($entity) => 'Contre-passé',
+                default => null,
+            },
+            'virementAnnulable' => ReversementIntangible::refusDeContrePassation(
+                $entity,
+                $this->lots->estContrePasse($entity),
+            ) === null,
         ];
     }
 }

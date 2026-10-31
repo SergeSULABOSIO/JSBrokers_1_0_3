@@ -6,23 +6,20 @@ use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\ReversementRetroAgent;
 use App\Entity\Utilisateur;
+use App\Exception\PieceIntangibleException;
+use App\Service\Retro\ReversementIntangible;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 /**
- * SUPPRIMER UNE LIGNE DE RÉTROS INTERMÉDIAIRES DÉFAIT TOUT LE VIREMENT.
+ * UN REVERSEMENT ENREGISTRÉ NE SE SUPPRIME PAS (Serge, 2026-10-30 — ReversementIntangible).
  *
- * ── POURQUOI CE N'EST PAS UN EXCÈS DE ZÈLE ──────────────────────────────────────────
- * Depuis que la rubrique replie chaque lot sur son porteur, la ligne sélectionnée
- * REPRÉSENTE un virement entier — elle en porte le total et le nombre d'échéances. N'en
- * supprimer qu'une aurait fait maigrir le décaissement d'un montant que l'écran ne
- * montrait même pas, et laissé une écriture comptable partielle.
- *
- * ── ET LA PORTÉE S'ARRÊTE AU LOT ────────────────────────────────────────────────────
- * Un virement voisin ne doit rien perdre : c'est la moitié du test, et c'est elle qui
- * tomberait si la suppression se mettait à raisonner sur le bénéficiaire ou la date au
- * lieu de la référence de lot.
+ * C'est une pièce comptable : il s'annule par une CONTRE-PASSATION du virement entier, et
+ * l'original reste lisible à côté de son annulation. Ce test tient les deux gardiens :
+ * l'écran (409 qui explique, rien n'est supprimé, ni le virement ni ses voisins) et le
+ * dernier rempart, le flush (IntangibiliteDesReversementsListener), qui refuse même une
+ * suppression ou une modification comptable faite directement par l'ORM.
  */
 class ReversementSuppressionLotTest extends WebTestCase
 {
@@ -109,8 +106,6 @@ class ReversementSuppressionLotTest extends WebTestCase
         };
 
         $a = [$ecrire(10.0, self::LOT_A), $ecrire(20.0, self::LOT_A), $ecrire(30.0, self::LOT_A)];
-        // B EST UN VERSEMENT VRAIMENT ISOLÉ : pas de référence de lot, comme le serveur
-        // en écrit un quand une seule échéance est réglée.
         $b = $ecrire(7.0, null);
         $em->flush();
 
@@ -127,65 +122,73 @@ class ReversementSuppressionLotTest extends WebTestCase
         $this->client->loginUser($utilisateur);
     }
 
-    public function testSupprimerUneLigneDefaitLeVirementEntierEtLuiSeul(): void
+    /** @param int[] $ids */
+    private function tousPresents(array $ids): void
+    {
+        $this->em()->clear();
+        $repo = $this->em()->getRepository(ReversementRetroAgent::class);
+        foreach ($ids as $id) {
+            self::assertNotNull($repo->find($id), "La ligne #{$id} est toujours là.");
+        }
+    }
+
+    public function testLEcranRefuseDeSupprimerUnVirementEtDitPourquoi(): void
     {
         $s = $this->semer();
         $this->connecter();
 
-        // On désigne le PORTEUR, comme le fait la rubrique repliée.
         $this->client->request('DELETE', '/admin/reversementretroagent/api/delete/' . $s['aIds'][0]);
 
-        self::assertResponseIsSuccessful();
-        $this->em()->clear();
-
-        $repo = $this->em()->getRepository(ReversementRetroAgent::class);
-        foreach ($s['aIds'] as $id) {
-            self::assertNull($repo->find($id), "La ligne #{$id} du virement A est supprimée.");
-        }
-
-        // ET LE VIREMENT VOISIN N'A RIEN PERDU. Sans cette moitié, une suppression qui
-        // raisonnerait sur le bénéficiaire — ils partagent le même — passerait au vert.
-        self::assertNotNull($repo->find($s['bId']), 'Le virement B est intact.');
+        self::assertResponseStatusCodeSame(409);
+        $corps = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertSame(ReversementIntangible::MOTIF_SUPPRESSION, $corps['message'] ?? null, 'Le refus dit quoi faire à la place.');
+        $this->tousPresents([...$s['aIds'], $s['bId']]);
     }
 
-    /**
-     * Le geste se fait aussi depuis un membre qui n'est pas le porteur : la rubrique le
-     * replie, mais l'assistant ou une recherche avancée peuvent désigner n'importe lequel.
-     */
-    public function testLeGesteVautDepuisNimporteQuelMembre(): void
-    {
-        $s = $this->semer();
-        $this->connecter();
-
-        $this->client->request('DELETE', '/admin/reversementretroagent/api/delete/' . $s['aIds'][2]);
-
-        self::assertResponseIsSuccessful();
-        $this->em()->clear();
-
-        $repo = $this->em()->getRepository(ReversementRetroAgent::class);
-        self::assertNull($repo->find($s['aIds'][0]), 'Le porteur part aussi.');
-        self::assertNull($repo->find($s['aIds'][1]));
-        self::assertNotNull($repo->find($s['bId']));
-    }
-
-    /**
-     * UN VERSEMENT ISOLÉ EST UN LOT D'UN MEMBRE : la règle n'a pas deux cas, et supprimer
-     * une ligne sans lot ne doit surtout pas emporter les autres versements sans lot.
-     */
-    public function testUnVersementIsoleNEmportePasSesVoisins(): void
+    /** Un versement isolé ne se supprime pas davantage. */
+    public function testUnVersementIsoleNeSeSupprimePasNonPlus(): void
     {
         $s = $this->semer();
         $this->connecter();
 
         $this->client->request('DELETE', '/admin/reversementretroagent/api/delete/' . $s['bId']);
 
-        self::assertResponseIsSuccessful();
-        $this->em()->clear();
+        self::assertResponseStatusCodeSame(409);
+        $this->tousPresents([$s['bId']]);
+    }
 
-        $repo = $this->em()->getRepository(ReversementRetroAgent::class);
-        self::assertNull($repo->find($s['bId']));
-        foreach ($s['aIds'] as $id) {
-            self::assertNotNull($repo->find($id), 'Le virement A est intact.');
-        }
+    /** LE DERNIER REMPART : même l'ORM, sans passer par l'écran, ne supprime pas un reversement. */
+    public function testLeFlushRefuseUneSuppressionDirecte(): void
+    {
+        $s = $this->semer();
+        $em = $this->em();
+        $em->remove($em->getRepository(ReversementRetroAgent::class)->find($s['bId']));
+
+        $this->expectException(PieceIntangibleException::class);
+        $em->flush();
+    }
+
+    /** Ni la modification d'un champ comptable faite directement par l'ORM. */
+    public function testLeFlushRefuseDeModifierUnMontant(): void
+    {
+        $s = $this->semer();
+        $em = $this->em();
+        $em->getRepository(ReversementRetroAgent::class)->find($s['bId'])->setMontant(8.0);
+
+        $this->expectException(PieceIntangibleException::class);
+        $em->flush();
+    }
+
+    /** La référence et la description, elles, restent modifiables. */
+    public function testLeFlushLaissePasserLaReferenceEtLaDescription(): void
+    {
+        $s = $this->semer();
+        $em = $this->em();
+        $em->getRepository(ReversementRetroAgent::class)->find($s['bId'])
+            ->setReference('SOLO-CORRIGE')->setDescription('Numéro d’ordre corrigé.');
+        $em->flush();
+
+        $em->clear();
+        self::assertSame('SOLO-CORRIGE', $em->getRepository(ReversementRetroAgent::class)->find($s['bId'])->getReference());
     }
 }

@@ -138,27 +138,21 @@ class ReversementRetroAgentController extends AbstractController
     }
 
     /**
-     * SUPPRIMER UN REVERSEMENT DÉFAIT TOUT SON VIREMENT.
+     * UN REVERSEMENT NE SE SUPPRIME PLUS (Serge, 2026-10-30).
      *
-     * Depuis que la rubrique replie chaque lot sur son porteur, la ligne sélectionnée
-     * REPRÉSENTE un virement entier : n'en supprimer qu'une échéance aurait fait maigrir le
-     * décaissement d'un montant que l'écran ne montrait même pas, et laissé une écriture
-     * comptable partielle. La règle du lot est celle de `LotDeVersement` — un seul endroit,
-     * partagé avec l'édition et la relecture des pièces.
+     * Il défaisait jadis tout son virement. C'est une pièce comptable : on l'annule par la
+     * CONTRE-PASSATION du virement entier (même règle de lot, `LotDeVersement`), qui laisse
+     * l'original et son annulation lisibles côte à côte.
      */
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
-    public function deleteApi(ReversementRetroAgent $reversement, LotDeVersement $lots): Response
+    public function deleteApi(ReversementRetroAgent $reversement): Response
     {
-        // LE PORTEUR EN DERNIER : ses frères sont supprimés d'abord, et la réponse — comme
-        // les gardes du socle — porte sur la ligne que l'utilisateur a désignée.
-        foreach ($lots->membresDuLot($reversement) as $membre) {
-            if ($membre === $reversement) {
-                continue;
-            }
-            $this->em->remove($membre);
-        }
+        // UN REVERSEMENT ENREGISTRÉ EST UNE PIÈCE COMPTABLE : il ne se supprime pas, il se
+        // contre-passe (ReversementIntangible, Serge 2026-10-30). Le cabinet d'abord : un id
+        // d'ailleurs reste introuvable, sans confirmer qu'il existe.
+        $this->appartenance()->exigerLeCabinetOuvert($reversement, 'Ce reversement');
 
-        return $this->handleDeleteApi($reversement);
+        return $this->json(['message' => \App\Service\Retro\ReversementIntangible::MOTIF_SUPPRESSION], Response::HTTP_CONFLICT);
     }
 
     #[Route(

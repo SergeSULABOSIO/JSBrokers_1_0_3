@@ -225,9 +225,10 @@ class ReversementEcritureTest extends WebTestCase
         $lignes = $this->em()->getRepository(\App\Entity\ReversementRetroAgent::class)
             ->findBy(['reference' => 'VIR-TEST-77']);
         self::assertCount(2, $lignes);
-        foreach ($lignes as $ligne) {
-            self::assertSame('VIR-TEST-77', $ligne->getLotReference());
-        }
+        // La CLÉ du lot est posée par le serveur, jamais la référence saisie : deux virements
+        // peuvent partager une référence (LotDeVersement::nouvelleReferenceDeLot).
+        self::assertStringStartsWith('LOT-', (string) $lignes[0]->getLotReference());
+        self::assertSame($lignes[0]->getLotReference(), $lignes[1]->getLotReference(), 'Une seule clé pour le virement.');
     }
 
     public function testUnReversementIsoleNaPasDeReferenceDeLot(): void

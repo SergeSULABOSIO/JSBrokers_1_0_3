@@ -93,6 +93,9 @@ final class CouvertureDesEcrans
         'ui:retroagent.reversement-request' => 'signaler_reversement_retro_agent',
         'ui:production.reversement-request' => 'signaler_reversement_retro_agent',
         'ui:production.versements-request' => 'retrocommissions',
+        // Annuler un virement enregistré (pièce comptable, ReversementIntangible) : la
+        // contre-passation du virement entier, par le même service que l'écran.
+        'ui:reversement.contre-passer-request' => 'contre_passer_reversement',
 
         // ── Portefeuilles ──────────────────────────────────────────────────
         // Affecter ou retirer un client d'un portefeuille, côté client comme côté

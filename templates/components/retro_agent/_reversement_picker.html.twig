@@ -27,6 +27,11 @@
         d'enregistrement serait resté inerte tant qu'on n'aurait pas redéposé le même
         bordereau — et corriger une date serait devenu impossible. #}
      data-reversement-retro-picker-piece-deja-value="{{ (edition and edition.pieces is not empty) ? 'true' : 'false' }}"
+     {# UN VIREMENT ENREGISTRÉ EST UNE PIÈCE COMPTABLE (ReversementIntangible) : ses échéances,
+        montants, date et compte s'affichent en LECTURE ; seuls la référence, la description et
+        les pièces se corrigent. Le serveur refuse en 409 tout autre changement. #}
+     data-reversement-retro-picker-edition-value="{{ edition ? 'true' : 'false' }}"
+     data-reversement-retro-picker-sans-preuve-value="{{ (edition and edition.sansPreuve) ? 'true' : 'false' }}"
      data-picker-overlay>
     <div class="jsb-picker-modal jsb-picker-modal--large"
          role="dialog"
@@ -41,7 +46,7 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('depense') }}" style="width:22px;height:22px;color:#0047AB;" />
                 </span>
                 <h5 id="jsb-rra-picker-title" class="modal-title mb-0">
-                    {%- if edition %}Corriger le virement&nbsp;«&nbsp;{{ edition.reference }}&nbsp;»
+                    {%- if edition %}Virement&nbsp;«&nbsp;{{ edition.reference }}&nbsp;»
                     {%- else %}Reverser une rétrocommission à&nbsp;«&nbsp;{{ beneficiaireNom }}&nbsp;»{% endif -%}
                 </h5>
             </div>
@@ -60,10 +65,11 @@
                 <p class="jsb-picker-intro-title">{{ beneficiaireNom }}</p>
                 <p id="jsb-rra-picker-desc" class="jsb-picker-intro-desc">
                     {%- if edition %}
-                        Les échéances <strong>déjà réglées</strong> par ce virement sont cochées.
-                        Décochez-en une pour l'en retirer, cochez-en une autre pour l'y ajouter,
-                        ou corrigez un montant. La pièce justificative déjà déposée reste
-                        valable&nbsp;: vous n'avez pas à la redéposer pour corriger une date.
+                        Ce virement est <strong>enregistré</strong>&nbsp;: ses échéances, ses
+                        montants, sa date et son compte ne se modifient plus. Vous pouvez
+                        corriger sa référence et sa description, et compléter ses pièces.
+                        Pour corriger le reste, utilisez «&nbsp;Contre-passer le virement&nbsp;»,
+                        puis enregistrez un nouveau versement.
                     {% else %}
                     Cochez les affaires réglées par ce versement. Seules celles dont la
                     commission a été <strong>encaissée par le cabinet</strong> apparaissent —
@@ -88,23 +94,26 @@
                 </p>
             {% else %}
                 <fieldset class="jsb-picker-carte">
-                    <legend class="fs-6" style="color:var(--cobalt-dark);">Affaires à régler</legend>
+                    <legend class="fs-6" style="color:var(--cobalt-dark);">{{ edition ? 'Échéances réglées par ce virement' : 'Affaires à régler' }}</legend>
                     <div class="table-responsive">
                         <table class="jsb-picker-table jsb-picker-table--lignes-cliquables"
-                               aria-label="Affaires avec un solde exigible">
+                               aria-label="{{ edition ? 'Échéances réglées par ce virement' : 'Affaires avec un solde exigible' }}">
                             <thead>
                                 <tr>
                                     <th scope="col" style="width:44px;">
                                         <input class="form-check-input" type="checkbox"
                                                data-action="change->reversement-retro-picker#toutCocher"
+                                               {{ edition ? 'checked disabled' : '' }}
                                                aria-label="Tout cocher">
                                     </th>
                                     <th scope="col">Client / Police</th>
+                                    {% if not edition %}
                                     <th scope="col" class="jsb-picker-num">
                                         Solde exigible{% if monnaie %} <span class="text-muted">({{ monnaie }})</span>{% endif %}
                                     </th>
+                                    {% endif %}
                                     <th scope="col" class="jsb-picker-num" style="width:11rem;">
-                                        Montant à verser{% if monnaie %} <span class="text-muted">({{ monnaie }})</span>{% endif %}
+                                        {{ edition ? 'Montant versé' : 'Montant à verser' }}{% if monnaie %} <span class="text-muted">({{ monnaie }})</span>{% endif %}
                                     </th>
                                 </tr>
                             </thead>
@@ -121,6 +130,7 @@
                                                celui-là même que l'écriture rapproche. #}
                                             <input class="form-check-input" type="checkbox"
                                                    {{ ((l.trancheId ?? 0) ~ ':' ~ (l.avenantId ?? 0)) in cochees ? 'checked' : '' }}
+                                                   {{ edition ? 'disabled' : '' }}
                                                    data-reversement-retro-picker-target="coche"
                                                    data-action="change->reversement-retro-picker#recalculer"
                                                    aria-label="Régler {{ l.client }} — {{ l.reference }}">
@@ -130,15 +140,22 @@
                                             <div class="text-muted small">{{ l.reference }} · {{ l.risque }}</div>
                                             <div class="text-muted small">{{ l.trancheNom }}{% if l.echeanceAt %} · échéance {{ l.echeanceAt|date('d/m/Y') }}{% endif %}</div>
                                         </td>
+                                        {% if not edition %}
                                         <td class="jsb-picker-num">
                                             {{ l.retroAgentExigible|number_format(2, ',', ' ') }}
                                         </td>
+                                        {% endif %}
                                         <td>
                                             {# Pré-rempli au solde exigible : le geste courant est de
                                                solder. Un versement partiel reste possible en corrigeant. #}
                                             <input type="number" class="form-control form-control-sm text-end"
+                                                   {% if edition %}
+                                                   step="0.01" readonly
+                                                   value="{{ (l.montantVerse ?? 0)|number_format(2, '.', '') }}"
+                                                   {% else %}
                                                    step="0.01" min="0" max="{{ l.retroAgentExigible }}"
                                                    value="{{ l.retroAgentExigible|number_format(2, '.', '') }}"
+                                                   {% endif %}
                                                    data-reversement-retro-picker-target="montant"
                                                    data-action="input->reversement-retro-picker#recalculer"
                                                    aria-label="Montant versé pour {{ l.reference }}">
@@ -174,6 +191,7 @@
                                     {{ ux_icon(resolve_icon_name('action:calendar'), {width: '16px', height: '16px'}) }}
                                 </span>
                                 <input type="date" id="rra-date" class="form-control"
+                                       {{ edition ? 'readonly' : '' }}
                                        value="{{ edition ? edition.paidAt|date('Y-m-d') : 'now'|date('Y-m-d') }}"
                                        data-reversement-retro-picker-target="date"
                                        aria-describedby="rra-date-aide">
@@ -213,6 +231,7 @@
                                     {{ ux_icon(resolve_icon_name('compte-bancaire'), {width: '16px', height: '16px'}) }}
                                 </span>
                                 <select id="rra-compte" class="form-select"
+                                        {{ edition ? 'disabled' : '' }}
                                         data-reversement-retro-picker-target="compte"
                                         aria-describedby="rra-compte-aide">
                                     {% set compte_retenu = edition ? edition.compteId : compteProposeId %}
@@ -223,6 +242,24 @@
                                 </select>
                             </div>
                         </div>
+                        {% if edition %}
+                        <div class="jsb-picker-champs--pleine">
+                            <label for="rra-description" class="form-label fw-semibold mb-0" style="color:var(--cobalt-dark);">Description</label>
+                            <span class="text-muted small d-block mb-1" id="rra-description-aide">
+                                Une précision sur ce virement&nbsp;: elle ne change pas l'écriture comptable.
+                            </span>
+                            <div class="jsb-picker-field">
+                                <span class="jsb-picker-field-icon" aria-hidden="true">
+                                    {{ ux_icon(resolve_icon_name('action:description'), {width: '16px', height: '16px'}) }}
+                                </span>
+                                <input type="text" id="rra-description" name="reversement_description"
+                                       class="form-control" maxlength="255" autocomplete="off"
+                                       value="{{ edition.description|texte_lisible }}"
+                                       data-reversement-retro-picker-target="description"
+                                       aria-describedby="rra-description-aide">
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                 </fieldset>
 
@@ -327,7 +364,7 @@
                         data-reversement-retro-picker-target="executer"
                         disabled>
                     <twig:UX:Icon name="{{ resolve_icon_name('action:save') }}" style="width:15px;height:15px;" aria-hidden="true" />
-                    Enregistrer le versement
+                    {{ edition ? 'Enregistrer les corrections' : 'Enregistrer le versement' }}
                 </button>
             </span>
         </footer>

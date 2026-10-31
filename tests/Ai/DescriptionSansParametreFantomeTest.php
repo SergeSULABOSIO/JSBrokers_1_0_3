@@ -63,7 +63,7 @@ class DescriptionSansParametreFantomeTest extends KernelTestCase
         'abandonnerMouvementExistant', 'agentId', 'assureurId', 'avenantId', 'cibleId', 'cotationId',
         'compteBancaireId', 'dateDebut', 'dateEffet', 'dateFin', 'demandeId',
         'demiJourneeDebut', 'demiJourneeFin', 'dureeJours', 'fichierId', 'paidAt',
-        'partenaireId', 'referencePolice', 'trancheId', 'typeAbsence',
+        'partenaireId', 'referencePolice', 'reversementId', 'trancheId', 'typeAbsence',
 
         // Clés internes de la charge utile d'un reversement et d'un document.
         'sourceMessageId',

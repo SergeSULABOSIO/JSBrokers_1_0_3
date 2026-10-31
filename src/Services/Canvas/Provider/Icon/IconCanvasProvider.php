@@ -114,6 +114,7 @@ class IconCanvasProvider
         'action:add'          => 'gridicons:add',
         'action:calendar'     => 'jsb:calendar', // icône locale (aucune dispo dans les sets)
         'action:count'        => 'jsb:hashtag',  // icône locale (compteur / quantité)
+        'action:contre-passer' => 'mdi:cash-minus', // annuler une pièce comptable par un montant opposé (reversement)
         'action:analyser'     => 'boxicons:analyze-filled',
         'action:alert'        => 'fluent:alert-24-regular',
         'action:annulation'   => 'fluent:calendar-cancel-24-regular',

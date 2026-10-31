@@ -2195,7 +2195,7 @@ trait ControllerUtilsTrait
                 $this->workspaceMutationService->commitWrite($entity, $currentEntreprise, $this->getUser());
             } catch (InsufficientTokensException $e) {
                 return $this->tokensBlockedJson($e);
-            } catch (\App\Service\Note\NoteIntangibleException $e) {
+            } catch (\App\Exception\PieceIntangibleException $e) {
                 // Le dernier rempart a parlé (une porte que les contrôles d'avant n'ont pas
                 // vue) : un refus lisible, pas une erreur 500.
                 return $this->json(['message' => $e->getMessage()], Response::HTTP_CONFLICT);
@@ -2337,7 +2337,7 @@ trait ControllerUtilsTrait
                 'message' => $this->compteRenduDeSuppression($entityName, $rapport),
                 'rapport' => $rapport,
             ]];
-        } catch (MutationException|\App\Service\Note\NoteIntangibleException $e) {
+        } catch (MutationException|\App\Exception\PieceIntangibleException $e) {
             // Refus MÉTIER énoncé par le moteur (le cabinet lui-même, une donnée qu'on ne
             // peut pas atteindre…), ou par le dernier rempart des notes émises. Il est déjà
             // rédigé pour l'utilisateur : on le relaie.

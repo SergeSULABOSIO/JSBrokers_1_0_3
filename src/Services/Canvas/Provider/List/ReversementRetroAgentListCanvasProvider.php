@@ -63,6 +63,9 @@ class ReversementRetroAgentListCanvasProvider implements ListCanvasProviderInter
                     // que les pièces de la ligne ferait passer pour nues deux lignes sur
                     // trois d'un virement pourtant justifié.
                     ["attribut_code" => "justificatifLibelle", "icone" => "document"],
+                    // Un virement annulé, ou son annulation : dit d'emblée, sans quoi l'original
+                    // et sa contre-passation se liraient comme deux versements.
+                    ["attribut_code" => "etatComptable", "attribut_type" => "text", "icone" => "action:contre-passer"],
                     // Un virement groupé se dit : sans cela, trois lignes d'un même
                     // décaissement se liraient comme trois virements distincts.
                     ["attribut_code" => "virementGroupe", "attribut_type" => "text"],

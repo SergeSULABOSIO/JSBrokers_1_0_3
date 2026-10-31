@@ -9,6 +9,7 @@ use App\Entity\Partenaire;
 use App\Entity\ReversementRetroAgent;
 use App\Repository\ReversementRetroAgentRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * UN VIREMENT, UNE LIGNE, UNE PREUVE — la lecture par LOT des reversements.
@@ -35,7 +36,7 @@ use Doctrine\ORM\EntityManagerInterface;
  * alors que les autres lignes du virement subsistent. C'est le prix assumé du
  * non-stockage redondant — l'aperçu d'un plan de suppression doit donc nommer la pièce.
  */
-final class LotDeVersement
+final class LotDeVersement implements ResetInterface
 {
     /** Préfixe des lots d'un seul membre : un reversement isolé n'a pas de lotReference. */
     private const PREFIXE_SOLO = 'solo-';
@@ -45,6 +46,9 @@ final class LotDeVersement
 
     /** @var array<string, array{total: float, membres: int}> clé de lot => chiffres du virement. */
     private array $virementsParLot = [];
+
+    /** @var array<int, bool> id => contre-passé, préchargé pour une page. */
+    private array $contrePasses = [];
 
     /**
      * La liste en cours est-elle REPLIÉE — une ligne par virement ?
@@ -61,6 +65,20 @@ final class LotDeVersement
         private readonly ReversementRetroAgentRepository $reversements,
         private readonly EntityManagerInterface $em,
     ) {
+    }
+
+    /**
+     * LA CLÉ D'UN NOUVEAU VIREMENT, posée par le SERVEUR — jamais la référence saisie.
+     *
+     * La référence (numéro d'ordre, n° du virement bancaire) appartient à l'utilisateur : deux
+     * virements peuvent la partager, et une correction se fait typiquement en contre-passant
+     * puis en ressaisissant le même virement, sous la même référence. Si elle faisait le lot,
+     * le nouveau virement rejoindrait l'ancien, déjà annulé — et ne pourrait plus jamais être
+     * contre-passé. La clé de lot est donc unique, et ne s'affiche pas.
+     */
+    public function nouvelleReferenceDeLot(): string
+    {
+        return sprintf('LOT-%s-%s', (new \DateTimeImmutable())->format('Ymd'), bin2hex(random_bytes(5)));
     }
 
     /**
@@ -161,9 +179,15 @@ final class LotDeVersement
             return [$reversement];
         }
 
+        // UN VIREMENT VA À UN SEUL BÉNÉFICIAIRE. Les lots anciens portent la référence SAISIE
+        // (avant `nouvelleReferenceDeLot`) : deux virements à deux bénéficiaires saisis avec la
+        // même référence se seraient fondus — et contre-passer l'un aurait annulé l'autre,
+        // sous le droit d'un seul (revue du 2026-10-31).
         $membres = $this->reversements->findBy([
             'lotReference' => $lot,
             'entreprise' => $reversement->getEntreprise(),
+            'agent' => $reversement->getAgent(),
+            'partenaire' => $reversement->getPartenaire(),
         ]);
 
         // Le reversement de départ EN FAIT PARTIE, même si la requête ne l'a pas rendu —
@@ -302,6 +326,50 @@ final class LotDeVersement
         }
 
         $this->virementsParLot = $this->replierLignes($this->reversements->lignesDeLots($ids, $references));
+    }
+
+    /**
+     * PRÉCHARGE, pour une page, quels reversements ont été contre-passés. Une contre-passation
+     * porte sur le virement ENTIER, d'un seul geste : la ligne affichée (porteur ou échéance)
+     * suffit donc à dire l'état de son virement.
+     *
+     * @param ReversementRetroAgent[] $reversements
+     */
+    public function prechargerContrePassations(array $reversements): void
+    {
+        $ids = array_values(array_filter(array_map(static fn (ReversementRetroAgent $r) => $r->getId(), $reversements)));
+        $contrePasses = array_fill_keys($ids, false);
+        foreach ($this->reversements->idsContrePasses($ids) as $id) {
+            $contrePasses[$id] = true;
+        }
+        $this->contrePasses = $contrePasses;
+    }
+
+    /**
+     * Ce reversement a-t-il été annulé par une contre-passation ? Lu dans le préchargement
+     * quand il y en a un ; à défaut, une requête ciblée — NON mémorisée : une décision (refus,
+     * plan de Ket) se prend toujours sur l'état de la base, jamais sur une lecture ancienne.
+     */
+    public function estContrePasse(ReversementRetroAgent $reversement): bool
+    {
+        $id = $reversement->getId();
+        if ($id === null) {
+            return false;
+        }
+
+        return $this->contrePasses[$id] ?? ($this->reversements->idsContrePasses([$id]) !== []);
+    }
+
+    /**
+     * Entre deux messages d'un processus long (worker de Ket), rien de la page précédente ne
+     * survit : préchargements et mode de lecture repartent de zéro.
+     */
+    public function reset(): void
+    {
+        $this->comptesParLot = [];
+        $this->virementsParLot = [];
+        $this->contrePasses = [];
+        $this->replie = false;
     }
 
     /**

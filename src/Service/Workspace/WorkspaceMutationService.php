@@ -14,6 +14,7 @@ use App\Ai\Mutation\MutationReferences;
 use App\Ai\Scope\AiScope;
 use App\Echange\Service\Progression;
 use App\Entity\Entreprise;
+use App\Entity\Invite;
 use App\Entity\Utilisateur;
 use App\Token\TokenAccountService;
 use App\Services\JSBDynamicSearchService;
@@ -112,6 +113,9 @@ class WorkspaceMutationService
         // création (un seul jeu de paramètres de congé par cabinet). En dernier et facultatif,
         // pour la même raison.
         private readonly ?DecisionDeCreation $decisionDeCreation = null,
+        // Contre-passer un virement (`contrePasser: true` sur un reversement) : le service même
+        // du geste d'écran. En dernier et facultatif, pour la même raison.
+        private readonly ?\App\Service\Retro\ContrePassationDeReversement $contrePassation = null,
     ) {
     }
 
@@ -240,6 +244,20 @@ class WorkspaceMutationService
             $base['bloque'] = true;
 
             return ['ok' => false, 'statut' => 'bloque'] + $base;
+        }
+
+        // CONTRE-PASSER UN VIREMENT : un ACTE (comme valider une note), pas une saisie — aucun
+        // formulaire n'est soumis. Refusé dès l'analyse si le virement ne peut plus l'être.
+        if ($this->estUneContrePassation($op)) {
+            if (($motif = $this->refusDeContrePassation($op, $cible, $scope)) !== null) {
+                $base['impacts'] = [$motif];
+                $base['bloque'] = true;
+
+                return ['ok' => false, 'statut' => 'bloque'] + $base;
+            }
+            $base['impacts'] = [\App\Service\Retro\ReversementIntangible::ANNONCE_CONTRE_PASSATION];
+
+            return ['ok' => true] + $base;
         }
 
         // Suppression : impacts de cascade + blocages FK.
@@ -605,6 +623,26 @@ class WorkspaceMutationService
             throw MutationException::bloque($refusIntangible);
         }
 
+        // CONTRE-PASSER UN VIREMENT : re-vérifié à l'exécution (il a pu l'être entre-temps),
+        // puis confié au service de l'écran — le virement ENTIER, une seule fois.
+        if ($this->estUneContrePassation($op)) {
+            $cible = $this->trouverCible($op, $scope) ?? throw MutationException::introuvable(
+                sprintf('%s #%d introuvable dans votre entreprise.', $libelle, (int) $op->targetId),
+            );
+            if (($motif = $this->refusDeContrePassation($op, $cible, $scope)) !== null) {
+                throw MutationException::bloque($motif);
+            }
+            $bilan = $this->contrePassation->contrePasser($cible, $scope->invite);
+
+            return [
+                'op' => $op->op, 'entite' => $op->entityShortName, 'libelle' => $libelle,
+                'cible' => $this->libelleInstance($cible), 'id' => $bilan['porteurId'], 'enfants' => [],
+                'contrePassation' => [
+                    'lignes' => $bilan['lignes'], 'total' => $bilan['total'], 'reference' => $bilan['reference'],
+                ],
+            ];
+        }
+
         // Renvois vers les créations DÉJÀ exécutées de ce plan : résolus en id réels
         // (source unique avec le dry-run) avant toute validation.
         $resolution = $this->resoudreReferences($op, $refs);
@@ -852,6 +890,29 @@ class WorkspaceMutationService
 
             return ($champs !== [] || $collections !== []) ? \App\Service\Note\NoteIntangible::motif($cible) : null;
         }
+        // UN REVERSEMENT ENREGISTRÉ EST UNE PIÈCE COMPTABLE (ReversementIntangible) : ses champs
+        // comptables ne s'écrivent plus — restent la référence, la description, les pièces. Et
+        // une contre-passation ne naît que par son chemin dédié (contre_passer_reversement),
+        // qui annule le virement ENTIER, une seule fois.
+        if ($op->entityShortName === 'ReversementRetroAgent') {
+            if ($cible instanceof \App\Entity\ReversementRetroAgent
+                && \App\Service\Retro\ReversementIntangible::champsComptablesTouches($op->fields) !== []) {
+                return \App\Service\Retro\ReversementIntangible::MOTIF;
+            }
+            if ($op->isCreate() && (array_key_exists('contrePassationDe', $op->fields) || array_key_exists('contrePasser', $op->fields))) {
+                return \App\Service\Retro\ReversementIntangible::CONTRE_PASSATION_PAR_SON_CHEMIN;
+            }
+            // Un VERSEMENT est une sortie de fonds : son montant est positif. Le montant opposé
+            // n'appartient qu'à la contre-passation, qui a son chemin.
+            if ($op->isCreate() && is_numeric($op->fields['montant'] ?? null) && (float) $op->fields['montant'] <= 0) {
+                return \App\Service\Retro\ReversementIntangible::MONTANT_POSITIF;
+            }
+            // On n'ajoute pas de ligne à un virement annulé (ni à son annulation).
+            if ($op->isCreate() && is_string($op->fields['lotReference'] ?? null)
+                && $this->em->getRepository(\App\Entity\ReversementRetroAgent::class)->lotClos($op->fields['lotReference'], $scope->entreprise)) {
+                return \App\Service\Retro\ReversementIntangible::LOT_CLOS;
+            }
+        }
         if ($op->entityShortName === 'Article') {
             $note = $cible instanceof \App\Entity\Article
                 ? $cible->getNote()
@@ -865,6 +926,35 @@ class WorkspaceMutationService
         }
 
         return null;
+    }
+
+    /** `contrePasser: true` sur un reversement existant : l'acte de contre-passation. */
+    private function estUneContrePassation(MutationOperation $op): bool
+    {
+        return $op->entityShortName === 'ReversementRetroAgent' && !$op->isCreate() && !$op->isDelete()
+            && array_key_exists('contrePasser', $op->fields) && $this->versBooleen($op->fields['contrePasser']);
+    }
+
+    /**
+     * Le motif qui refuse cette contre-passation ; null si elle peut se faire. Mêmes règles que
+     * l'écran (RetroAgentController::contrePasserVirement) : l'acte se fait SEUL, sur un virement
+     * ni déjà contre-passé ni lui-même une contre-passation, et le versement d'un agent relève de
+     * la gestion de l'espace de travail.
+     */
+    private function refusDeContrePassation(MutationOperation $op, ?object $cible, AiScope $scope): ?string
+    {
+        if (!$cible instanceof \App\Entity\ReversementRetroAgent) {
+            return null;
+        }
+        if (count($op->fields) > 1 || $op->collections !== []) {
+            return \App\Service\Retro\ReversementIntangible::CONTRE_PASSATION_SEULE;
+        }
+        if ($cible->getAgent() !== null && !$this->accessResolver->canManageInvites($scope->invite)) {
+            return \App\Service\Retro\ReversementIntangible::CONTRE_PASSATION_AGENT_SANS_DROIT;
+        }
+
+        return ($this->contrePassation ?? throw new \LogicException('ContrePassationDeReversement indisponible.'))
+            ->refus($cible);
     }
 
     private function refusDuRattachementAgent(MutationOperation $op, ?object $cible): ?string
@@ -946,6 +1036,11 @@ class WorkspaceMutationService
         }
         if ($this->accessResolver->isRoleManagementEntity($op->entityShortName)) {
             return false; // ceinture + bretelles.
+        }
+        // Contre-passer un virement ÉCRIT des lignes (montants opposés) : le droit de l'écran est
+        // celui d'enregistrer un versement — l'écriture —, pas la modification d'un reversement.
+        if ($this->estUneContrePassation($op)) {
+            return $this->accessResolver->can($scope->invite, $op->entityShortName, Invite::ACCESS_ECRITURE);
         }
 
         return $this->accessResolver->can($scope->invite, $op->entityShortName, $op->requiredLevel());
@@ -1378,6 +1473,18 @@ class WorkspaceMutationService
             } else {
                 $facultatifs[] = $item;
             }
+        }
+
+        // L'ACTE DE CONTRE-PASSATION d'un reversement : pas une colonne, un geste — annoncé ici
+        // pour que le plan le porte (comme `validated` d'une note), exécuté par
+        // ContrePassationDeReversement. Seul, sur un reversement existant.
+        if ($shortName === 'ReversementRetroAgent') {
+            $facultatifs[] = [
+                'champ' => 'contrePasser',
+                'libelle' => 'Contre-passer le virement',
+                'nature' => 'booleen',
+                'aide' => 'true sur un reversement EXISTANT, et rien d’autre : annule le virement entier par des lignes de montant opposé.',
+            ];
         }
 
         return ['entite' => $shortName, 'libelle' => $libelle, 'mode' => $mode, 'obligatoires' => $obligatoires, 'facultatifs' => $facultatifs, 'auto' => $auto];

@@ -38,6 +38,8 @@ class OutilsDePlanTest extends KernelTestCase
         // ne leur retirera pas le marqueur sans qu'on le voie.
         'preparer_demande_conge',
         'preparer_decision_conge',
+        // Annuler un reversement (pièce comptable) : un plan à valider, comme toute écriture.
+        'contre_passer_reversement',
     ];
 
     /**

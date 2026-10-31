@@ -235,6 +235,49 @@ class ReversementRetroAgentRepository extends ServiceEntityRepository
     }
 
     /**
+     * Ce lot est-il CLOS — déjà annulé, ou lui-même une annulation ? On n'y ajoute plus de ligne.
+     */
+    public function lotClos(string $lot, \App\Entity\Entreprise $entreprise): bool
+    {
+        $lot = trim($lot);
+        if ($lot === '') {
+            return false;
+        }
+
+        return (int) $this->createQueryBuilder('r')
+            ->select('COUNT(r.id)')
+            ->where('r.lotReference = :lot')
+            ->andWhere('r.entreprise = :entreprise')
+            ->andWhere('r.contrePassationDe IS NOT NULL OR EXISTS (SELECT 1 FROM ' . ReversementRetroAgent::class . ' c WHERE c.contrePassationDe = r)')
+            ->setParameter('lot', $lot)
+            ->setParameter('entreprise', $entreprise)
+            ->getQuery()
+            ->getSingleScalarResult() > 0;
+    }
+
+    /**
+     * Parmi ces reversements, ceux qui ont été CONTRE-PASSÉS — en une requête, pour une page.
+     *
+     * @param int[] $ids
+     *
+     * @return int[] les identifiants contre-passés
+     */
+    public function idsContrePasses(array $ids): array
+    {
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if ($ids === []) {
+            return [];
+        }
+
+        return array_map('intval', $this->createQueryBuilder('r')
+            ->select('IDENTITY(r.contrePassationDe) AS id')
+            ->where('r.contrePassationDe IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->getQuery()
+            ->getSingleColumnResult());
+    }
+
+    /**
      * LES LIGNES DES VIREMENTS D'UNE PAGE — montant et lot, en UNE requête.
      *
      * Depuis que la rubrique replie chaque lot sur son porteur, une ligne à l'écran doit

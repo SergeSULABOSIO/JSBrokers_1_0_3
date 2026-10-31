@@ -13,27 +13,26 @@ use App\Entity\ReversementRetroAgent;
 use App\Entity\Risque;
 use App\Entity\Utilisateur;
 use App\Service\Retro\LotDeVersement;
+use App\Service\Retro\ReversementIntangible;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 /**
- * CORRIGER UN VIREMENT DÉJÀ ENREGISTRÉ.
+ * ROUVRIR UN VIREMENT DÉJÀ ENREGISTRÉ — une PIÈCE COMPTABLE (Serge, 2026-10-30).
  *
  * ── POURQUOI CETTE FENÊTRE ET PAS LE DIALOGUE GÉNÉRIQUE ─────────────────────────────
  * Depuis que la rubrique replie chaque lot sur son porteur, une ligne REPRÉSENTE un
- * virement entier. Le dialogue générique n'en aurait montré qu'une échéance sur six, et
- * laissé corriger un montant sans voir les autres.
+ * virement entier. Le dialogue générique n'en aurait montré qu'une échéance sur six.
  *
- * ── LES QUATRE RÈGLES QUE CE TEST TIENT ─────────────────────────────────────────────
- *  1. ON MET À JOUR, ON NE RECRÉE PAS. Recréer aurait changé l'identifiant des lignes —
- *     donc perdu les documents qui y sont rattachés.
- *  2. CE QUI N'EST PAS REPOSTÉ SORT du virement.
- *  3. ⚠ LE PIÈGE DU PORTEUR : la pièce justificative est écrite sur le membre au plus
- *     petit id. Retirer CETTE ligne-là détruirait le bordereau avec elle, et le
- *     décaissement se retrouverait sans preuve sans que rien ne le dise.
- *  4. UN VIREMENT ROUVERT A DÉJÀ SA PREUVE : corriger une date ne doit pas exiger qu'on
- *     redépose le même bordereau.
+ * ── LES RÈGLES QUE CE TEST TIENT (ReversementIntangible) ────────────────────────────
+ *  1. LA PARTIE COMPTABLE NE BOUGE PLUS : retirer une échéance, changer un montant, la date
+ *     ou le compte est refusé en 409 qui explique — et RIEN n'est écrit ni retiré.
+ *  2. RESTENT CORRIGEABLES : la référence, la description, les pièces.
+ *  3. LA PREUVE : retirer la dernière pièce sans en annoncer une autre est refusé, et aucune
+ *     pièce n'est détruite par une requête refusée.
+ *  4. LA FENÊTRE LE DIT : en lecture pour la partie comptable, elle oriente vers la
+ *     contre-passation.
  */
 class ReversementEditionTest extends WebTestCase
 {
@@ -63,6 +62,12 @@ class ReversementEditionTest extends WebTestCase
     private function cleanUp(): void
     {
         $conn = $this->em()->getConnection();
+        // Une contre-passation retient l'original (RESTRICT) : le lien se dénoue d'abord.
+        $conn->executeStatement(
+            'UPDATE reversement_retro_agent t JOIN entreprise e ON t.entreprise_id = e.id
+             SET t.contre_passation_de_id = NULL WHERE e.nom = :nom',
+            ['nom' => self::ENTREPRISE_NOM],
+        );
         foreach ([
             'document', 'reversement_retro_agent', 'avenant', 'cotation', 'piste',
             'client', 'risque', 'invite',
@@ -73,8 +78,7 @@ class ReversementEditionTest extends WebTestCase
             );
         }
         // LE WORKSPACE ACTIF POINTE SUR L'ENTREPRISE : on dénoue le lien avant de la
-        // supprimer, sinon la contrainte de clé étrangère refuse — et le nettoyage
-        // échouerait AVANT le test, ce qui se lit comme un échec du code testé.
+        // supprimer, sinon la contrainte de clé étrangère refuse.
         $conn->executeStatement(
             'UPDATE utilisateur u JOIN entreprise e ON u.connected_to_id = e.id
              SET u.connected_to_id = NULL WHERE e.nom = :nom',
@@ -87,11 +91,8 @@ class ReversementEditionTest extends WebTestCase
 
     /**
      * Un virement de trois échéances — 10, 20, 30 — dont le PORTEUR tient le bordereau.
-     *
-     * CHAQUE LIGNE DÉSIGNE UNE AFFAIRE DISTINCTE, et il le faut : le rapprochement se fait
-     * sur le couple (échéance, affaire). Trois lignes sans affaire auraient toutes porté la
-     * même clé « 0:0 », et le test aurait vérifié un cas que l'écriture refuse de toute
-     * façon — une ligne qui ne désigne rien n'est pas enregistrable.
+     * Chaque ligne désigne une affaire distincte : le rapprochement se fait sur le couple
+     * (échéance, affaire).
      *
      * @return array{ids: int[], avenantIds: int[], entrepriseId: int}
      */
@@ -107,10 +108,6 @@ class ReversementEditionTest extends WebTestCase
             ->setAdresse('1 rue')->setTelephone('+2430000')->setRccm('R')->setIdnat('I')->setNumimpot('N')
             ->setUtilisateur($owner);
         $em->persist($entreprise);
-
-        // L'INVITÉ DU PROPRIÉTAIRE, et le workspace ACTIF : `getInvite()` résout l'invité
-          // de l'entreprise vers laquelle l'utilisateur est connecté. Sans `connectedTo`,
-          // toutes les routes rendent « Aucun invité trouvé ».
         $owner->setConnectedTo($entreprise);
 
         $gestionnaire = (new Invite())->setNom('Gestionnaire')->setProprietaire(true);
@@ -131,7 +128,6 @@ class ReversementEditionTest extends WebTestCase
         $clientAssure->setEntreprise($entreprise);
         $em->persist($clientAssure);
 
-        // TROIS AFFAIRES : c'est ce qui donne trois clés de rapprochement distinctes.
         $avenants = [];
         for ($i = 0; $i < 3; ++$i) {
             $piste = (new Piste())->setNom('Piste Virement ' . $i)->setTypeAvenant(0)
@@ -155,7 +151,6 @@ class ReversementEditionTest extends WebTestCase
         }
         $em->flush();
 
-        $ids = [];
         $membres = [];
         foreach ([10.0, 20.0, 30.0] as $i => $montant) {
             $r = (new ReversementRetroAgent())
@@ -164,22 +159,22 @@ class ReversementEditionTest extends WebTestCase
                 ->setMontant($montant)
                 ->setPaidAt(new \DateTimeImmutable('2026-08-01'))
                 ->setReference(self::LOT)
-                ->setLotReference(self::LOT);
+                ->setLotReference(self::LOT)
+                ->setDescription('Virement de septembre, convenu par téléphone.');
             $r->setEntreprise($entreprise)->setInvite($agent);
             $em->persist($r);
             $membres[] = $r;
         }
         $em->flush();
 
-        // L'ordre d'écriture est celui des identifiants : le porteur règle l'affaire 0.
+        $ids = [];
         $avenantIds = [];
         foreach ($membres as $membre) {
             $ids[] = $membre->getId();
             $avenantIds[] = $membre->getAvenant()->getId();
         }
 
-        // LE BORDEREAU EST SUR LE PORTEUR — le plus petit id. C'est la convention de
-        // l'écran, et c'est elle qui rend le retrait de cette ligne dangereux.
+        // LE BORDEREAU EST SUR LE PORTEUR — le plus petit id.
         $piece = (new Document())->setNom('bordereau.pdf');
         $piece->setReversementRetroAgent($em->getRepository(ReversementRetroAgent::class)->find($ids[0]));
         $piece->setEntreprise($entreprise)->setInvite($agent);
@@ -189,38 +184,41 @@ class ReversementEditionTest extends WebTestCase
         return ['ids' => $ids, 'avenantIds' => $avenantIds, 'entrepriseId' => $entreprise->getId()];
     }
 
+    /** Les trois lignes du virement, telles qu'enregistrées — ce que la fenêtre renvoie. */
+    private function lignesEnregistrees(array $s): array
+    {
+        return [
+            ['trancheId' => 0, 'avenantId' => $s['avenantIds'][0], 'montant' => 10.0],
+            ['trancheId' => 0, 'avenantId' => $s['avenantIds'][1], 'montant' => 20.0],
+            ['trancheId' => 0, 'avenantId' => $s['avenantIds'][2], 'montant' => 30.0],
+        ];
+    }
+
     /**
-     * @param array<int, array{montant: float}> $lignes
+     * @param array<string, mixed> $surcharges clés du corps à remplacer ou ajouter
      */
-    private function poster(
-        int $id,
-        array $lignes,
-        string $paidAt = '2026-08-01',
-        array $piecesRetirees = [],
-        bool $avecPiece = false,
-    ): array {
+    private function poster(int $id, array $s, array $surcharges = []): array
+    {
+        $corps = $surcharges + [
+            'lignes' => $this->lignesEnregistrees($s),
+            'paidAt' => '2026-08-01',
+            'reference' => self::LOT,
+            'piecesRetirees' => [],
+            'avecPiece' => false,
+        ];
         $this->client->request(
             'POST',
             '/admin/retro-agent/reversement/' . $id . '/editer',
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
-            json_encode([
-                'lignes' => $lignes,
-                'paidAt' => $paidAt,
-                'reference' => self::LOT,
-                'piecesRetirees' => $piecesRetirees,
-                'avecPiece' => $avecPiece,
-            ]),
+            json_encode($corps),
         );
 
         $reponse = $this->client->getResponse();
         $decode = json_decode((string) $reponse->getContent(), true);
-        if (!is_array($decode)) {
-            $decode = ['__statut' => $reponse->getStatusCode(), '__corps' => substr((string) $reponse->getContent(), 0, 300)];
-        }
 
-        return $decode;
+        return is_array($decode) ? $decode : ['__statut' => $reponse->getStatusCode()];
     }
 
     private function connecter(): void
@@ -229,13 +227,18 @@ class ReversementEditionTest extends WebTestCase
         $this->client->loginUser($utilisateur);
     }
 
-    /**
-     * LES MEMBRES DU LOT SONT CEUX QUE L'ÉDITION ROUVRE — et le porteur est le plus petit id.
-     *
-     * C'est la règle partagée par les trois usages : rouvrir un virement, le supprimer, et
-     * relire ses pièces. Trois copies auraient fini par diverger sur le cas du versement
-     * isolé — d'où ce contrôle sur les deux formes.
-     */
+    /** @return array<int, ReversementRetroAgent> */
+    private function relire(array $s): array
+    {
+        $this->em()->clear();
+
+        return array_map(
+            fn (int $id) => $this->em()->getRepository(ReversementRetroAgent::class)->find($id),
+            $s['ids'],
+        );
+    }
+
+    /** LES MEMBRES DU LOT se lisent depuis n'importe laquelle de ses lignes ; le porteur est le plus petit id. */
     public function testLeLotSeLitDeNimporteLequelDeSesMembres(): void
     {
         $s = $this->semer();
@@ -250,119 +253,97 @@ class ReversementEditionTest extends WebTestCase
         }
     }
 
-    /**
-     * ⚠ LE PIÈGE DU PORTEUR — retirer la ligne qui tient le bordereau ne le détruit pas.
-     *
-     * Sans le transfert, la suppression du porteur emportait son document en cascade : le
-     * virement restait justifié à l'écran (le compte est lu sur le lot) mais la pièce
-     * n'existait plus. Un décaissement sans preuve, silencieusement.
-     */
-    public function testRetirerLePorteurNeDetruitPasSonBordereau(): void
+    /** RETIRER UNE ÉCHÉANCE DU VIREMENT est refusé : les trois lignes et le bordereau restent. */
+    public function testRetirerUneEcheanceDuVirementEstRefuse(): void
     {
         $s = $this->semer();
         $this->connecter();
 
-        // On ne repose QUE deux lignes : le porteur — celle à 10 — sort du virement.
-        // On ne repose QUE l'affaire n°1 : le porteur — qui règle l'affaire n°0 et tient
-        // le bordereau — sort du virement.
-        $reponse = $this->poster($s['ids'][0], [
-            ['trancheId' => 0, 'avenantId' => $s['avenantIds'][1], 'montant' => 20.0],
+        $reponse = $this->poster($s['ids'][0], $s, [
+            'lignes' => [['trancheId' => 0, 'avenantId' => $s['avenantIds'][1], 'montant' => 20.0]],
         ]);
 
-        self::assertSame(1, $reponse['crees'] ?? null, 'Une seule ligne reste.');
-        self::assertSame(2, $reponse['retires'] ?? null, 'Les deux autres sortent du virement.');
+        self::assertResponseStatusCodeSame(409);
+        self::assertSame(ReversementIntangible::MOTIF, $reponse['message'] ?? null, 'Le refus explique et oriente vers la contre-passation.');
+        self::assertNotContains(null, $this->relire($s), 'Aucune ligne du virement n’a disparu.');
+        self::assertCount(1, $this->em()->getRepository(Document::class)->findBy(['nom' => 'bordereau.pdf']));
+    }
 
-        $this->em()->clear();
-        $pieces = $this->em()->getRepository(Document::class)->findBy(['nom' => 'bordereau.pdf']);
-        self::assertCount(1, $pieces, 'Le bordereau a survécu au retrait de la ligne qui le portait.');
-        self::assertNotNull(
-            $pieces[0]->getReversementRetroAgent(),
-            'Et il est rattaché au membre qui reste, pas laissé orphelin.',
-        );
+    /** CHANGER UN MONTANT est refusé. */
+    public function testChangerUnMontantEstRefuse(): void
+    {
+        $s = $this->semer();
+        $this->connecter();
+        $lignes = $this->lignesEnregistrees($s);
+        $lignes[0]['montant'] = 42.0;
+
+        $this->poster($s['ids'][0], $s, ['lignes' => $lignes]);
+
+        self::assertResponseStatusCodeSame(409);
+        self::assertSame(10.0, $this->relire($s)[0]->getMontant());
     }
 
     /**
-     * CORRIGER UNE DATE N'EXIGE PAS DE REDÉPOSER LE BORDEREAU.
-     *
-     * La garde « pas de versement sans preuve » vaut à la création. Appliquée telle quelle à
-     * un virement rouvert, elle aurait refusé toute correction tant qu'on n'aurait pas
-     * redéposé la même pièce — donc fait exister deux fois le même bordereau, ou renoncé à
-     * la correction.
+     * CHANGER LA DATE est refusé — et la pièce marquée pour retrait dans la MÊME requête
+     * n'est pas détruite : un refus n'écrit rien.
      */
-    public function testCorrigerUneDateSansRedeposerLaPiece(): void
+    public function testChangerLaDateEstRefuseEtRienNEstRetire(): void
+    {
+        $s = $this->semer();
+        $this->connecter();
+        $pieceId = $this->em()->getRepository(Document::class)->findOneBy(['nom' => 'bordereau.pdf'])->getId();
+
+        $this->poster($s['ids'][0], $s, ['paidAt' => '2026-09-15', 'piecesRetirees' => [$pieceId], 'avecPiece' => true]);
+
+        self::assertResponseStatusCodeSame(409);
+        self::assertSame('2026-08-01', $this->relire($s)[0]->getPaidAt()?->format('Y-m-d'));
+        self::assertNotNull($this->em()->getRepository(Document::class)->find($pieceId), 'La pièce est intacte.');
+    }
+
+    /** LA RÉFÉRENCE ET LA DESCRIPTION SE CORRIGENT, sur toutes les lignes du virement. */
+    public function testLaReferenceEtLaDescriptionSeCorrigent(): void
     {
         $s = $this->semer();
         $this->connecter();
 
-        $reponse = $this->poster(
-            $s['ids'][0],
-            [['trancheId' => 0, 'avenantId' => $s['avenantIds'][0], 'montant' => 10.0]],
-            '2026-09-15',
-        );
+        $this->poster($s['ids'][1], $s, ['reference' => 'VIR-CORRIGEE', 'description' => 'Référence bancaire corrigée.']);
 
-        self::assertResponseIsSuccessful('Le virement a déjà sa preuve : la correction passe.');
-        self::assertSame(1, $reponse['crees'] ?? null);
-
-        $this->em()->clear();
-        $restant = $this->em()->getRepository(ReversementRetroAgent::class)->find($s['ids'][0]);
-        self::assertNotNull($restant, 'La ligne conservée garde son identifiant : on met à jour, on ne recrée pas.');
-        self::assertSame('2026-09-15', $restant->getPaidAt()?->format('Y-m-d'));
-    }
-
-    /**
-     * UNE ÉDITION PAR LE PICKER NE PERD PAS LA DESCRIPTION (2026-10-17).
-     *
-     * Le picker de reversement n'envoie AUCUNE description : il ne la propose pas. Le
-     * serveur la réécrivait pourtant avec ce qu'il ne recevait pas — `null` — à chaque
-     * correction. Une perte de donnée silencieuse : la date corrigée, le commentaire disparu.
-     */
-    public function testCorrigerUnVersementGardeSaDescription(): void
-    {
-        $s = $this->semer();
-        $reversement = $this->em()->getRepository(ReversementRetroAgent::class)->find($s['ids'][0]);
-        $reversement->setDescription('Virement de septembre, convenu par téléphone.');
-        $this->em()->flush();
-        $this->connecter();
-
-        $this->poster(
-            $s['ids'][0],
-            [['trancheId' => 0, 'avenantId' => $s['avenantIds'][0], 'montant' => 10.0]],
-            '2026-09-15',
-        );
         self::assertResponseIsSuccessful();
-
-        $this->em()->clear();
-        $apres = $this->em()->getRepository(ReversementRetroAgent::class)->find($s['ids'][0]);
-        self::assertSame('2026-09-15', $apres?->getPaidAt()?->format('Y-m-d'), 'La correction est bien passée.');
-        self::assertSame(
-            'Virement de septembre, convenu par téléphone.',
-            $apres?->getDescription(),
-            'La description, que le picker n\'envoie pas, a été effacée par la correction.',
-        );
+        foreach ($this->relire($s) as $ligne) {
+            self::assertSame('VIR-CORRIGEE', $ligne->getReference());
+            self::assertSame('Référence bancaire corrigée.', $ligne->getDescription());
+            self::assertSame(self::LOT, $ligne->getLotReference(), 'Le lot, lui, ne bouge pas : il fait le virement.');
+        }
     }
 
-    /**
-     * UN VIREMENT QUI RETOMBE À UNE SEULE LIGNE N'EST PLUS UN LOT.
-     *
-     * La `lotReference` n'est posée qu'à partir de deux lignes — sans quoi un versement
-     * isolé pourrait être fondu dans le lot d'un autre. La règle valait à la création ;
-     * elle doit valoir aussi quand une correction fait maigrir le virement.
-     */
-    public function testUnVirementRamenéAUneLigneCesseDEtreUnLot(): void
+    /** SANS DESCRIPTION ENVOYÉE, la description reste : on n'écrit pas ce qu'on ne reçoit pas. */
+    public function testSansDescriptionEnvoyeeLaDescriptionReste(): void
     {
         $s = $this->semer();
         $this->connecter();
 
-        $this->poster($s['ids'][0], [['trancheId' => 0, 'avenantId' => $s['avenantIds'][0], 'montant' => 42.0]]);
+        $this->poster($s['ids'][0], $s);
 
-        $this->em()->clear();
-        $restant = $this->em()->getRepository(ReversementRetroAgent::class)->find($s['ids'][0]);
-        self::assertSame(42.0, $restant->getMontant(), 'Le montant corrigé est écrit.');
-        self::assertNull($restant->getLotReference(), 'Seul, il n\'est plus membre d\'un lot.');
+        self::assertResponseIsSuccessful();
+        self::assertSame('Virement de septembre, convenu par téléphone.', $this->relire($s)[0]->getDescription());
     }
 
-    /** La fenêtre s'ouvre en édition, cochée sur ce que le virement règle déjà. */
-    public function testLaFenetreSOuvreCocheeSurLesEcheancesDuVirement(): void
+    /** Une description trop longue (ou qui n'est pas un texte) est refusée en 422, et rien n'est écrit. */
+    public function testUneDescriptionTropLongueEstRefusee(): void
+    {
+        $s = $this->semer();
+        $this->connecter();
+
+        $this->poster($s['ids'][0], $s, ['description' => str_repeat('x', 256), 'reference' => 'VIR-NE-DOIT-PAS-PASSER']);
+        self::assertResponseStatusCodeSame(422);
+        $this->poster($s['ids'][0], $s, ['description' => ['pas', 'un', 'texte']]);
+        self::assertResponseStatusCodeSame(422);
+
+        self::assertSame(self::LOT, $this->relire($s)[0]->getReference(), 'Le refus n’a rien écrit.');
+    }
+
+    /** La fenêtre s'ouvre en LECTURE pour la partie comptable, sur les seules échéances du virement. */
+    public function testLaFenetreSOuvreEnLecture(): void
     {
         $s = $this->semer();
         $this->connecter();
@@ -372,70 +353,45 @@ class ReversementEditionTest extends WebTestCase
         self::assertResponseIsSuccessful();
         $html = (string) $this->client->getResponse()->getContent();
 
-        self::assertStringStartsWith('<div', ltrim($html), 'Un fragment, comme le picker de création.');
         self::assertStringContainsString('data-controller="reversement-retro-picker"', $html);
-        // Le titre DIT qu'on corrige, et nomme le virement.
-        self::assertStringContainsString('Corriger le virement', $html);
+        self::assertStringContainsString('data-reversement-retro-picker-edition-value="true"', $html);
         self::assertStringContainsString(self::LOT, $html);
-        // La pièce déjà déposée est annoncée, et la garde du bouton la connaît.
-        self::assertStringContainsString('data-reversement-retro-picker-piece-deja-value="true"', $html);
-        self::assertStringContainsString('déjà justifié', $html);
-
-        // ET LA PIÈCE EST NOMMÉE, avec de quoi la retirer. Annoncer « 1 pièce » sans la
-        // montrer laissait devant un compte qu'on ne pouvait ni vérifier ni corriger.
+        self::assertStringContainsString('Contre-passer le virement', $html, 'Elle dit comment corriger le reste.');
+        self::assertStringNotContainsString('Solde exigible', $html, 'Rien à verser : on relit un virement.');
+        self::assertSame(3, substr_count($html, 'data-reversement-retro-picker-target="ligne"'), 'Les trois échéances, et elles seules.');
+        self::assertMatchesRegularExpression('/type="date"[^>]*readonly/s', $html, 'La date est en lecture.');
+        self::assertMatchesRegularExpression('/<select id="rra-compte"[^>]*disabled/s', $html, 'Le compte est en lecture.');
+        self::assertStringContainsString('data-reversement-retro-picker-target="description"', $html, 'La description se corrige.');
+        // La pièce déjà déposée est nommée, avec de quoi la retirer.
         self::assertStringContainsString('bordereau.pdf', $html);
         self::assertStringContainsString('click->reversement-retro-picker#basculerPiece', $html);
     }
 
-    /**
-     * REMPLACER UNE PIÈCE : la retirer et en annoncer une autre dans le même geste.
-     */
+    /** REMPLACER UNE PIÈCE : la retirer et en annoncer une autre dans le même geste. */
     public function testUnePieceSeRetirePourEtreRemplacee(): void
     {
         $s = $this->semer();
         $this->connecter();
-        $pieceId = $this->em()->getRepository(Document::class)
-            ->findOneBy(['nom' => 'bordereau.pdf'])->getId();
+        $pieceId = $this->em()->getRepository(Document::class)->findOneBy(['nom' => 'bordereau.pdf'])->getId();
 
-        $this->poster(
-            $s['ids'][0],
-            [['trancheId' => 0, 'avenantId' => $s['avenantIds'][0], 'montant' => 10.0]],
-            '2026-08-01',
-            [$pieceId],
-            avecPiece: true,
-        );
+        $this->poster($s['ids'][0], $s, ['piecesRetirees' => [$pieceId], 'avecPiece' => true]);
 
         self::assertResponseIsSuccessful();
         $this->em()->clear();
-        self::assertCount(
-            0,
-            $this->em()->getRepository(Document::class)->findBy(['nom' => 'bordereau.pdf']),
-            'La pièce marquée est bien supprimée.',
-        );
+        self::assertNull($this->em()->getRepository(Document::class)->find($pieceId), 'La pièce marquée est supprimée.');
     }
 
-    /**
-     * ⚠ RETIRER LA DERNIÈRE PREUVE SANS EN DÉPOSER UNE AUTRE EST REFUSÉ.
-     *
-     * C'est l'ordre des opérations qui le rend vrai : les pièces marquées partent
-     * AVANT que la garde ne compte ce qui reste. Compter d'abord aurait laissé passer
-     * un enregistrement qui efface la dernière preuve du virement — un décaissement
-     * nu, accepté par la règle même qui l'interdit.
-     */
+    /** ⚠ RETIRER LA DERNIÈRE PREUVE SANS EN DÉPOSER UNE AUTRE est refusé, et la pièce reste. */
     public function testRetirerLaDernierePreuveSansLaRemplacerEstRefuse(): void
     {
         $s = $this->semer();
         $this->connecter();
-        $pieceId = $this->em()->getRepository(Document::class)
-            ->findOneBy(['nom' => 'bordereau.pdf'])->getId();
+        $pieceId = $this->em()->getRepository(Document::class)->findOneBy(['nom' => 'bordereau.pdf'])->getId();
 
-        $this->poster(
-            $s['ids'][0],
-            [['trancheId' => 0, 'avenantId' => $s['avenantIds'][0], 'montant' => 10.0]],
-            '2026-08-01',
-            [$pieceId],
-        );
+        $this->poster($s['ids'][0], $s, ['piecesRetirees' => [$pieceId]]);
 
         self::assertResponseStatusCodeSame(422, 'Un virement ne reste pas sans preuve.');
+        $this->em()->clear();
+        self::assertNotNull($this->em()->getRepository(Document::class)->find($pieceId), 'Rien n’a été retiré avant le refus.');
     }
 }

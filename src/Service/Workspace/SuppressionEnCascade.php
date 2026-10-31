@@ -187,6 +187,12 @@ class SuppressionEnCascade
         // passe par un UPDATE en masse, que le rempart du flush ne voit pas : on refuse ici.
         array_push($refus, ...$this->notesValideesDetachees($aDetacher, $aDetruire));
 
+        // UN REVERSEMENT ENREGISTRÉ NE PART PAS, ET N'EST PAS DÉTACHÉ (Serge, 2026-10-30) : c'est
+        // une pièce comptable. Supprimer l'échéance, la police, le bénéficiaire ou le compte d'un
+        // reversement l'emporterait — ou le modifierait par un UPDATE en masse, que le rempart du
+        // flush ne voit pas. On refuse donc ici, sur le plan final.
+        array_push($refus, ...$this->reversementsTouches($aDetruire, $aDetacher));
+
         return new PlanDeSuppression(
             racineClasse: $classe,
             racineId: $id,
@@ -837,6 +843,38 @@ class SuppressionEnCascade
      *
      * @param int[] $ids
      */
+    /**
+     * Les reversements que le plan emporterait ou modifierait (ReversementIntangible).
+     *
+     * @param array<class-string, array<int, int>> $aDetruire
+     *
+     * @return list<string>
+     */
+    private function reversementsTouches(array $aDetruire, array $aDetacher): array
+    {
+        $emportes = count($aDetruire[\App\Entity\ReversementRetroAgent::class] ?? []);
+        $modifies = 0;
+        foreach ($aDetacher as $detachement) {
+            // L'invité qui a SAISI le reversement n'est pas son contenu (comme pour une note).
+            if ($detachement['classe'] === \App\Entity\ReversementRetroAgent::class && $detachement['champ'] !== 'invite') {
+                $modifies += count($detachement['ids']);
+            }
+        }
+        if ($emportes + $modifies === 0) {
+            return [];
+        }
+        $nombre = $emportes + $modifies;
+
+        return [sprintf(
+            'Cette suppression %s %d reversement%s enregistré%s. %s',
+            $emportes > 0 ? 'emporterait' : 'modifierait',
+            $nombre,
+            $nombre > 1 ? 's' : '',
+            $nombre > 1 ? 's' : '',
+            \App\Service\Retro\ReversementIntangible::MOTIF_SUPPRESSION,
+        )];
+    }
+
     /**
      * Les notes VALIDÉES qu'un détachement modifierait (la note elle-même, ou l'une de ses
      * lignes) sans les détruire.

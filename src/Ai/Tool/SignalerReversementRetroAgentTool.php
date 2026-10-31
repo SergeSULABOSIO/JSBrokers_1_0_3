@@ -78,6 +78,7 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
         private readonly JustificatifExige $justificatifExige,
         private readonly ConversationFichierResolver $fichiers,
         private readonly PieceSourceRattachement $rattachement,
+        private readonly \App\Service\Retro\LotDeVersement $lots,
     ) {
     }
 
@@ -349,7 +350,9 @@ final class SignalerReversementRetroAgentTool implements AiToolProduisantUnPlan,
         $compteId = $this->resoudreCompte($args, $scope);
         // Un lot n'existe qu'à partir de DEUX lignes : un reversement isolé garde
         // lotReference vide, pour ne jamais être fondu dans le lot d'un autre.
-        $lotReference = count($lignesDemandees) > 1 ? $reference : null;
+        // La CLÉ du lot est posée par le serveur, jamais la référence saisie : deux virements
+        // peuvent partager une référence (LotDeVersement::nouvelleReferenceDeLot).
+        $lotReference = count($lignesDemandees) > 1 ? $this->lots->nouvelleReferenceDeLot() : null;
 
         $operations = [];
         $refuses = $selection['refus'];
